@@ -45,19 +45,38 @@ def train_online(
     DP:
     accuracies:
   """
+  ''' 
+    TODO: 
+    - See why use tensor flow 
+    - See what does the "batch function" does
+    
+    
+  '''
   
+  
+  # creates a tf dataset
   dataset = tf.data.Dataset.from_tensor_slices(
       (inputs, targets, protected_targets)
   )
   dataset = dataset.batch(batch_size)
+  
+  # number of internal nodes in a binary tree
   num_internal_nodes = 2**tree_depth - 1
+  
+  # choose the optimizer and loss criteria
   optimizer = tf.keras.optimizers.Adam(learning_rate=2e-3)
   criteria = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
+  
+  # to calculate the average accuracy over batches
   avg_accuracy = tf.keras.metrics.Accuracy()
+  
+  # Accumulates fairness gradients for the protected groups [trees, num_features, num_internal_nodes]
   gradient_w_a0 = np.zeros([num_trees, data_dim, num_internal_nodes])
   gradient_w_a1 = np.zeros([num_trees, data_dim, num_internal_nodes])
   gradient_b_a0 = np.zeros([num_trees, num_internal_nodes])
   gradient_b_a1 = np.zeros([num_trees, num_internal_nodes])
+  
+  # Accumulates node decisions for the protected groups
   agg_y_a0 = tf.zeros([num_trees, num_internal_nodes], name='agg_Y0')
   agg_y_a1 = tf.zeros([num_trees, num_internal_nodes], name='agg_Y1')
 

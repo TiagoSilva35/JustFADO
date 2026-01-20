@@ -89,17 +89,21 @@ def train_online(
       targets_batch,
       protected_batch) in enumerate(iterations):
     with tf.GradientTape(persistent=True) as tape:
+      # make a forward pass and get the predictions
       # predictions: [batch_size, num_class]
       # y: [num_trees, batch_size, num_internal_nodes]
       predictions = model(inputs_batch, training=True)
       # y_pred: [batch_size]
       y_pred = tf.math.argmax(predictions, axis=-1)
       target_loss = criteria(y_true=targets_batch, y_pred=predictions)
+      
       # get demographic parity scores
       y_predictions.extend(y_pred.numpy())
+      
+      # calculate dp which is the difference in positive outcome rates between groups
       dp, dp_sign = dp_function(
           y_predictions, protected_targets[: len(y_predictions)])
-      # update the average accuracy
+      # update running averages for accuracy, auc, loss
       avg_accuracy.update_state(targets_batch, y_pred)
       avg_auc.update_state(targets_batch, y_pred)
       avg_loss.update_state(target_loss)
@@ -119,6 +123,9 @@ def train_online(
       if not local_run:
         wandb.log(results)
 
+      
+      # Calculate the gradients separately for protected groups and computes penalties
+       
       # update the task gradients w.r.t. current sample
       # d L_{CE}(y, \hat{y})/d\theta
       gradients = tape.gradient(target_loss, model.trainable_variables)
@@ -137,7 +144,9 @@ def train_online(
           elif a_label == 1:
             agg_y_a1 += y_pred
             
-          fair_gradients = tape.gradient(predictions[i], model.trainable_variables)
+          
+          fair_gradients = tape.gradient(predictions[i], model.trainable_variables) 
+          
           factor = 1 / protected_class_count[a_label]
         
           # vanilla averaging
