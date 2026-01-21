@@ -132,6 +132,8 @@ def train(
           tree_depth=depth,
           num_classes=num_class,
           activation=activation,
+          use_layer_norm=True,
+          dropout_rate=0.0
       )
     elif model_type == 'ht':
       model = HoeffdingTree()

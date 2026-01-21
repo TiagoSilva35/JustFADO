@@ -1,0 +1,44 @@
+{
+  "os": "Linux-6.14.0-37-generic-x86_64-with-glibc2.17",
+  "python": "CPython 3.8.20",
+  "startedAt": "2026-01-21T07:40:08.091794Z",
+  "args": [
+    "--activation=sigmoid",
+    "--base_gamma=None",
+    "--batch_size=1",
+    "--compute_fairness=True",
+    "--compute_mode=default",
+    "--constraint_type=node",
+    "--dataset=adult",
+    "--depth=4",
+    "--encoder_model=instructor",
+    "--gradient_type=vanilla",
+    "--lambda_const=0.1",
+    "--max_iter=1",
+    "--mode=node",
+    "--model_type=mlp",
+    "--num_trees=3",
+    "--offline_loss_type=mmd",
+    "--probability=0.5",
+    "--reservoir_size=500"
+  ],
+  "program": "cli.py",
+  "codePath": "main.py",
+  "codePathLocal": "cli.py",
+  "email": "tjcsilva04@gmail.com",
+  "root": "/home/tiago/Documents/Bolsa/Aranyani2.0/src",
+  "host": "tiago-Modern-14-B5M",
+  "executable": "/home/tiago/anaconda3/envs/arnya/bin/python",
+  "cpu_count": 8,
+  "cpu_count_logical": 16,
+  "disk": {
+    "/": {
+      "total": "1005867986944",
+      "used": "144787275776"
+    }
+  },
+  "memory": {
+    "total": "16092151808"
+  },
+  "writerId": "8c16gkckbx2a77f7j19rej199opk3tsr"
+}

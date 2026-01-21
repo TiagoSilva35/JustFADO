@@ -45,13 +45,8 @@ def train_online(
     DP:
     accuracies:
   """
-  ''' 
-    TODO: 
-    - See why use tensor flow 
-    - See what does the "batch function" does
-    
-    
-  '''
+  
+
   
   
   # creates a tf dataset
