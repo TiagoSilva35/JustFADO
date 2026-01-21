@@ -5,4 +5,6 @@ adhoc/
 plots/
 results/
 src/__pycache__/
+src/wandb/
+data/
 *.csv
