@@ -1,0 +1,38 @@
+DP in the original dataset: 0.19627598779361352
+{0, 1} {0, 1}
+  0%|                                                                                                                         | 0/32561 [00:00<?, ?it/s]/home/tiago/anaconda3/envs/arnya/lib/python3.8/site-packages/numpy/core/fromnumeric.py:3372: RuntimeWarning: Mean of empty slice.
+  return _methods._mean(a, axis=axis, dtype=dtype,
+/home/tiago/anaconda3/envs/arnya/lib/python3.8/site-packages/numpy/core/_methods.py:170: RuntimeWarning: invalid value encountered in double_scalars
+  ret = ret.dtype.type(ret / rcount)
+ CE Loss: 0.605, Accuracy: 100.000%, AUC: 0.000%, DP: nan,:   0%|                                                             | 0/32561 [00:00<?, ?it/s]WARNING:tensorflow:Calling GradientTape.gradient on a persistent tape inside its context is significantly less efficient than calling it outside the context (it causes the gradient ops to be recorded on the tape, leading to increased CPU and memory usage). Only call GradientTape.gradient inside the context if you actually want to trace the gradient in order to compute higher order derivatives.
+W0121 09:29:45.568326 130347945051648 backprop.py:1033] Calling GradientTape.gradient on a persistent tape inside its context is significantly less efficient than calling it outside the context (it causes the gradient ops to be recorded on the tape, leading to increased CPU and memory usage). Only call GradientTape.gradient inside the context if you actually want to trace the gradient in order to compute higher order derivatives.
+WARNING:tensorflow:Calling GradientTape.gradient on a persistent tape inside its context is significantly less efficient than calling it outside the context (it causes the gradient ops to be recorded on the tape, leading to increased CPU and memory usage). Only call GradientTape.gradient inside the context if you actually want to trace the gradient in order to compute higher order derivatives.
+W0121 09:29:45.586738 130347945051648 backprop.py:1033] Calling GradientTape.gradient on a persistent tape inside its context is significantly less efficient than calling it outside the context (it causes the gradient ops to be recorded on the tape, leading to increased CPU and memory usage). Only call GradientTape.gradient inside the context if you actually want to trace the gradient in order to compute higher order derivatives.
+ CE Loss: 0.484, Accuracy: 76.584%, AUC: 57.939%, DP: 0.01124,:   8%|███▊                                          | 2742/32561 [00:44<08:03, 61.70it/s]
+Step 100: Fairness/Task gradient ratio: 0.2528 (fairness: 0.122564, task: 0.484834)
+Step 200: Fairness/Task gradient ratio: 0.7386 (fairness: 0.099499, task: 0.134719)
+Step 300: Fairness/Task gradient ratio: 0.3784 (fairness: 0.094424, task: 0.249503)
+Step 400: Fairness/Task gradient ratio: 0.0850 (fairness: 0.089341, task: 1.050779)
+Step 500: Fairness/Task gradient ratio: 0.1856 (fairness: 0.090390, task: 0.487059)
+Step 600: Fairness/Task gradient ratio: 0.2093 (fairness: 0.088908, task: 0.424883)
+Step 700: Fairness/Task gradient ratio: 0.8891 (fairness: 0.083448, task: 0.093858)
+Step 800: Fairness/Task gradient ratio: 0.1016 (fairness: 0.081515, task: 0.802221)
+Step 900: Fairness/Task gradient ratio: 0.5592 (fairness: 0.082668, task: 0.147836)
+Step 1000: Fairness/Task gradient ratio: 0.1196 (fairness: 0.082590, task: 0.690441)
+Step 1100: Fairness/Task gradient ratio: 0.1160 (fairness: 0.082312, task: 0.709869)
+Step 1200: Fairness/Task gradient ratio: 0.2323 (fairness: 0.082280, task: 0.354212)
+Step 1300: Fairness/Task gradient ratio: 0.8962 (fairness: 0.082441, task: 0.091987)
+Step 1400: Fairness/Task gradient ratio: 0.0692 (fairness: 0.083007, task: 1.199581)
+Step 1500: Fairness/Task gradient ratio: 0.9412 (fairness: 0.082802, task: 0.087976)
+Step 1600: Fairness/Task gradient ratio: 0.3238 (fairness: 0.080694, task: 0.249212)
+Step 1700: Fairness/Task gradient ratio: 0.0968 (fairness: 0.080384, task: 0.830424)
+Step 1800: Fairness/Task gradient ratio: 0.1519 (fairness: 0.080497, task: 0.529939)
+Step 1900: Fairness/Task gradient ratio: 0.3315 (fairness: 0.080598, task: 0.243154)
+Step 2000: Fairness/Task gradient ratio: 0.1374 (fairness: 0.080766, task: 0.587920)
+Step 2100: Fairness/Task gradient ratio: 0.1257 (fairness: 0.080869, task: 0.643428)
+Step 2200: Fairness/Task gradient ratio: 0.1868 (fairness: 0.079391, task: 0.425009)
+Step 2300: Fairness/Task gradient ratio: 0.8065 (fairness: 0.078729, task: 0.097619)
+Step 2400: Fairness/Task gradient ratio: 0.2506 (fairness: 0.078395, task: 0.312781)
+Step 2500: Fairness/Task gradient ratio: 1.2908 (fairness: 0.078610, task: 0.060902)
+Step 2600: Fairness/Task gradient ratio: 0.0812 (fairness: 0.078614, task: 0.967804)
+Step 2700: Fairness/Task gradient ratio: 0.1133 (fairness: 0.078796, task: 0.695256)
