@@ -6,7 +6,7 @@ import tensorflow as tf
 import tqdm
 import wandb
 import utils
-
+from correlation_tracker import feature_correlation_tracker
 
 def train_online(
     model,
@@ -23,6 +23,9 @@ def train_online(
     constraint_type='node',
     gradient_type='vanilla',
     local_run=False,
+    use_correlation_penalty=True,
+    correlation_threshold=0.3,
+    penalty_aggression=2.0,
 ):
   """Online training function with node level fairness constraints.
   Args:
@@ -44,8 +47,16 @@ def train_online(
   Returns:
     DP:
     accuracies:
-  """
-  
+"""
+  correlation_tracker = feature_correlation_tracker(
+    num_features=data_dim,
+    ema_decay=0.99,
+    correlation_threshold=correlation_threshold,
+    penalty_base=1.0,
+    penalty_aggression=penalty_aggression,
+    warmup_samples=50,
+    penalty_decay=0.95,
+  ) if use_correlation_penalty else None
 
   
   
@@ -61,7 +72,6 @@ def train_online(
   # choose the optimizer and loss criteria
   optimizer = tf.keras.optimizers.Adam(learning_rate=2e-3)
   criteria = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
-  
   # to calculate the average accuracy over batches
   avg_accuracy = tf.keras.metrics.Accuracy()
   
@@ -71,9 +81,9 @@ def train_online(
   gradient_b_a0 = np.zeros([num_trees, num_internal_nodes])
   gradient_b_a1 = np.zeros([num_trees, num_internal_nodes])
   
-  # Accumulates node decisions for the protected groups
-  agg_y_a0 = tf.zeros([num_trees, num_internal_nodes], name='agg_Y0')
-  agg_y_a1 = tf.zeros([num_trees, num_internal_nodes], name='agg_Y1')
+  # Accumulates node decisions for the protected groups (use numpy for proper mutation)
+  agg_y_a0 = np.zeros([num_trees, num_internal_nodes])
+  agg_y_a1 = np.zeros([num_trees, num_internal_nodes])
 
   # avoid runtime error
   protected_class_count = collections.defaultdict(int)
@@ -87,11 +97,33 @@ def train_online(
   # hyperparameters
   huber_loss_delta = 0.01
 
+  # Collect all tree trainable variables for fairness gradients
+  # (model.layers is a Python list, so we need to manually collect)
+  all_tree_trainable_vars = []
+  for tree in model.layers:
+    all_tree_trainable_vars.extend(tree.trainable_variables)
+
   iterations = tqdm.tqdm(dataset)
-  for _, (
+  for step, (
       inputs_batch,
       targets_batch,
       protected_batch) in enumerate(iterations):
+    
+    if correlation_tracker is not None:
+      correlations, penalties = correlation_tracker.update(inputs_batch.numpy(), protected_batch.numpy())
+
+    if step % 500 == 0 and step > 0:
+      stats = correlation_tracker.get_stats()
+      corr_indices, corr_values = correlation_tracker.get_correlated_features(
+        return_correlations=True
+      )
+      if len(corr_indices) > 0:
+        print(
+          f"Step {step}: Correlated features with protected attribute: "
+          f"indices {corr_indices}, correlations {corr_values}"
+          f"max penalty {stats['penalties'].max():.4f}"
+        )
+
     with tf.GradientTape(persistent=True) as tape:
       # predictions: [batch_size, num_class]
       # y: [num_trees, batch_size, num_internal_nodes]
@@ -104,22 +136,36 @@ def train_online(
       y_predictions.extend(y_pred.numpy())
       dp, dp_sign = dp_function(
           y_predictions, protected_targets[: len(y_predictions)])
+      
+      demographic_parities.append(dp)
+      accuracies.append(avg_accuracy.result().numpy())
+      
       # update the average accuracy
       avg_accuracy.update_state(targets_batch, y_pred)
       avg_auc.update_state(targets_batch, y_pred)
       avg_loss.update_state(target_loss)
-      iterations.set_description(
+      desc=(
           f' CE Loss: {avg_loss.result():.3f},'
           f' Accuracy: { avg_accuracy.result():.3%},'
           f' AUC: {avg_auc.result():.3%},'
           f' DP: {dp:.5f},'
       )
+      if correlation_tracker is not None:
+        stats = correlation_tracker.get_stats()
+        desc += f' Corr: {stats["num_correlated"]}'
+      iterations.set_description(desc)
       results = {
           'CE loss': avg_loss.result(),
           'Accuracy': avg_accuracy.result(),
           'AUC': avg_auc.result(),
           'DP': dp,
       }
+
+      if correlation_tracker is not None:
+        stats = correlation_tracker.get_stats()
+        results['num_correlated_features'] = stats['num_correlated']
+        results['max_correlation'] = stats['correlations'].max()
+        results['mean_penalty'] = stats['penalties'].mean()
 
       if not local_run:
         wandb.log(results)
@@ -138,13 +184,14 @@ def train_online(
           protected_class_count[a_label] += 1
           # update the aggregate score based on protected label: A.
           if a_label == 0:
-            agg_y_a0 += node_decisions[:, i]
+            agg_y_a0 += node_decisions[:, i].numpy()
           elif a_label == 1:
-            agg_y_a1 += node_decisions[:, i]
+            agg_y_a1 += node_decisions[:, i].numpy()
           if constraint_type == 'node':
             # compute the gradients w.r.t. node-level decisions
+            # Use the collected trainable variables from all trees
             fair_gradients = tape.gradient(node_decisions[:, i],
-                                           model.layers.trainable_variables)
+                                           all_tree_trainable_vars)
           elif constraint_type == 'leaf':
             # compute the gradients w.r.t. final forest decisions
             fair_gradients = tape.gradient(
@@ -159,8 +206,8 @@ def train_online(
           for fair_grad in fair_gradients:
             if fair_grad is None:
               continue
-            if len(fair_grad.shape) == 1:
-              # selected parameter B: bias
+            if len(fair_grad.shape) == 1 and fair_grad.shape[0] == num_internal_nodes:
+              # selected parameter B: bias (shape: [num_internal_nodes])
               # select the group to be updated
               gradient_theta = gradient_b_a0 if a_label == 0 else gradient_b_a1
               idx_b += 1
@@ -198,6 +245,8 @@ def train_online(
               )
         # safety check
         if protected_class_count[0] == 0 or protected_class_count[1] == 0:
+          # Still apply task gradients when one group is missing
+          optimizer.apply_gradients(zip(gradients, model.trainable_variables))
           continue
         if gradient_type == 'ema':
           # enable correction factors
@@ -212,18 +261,25 @@ def train_online(
         total_gradients = []
         idx_b = 0
         idx_w = 0
+        if correlation_tracker is not None:
+          # apply correlation penalties to gradients
+          penalty_factors = correlation_tracker.get_penalty_weights(as_tensor=False)
+        else:
+          penalty_factors = np.ones(data_dim)
         # iterate over all task gradients and add the fairness term
         for idx, grad in enumerate(gradients):
           tree_id = idx // 3 # 3 set of parameters per tree, (W, B, \bf \Theta)
           
           # compute sign(E_{x~1}[n_i] - E_{x~0}[n_i]) for tree_id-th tree
-          F = agg_y_a1[tree_id] / protected_class_count[1]- agg_y_a0[tree_id] / protected_class_count[0]
+          F = agg_y_a1[tree_id] / protected_class_count[1] - agg_y_a0[tree_id] / protected_class_count[0]
+          F = tf.convert_to_tensor(F, dtype=tf.float32)
+          
           if constraint_type == 'node':
             signs_y = tf.math.sign(F - huber_loss_delta/2)
           else:
             signs_y = dp_sign
           
-          if len(grad.shape) == 1:
+          if len(grad.shape) == 1 and grad.shape[0] == num_internal_nodes:
             # bias parameter selection: B
             # compute: (E_{x~1}[dn_i/dB] - E_{x~0}[dn_i/dB])
             grad_b_diff = tf.convert_to_tensor(
@@ -253,6 +309,11 @@ def train_online(
             huber_abs = tf.multiply(tf.multiply(1-huber_check, signs_y), grad_w_diff)
 
             grad_w = lambda_const * (huber_quadratic + huber_abs)
+
+            if correlation_tracker is not None:
+              penalty_matrix = tf.constant(penalty_factors[:, np.newaxis], dtype=tf.float32)
+              grad_w = grad_w * penalty_matrix
+
             total_gradients.append(grad + grad_w)
             idx_w = idx_w + 1
           else:
