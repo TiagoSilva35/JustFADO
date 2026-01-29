@@ -47,6 +47,14 @@ flags.DEFINE_float('probability', 0.5,
 flags.DEFINE_string('encoder_model', 'instructor', '[bert, instructor]')
 flags.DEFINE_integer('reservoir_size', 100, 'size of reservoir.')
 flags.DEFINE_string('offline_loss_type', 'mmd', '[mmd, l2, l1]')
+flags.DEFINE_bool('use_correlation_penalty', True, 
+                  'Whether to use dynamic correlation-based penalties.')
+flags.DEFINE_float('correlation_threshold', 0.3,
+                   'Threshold for marking features as correlated.')
+flags.DEFINE_float('penalty_aggression', 2.0,
+                   'How aggressively to penalize correlated features.')
+
+
 
 FLAGS = flags.FLAGS
 
@@ -70,6 +78,9 @@ def train(
     reservoir_size=100,
     offline_loss_type='mmd',
     local_run=False,
+    use_correlation_penalty=True,
+    correlation_threshold=0.3,
+    penalty_aggression=2.0,
 ):
   """Training function.
 
@@ -131,9 +142,11 @@ def train(
           data_dim=data_dim,
           tree_depth=depth,
           num_classes=num_class,
-          activation=activation,
+          activation='relu',  
           use_layer_norm=True,
-          dropout_rate=0.0
+          dropout_rate=0.0,  
+          num_layers=2,
+          hidden_multiplier=2,  
       )
     elif model_type == 'ht':
       model = HoeffdingTree()
@@ -178,6 +191,9 @@ def train(
           constraint_type=constraint_type,
           gradient_type=gradient_type,
           local_run=local_run,
+          use_correlation_penalty=use_correlation_penalty,
+          correlation_threshold=correlation_threshold,
+          penalty_aggression=penalty_aggression,
       )
     elif mode == 'majority':
         train_func = majority.train_online

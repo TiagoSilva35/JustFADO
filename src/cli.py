@@ -40,6 +40,7 @@ def main(_):
       encoder_model=config.encoder_model,
       reservoir_size=config.reservoir_size,
       offline_loss_type=config.offline_loss_type,
+
   )
   run.finish()
 

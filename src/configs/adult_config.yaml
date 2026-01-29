@@ -3,8 +3,7 @@ method: grid
 name: sweep
 parameters:
   lambda_const: 
-    values: [0.5, 1.0, 10.0, 50.0, 100.0, 200.0] 
-    #values: [0.1, 0.3, 0.5, 1.0, 10.]
+    values: [0.0, 0.1, 0.5, 1.0, 5., 10.]
   dataset:
     values: ['adult']
   mode:
@@ -22,7 +21,7 @@ parameters:
   activation:
     values: ['sigmoid']
   model_type:
-    values: ['mlp']
+    values: ['forest']
   compute_mode:
     values: ['default']
   base_gamma: 
