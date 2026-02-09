@@ -40,6 +40,9 @@ def main(_):
       encoder_model=config.encoder_model,
       reservoir_size=config.reservoir_size,
       offline_loss_type=config.offline_loss_type,
+      use_correlation_penalty=config.use_correlation_penalty,
+      correlation_threshold=config.correlation_threshold,
+      penalty_aggression=config.penalty_aggression,
 
   )
   run.finish()
