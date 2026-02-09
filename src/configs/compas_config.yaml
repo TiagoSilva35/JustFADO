@@ -3,7 +3,7 @@ method: grid
 name: sweep
 parameters:
   lambda_const: 
-    values: [0.0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.08, 0.09, 0.1, 0.3, 0.5, 1.0, 5., 10., 100]
+    values: [0.0, 0.1, 0.5, 1.0, 5.0, 10.0]
   dataset:
     values: ['compas']
   mode:
@@ -38,3 +38,9 @@ parameters:
     values: [500]
   offline_loss_type:
     values: ['mmd']
+  use_correlation_penalty:
+    values: [True, False]
+  correlation_threshold:
+    values: [0.2]
+  penalty_aggression:
+    values: [2.0]

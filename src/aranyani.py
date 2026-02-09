@@ -91,6 +91,7 @@ def train_online(
   avg_loss = tf.keras.metrics.Mean()
   avg_auc = tf.keras.metrics.AUC()
   y_predictions = []
+  y_true_all = []  # Track all true labels for confusion matrix
   demographic_parities = []
   accuracies = []
 
@@ -112,7 +113,7 @@ def train_online(
     if correlation_tracker is not None:
       correlations, penalties = correlation_tracker.update(inputs_batch.numpy(), protected_batch.numpy())
 
-    if step % 500 == 0 and step > 0:
+    if step % 500 == 0 and step > 0 and correlation_tracker is not None:
       stats = correlation_tracker.get_stats()
       corr_indices, corr_values = correlation_tracker.get_correlated_features(
         return_correlations=True
@@ -134,6 +135,7 @@ def train_online(
       target_loss = criteria(y_true=targets_batch, y_pred=predictions)
       # get demographic parity scores
       y_predictions.extend(y_pred.numpy())
+      y_true_all.extend(targets_batch.numpy())  # Track true labels
       dp, dp_sign = dp_function(
           y_predictions, protected_targets[: len(y_predictions)])
       
@@ -321,4 +323,26 @@ def train_online(
             total_gradients.append(grad)
         total_gradients = tuple(total_gradients)
       optimizer.apply_gradients(zip(total_gradients, model.trainable_variables))
+  
+  # Compute and display final confusion matrix using utility function
+  y_true_array = np.array(y_true_all)
+  y_pred_array = np.array(y_predictions)
+  
+  cm = utils.display_confusion_matrix(
+      y_true_array, 
+      y_pred_array,
+      save_path='files/train_confusion_matrix.png',
+      title='Training Set Final Confusion Matrix',
+      log_to_wandb=(not local_run),
+      wandb_module=wandb if not local_run else None
+  )
+  
+  # Log additional final metrics to wandb
+  if not local_run:
+    wandb.log({
+      "final_accuracy": avg_accuracy.result().numpy(),
+      "final_auc": avg_auc.result().numpy(),
+      "final_dp": dp,
+    })
+  
   return demographic_parities, accuracies
