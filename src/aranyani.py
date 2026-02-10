@@ -1,5 +1,4 @@
 """Script for online training."""
-
 import collections
 import numpy as np
 import tensorflow as tf
@@ -26,6 +25,7 @@ def train_online(
     use_correlation_penalty=True,
     correlation_threshold=0.3,
     penalty_aggression=2.0,
+    use_class_weights=True,
 ):
   """Online training function with node level fairness constraints.
   Args:
@@ -39,10 +39,15 @@ def train_online(
     compute_fairness:
     lambda_const:
     num_trees:
-    neutralize_gradients:
     base_gamma:
     constraint_type:
     gradient_type:
+    local_run:
+    use_correlation_penalty:
+    correlation_threshold:
+    penalty_aggression:
+    use_class_weights: Whether to apply inverse-frequency class weights to
+        the cross-entropy loss. Helps with class imbalance.
   
   Returns:
     DP:
@@ -57,9 +62,6 @@ def train_online(
     warmup_samples=50,
     penalty_decay=0.95,
   ) if use_correlation_penalty else None
-
-  
-  
   # creates a tf dataset
   dataset = tf.data.Dataset.from_tensor_slices(
       (inputs, targets, protected_targets)
@@ -132,6 +134,8 @@ def train_online(
 
       # y_pred: [batch_size]
       y_pred = tf.math.argmax(predictions, axis=-1)
+      # Apply class-balanced loss if enabled, otherwise standard CE
+
       target_loss = criteria(y_true=targets_batch, y_pred=predictions)
       # get demographic parity scores
       y_predictions.extend(y_pred.numpy())

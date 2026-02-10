@@ -38,3 +38,11 @@ parameters:
     values: [500]
   offline_loss_type:
     values: ['mmd']
+  use_correlation_penalty:
+    values: [False]
+  correlation_threshold:
+    values: [0.2]
+  penalty_aggression:
+    values: [2.0]
+  use_class_weights:
+    values: [False]
