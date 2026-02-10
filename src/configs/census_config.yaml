@@ -44,3 +44,5 @@ parameters:
     values: [0.2]
   penalty_aggression:
     values: [2.0]
+  use_class_weights:
+    values: [False]

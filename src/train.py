@@ -47,12 +47,14 @@ flags.DEFINE_float('probability', 0.5,
 flags.DEFINE_string('encoder_model', 'instructor', '[bert, instructor]')
 flags.DEFINE_integer('reservoir_size', 100, 'size of reservoir.')
 flags.DEFINE_string('offline_loss_type', 'mmd', '[mmd, l2, l1]')
-flags.DEFINE_bool('use_correlation_penalty', True, 
+flags.DEFINE_bool('use_correlation_penalty', False, 
                   'Whether to use dynamic correlation-based penalties.')
 flags.DEFINE_float('correlation_threshold', 0.3,
                    'Threshold for marking features as correlated.')
 flags.DEFINE_float('penalty_aggression', 2.0,
                    'How aggressively to penalize correlated features.')
+flags.DEFINE_bool('use_class_weights', False,
+                  'Whether to apply inverse-frequency class weights to the loss.')
 
 
 
@@ -78,9 +80,10 @@ def train(
     reservoir_size=100,
     offline_loss_type='mmd',
     local_run=False,
-    use_correlation_penalty=True,
+    use_correlation_penalty=False,
     correlation_threshold=0.3,
     penalty_aggression=2.0,
+    use_class_weights=False,
 ):
   """Training function.
 
@@ -175,7 +178,8 @@ def train(
 
     if mode == 'node' and model_type == 'forest':
       train_func = aranyani.train_online
-      
+      use_correlation_penalty = False
+      print(f"correlation is being used: {use_correlation_penalty}")
       dp, accuracies = train_func(
           model,
           x_train,
@@ -194,6 +198,7 @@ def train(
           use_correlation_penalty=use_correlation_penalty,
           correlation_threshold=correlation_threshold,
           penalty_aggression=penalty_aggression,
+          use_class_weights=use_class_weights,
       )
     elif mode == 'majority':
         train_func = majority.train_online

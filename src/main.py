@@ -23,6 +23,10 @@ def main(_):
       reservoir_size=FLAGS.reservoir_size,
       offline_loss_type=FLAGS.offline_loss_type,
       local_run=True,
+      use_correlation_penalty=FLAGS.use_correlation_penalty,
+      correlation_threshold=FLAGS.correlation_threshold,
+      penalty_aggression=FLAGS.penalty_aggression,
+      use_class_weights=FLAGS.use_class_weights,
   )
 
 if __name__ == '__main__':
