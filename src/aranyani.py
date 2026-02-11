@@ -6,6 +6,7 @@ import tqdm
 import wandb
 import utils
 from correlation_tracker import feature_correlation_tracker
+from weight_monitor import ClassWeightMonitor
 
 def train_online(
     model,
@@ -62,6 +63,14 @@ def train_online(
     warmup_samples=50,
     penalty_decay=0.95,
   ) if use_correlation_penalty else None
+
+  weight_updater = ClassWeightMonitor(
+    total_num_samples=0,
+    num_classes=2,
+    alpha=1.0,
+    _lambda=1.0,
+  )
+  print("weight updater enabled:", weight_updater is not None)
   # creates a tf dataset
   dataset = tf.data.Dataset.from_tensor_slices(
       (inputs, targets, protected_targets)
@@ -111,7 +120,7 @@ def train_online(
       inputs_batch,
       targets_batch,
       protected_batch) in enumerate(iterations):
-    
+    print(f"Step {step}: Starting training step with input batch shape {inputs_batch.shape}")
     if correlation_tracker is not None:
       correlations, penalties = correlation_tracker.update(inputs_batch.numpy(), protected_batch.numpy())
 
@@ -136,7 +145,14 @@ def train_online(
       y_pred = tf.math.argmax(predictions, axis=-1)
       # Apply class-balanced loss if enabled, otherwise standard CE
 
-      target_loss = criteria(y_true=targets_batch, y_pred=predictions)
+      if weight_updater is None:
+        target_loss = criteria(y_true=targets_batch, y_pred=predictions)
+      else:
+        weight_updater.update_weights(sample_label=targets_batch.numpy()[0])
+        class_weights = tf.gather(weight_updater.class_weights, targets_batch)
+        target_loss = criteria(y_true=targets_batch, y_pred=predictions, sample_weight=class_weights)
+        weight_updater.total_num_samples += 1
+        weight_updater.get_stats()
       # get demographic parity scores
       y_predictions.extend(y_pred.numpy())
       y_true_all.extend(targets_batch.numpy())  # Track true labels
