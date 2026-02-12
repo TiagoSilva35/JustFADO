@@ -38,12 +38,20 @@ class FairDecisionForest(tf.Module):
     all_predictions = []
     all_node_decisions = []
     for layer in self.layers:
-      prediction, node_decisions, _ = layer(inputs, training=training)
-      all_predictions.append(prediction)
-      all_node_decisions.append(node_decisions)
+      if training:
+        # During training, we want to collect predictions and node decisions
+        prediction, node_decisions, _ = layer(inputs, training=training)
+        all_predictions.append(prediction)
+        all_node_decisions.append(node_decisions)
+      else:
+        # During inference, we only want the final prediction
+        prediction = layer(inputs, training=training)
+        all_predictions.append(prediction)
 
     final_prediction = tf.reduce_mean(tf.stack(all_predictions), axis=0)
-    all_node_decisions = tf.stack(all_node_decisions, axis=0)
+
     if training:
+      all_node_decisions = tf.stack(all_node_decisions, axis=0)
       return final_prediction, all_node_decisions
-    return tf.nn.softmax(final_prediction, axis=-1)
+    
+    return final_prediction

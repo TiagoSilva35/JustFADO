@@ -145,35 +145,47 @@ def get_demographic_parity(y_predictions, y_protected):
   return demographic_parity, np.copysign(1, raw_diff)
 
 
-def get_test_performance(model, x_test, y_test, a_test, data_dim=13, 
+def get_test_performance(model, x_test, y_test, a_test, data_dim,
                         show_confusion_matrix=True):
-  """Test performance.
-
-  Args:
-    model:
-    x_test:
-    y_test:
-    a_test:
-    data_dim:
-    show_confusion_matrix: Whether to display confusion matrix.
-  """
   accuracy = tf.keras.metrics.Accuracy()
+  auc = tf.keras.metrics.AUC()
 
   y_true = tf.convert_to_tensor(np.array(y_test))
-  y_pred = tf.math.argmax(
-      model(
-          tf.convert_to_tensor(
-              np.array(x_test, dtype=np.float32).reshape(-1, data_dim)
-          )
+  
+  # Get probabilities from model
+  y_probs = model(
+      tf.convert_to_tensor(
+          np.array(x_test, dtype=np.float32).reshape(-1, data_dim)
       ),
-      axis=-1,
+      training=False  
   )
+  
+  # Get predicted classes for accuracy
+  y_pred = tf.math.argmax(y_probs, axis=-1)
 
   accuracy.update_state(y_true, y_pred)
-  print(f'Test Accuracy: {accuracy.result():.3f}')
-
+  acc = accuracy.result().numpy()
+  
+  # AUC needs probabilities of the positive class (class 1)
+  auc.update_state(y_true, y_probs[:, 1])
+  auc_value = auc.result().numpy()
+  
   dp, _ = get_demographic_parity(y_pred, a_test)
+  
+  # Calculate true sensitivity (recall): TP / (TP + FN)
+  y_true_np = y_true.numpy()
+  y_pred_np = y_pred.numpy()
+  actual_positives = (y_true_np == 1)
+  
+  if np.sum(actual_positives) > 0:
+    sensitivity = np.mean(y_pred_np[actual_positives])
+  else:
+    sensitivity = 0.0
+  
+  print(f'Test Accuracy: {acc:.3f}')
+  print(f'Test Sensitivity: {sensitivity:.3f}')
   print(f'Test DP: {dp:.3f}')
+  print(f'Test AUC: {auc_value:.3f}')
   
   # Display confusion matrix if requested
   if show_confusion_matrix:
@@ -183,6 +195,8 @@ def get_test_performance(model, x_test, y_test, a_test, data_dim=13,
         save_path='files/test_confusion_matrix.png',
         title='Test Set Confusion Matrix'
     )
+
+  return {'accuracy': float(acc), 'dp': float(dp), 'sensitivity': float(sensitivity), 'auc': float(auc_value)}
 
 
 def gauss_kernel(x1, x2, beta=1.0):
@@ -218,3 +232,14 @@ def maximum_mean_discrepancy(x, y, kernel_scale=1.0):
       tf.reduce_mean(k_xx) - 2.0 * tf.reduce_mean(k_xy) + tf.reduce_mean(k_yy)
   )
   return mmd_loss
+
+def aggregate_fold_results(fold_results):
+    """Aggregate metrics across folds."""
+    return {
+        'mean_train_accuracy': np.mean([f['train_accuracies'][-1] for f in fold_results]),
+        'std_train_accuracy': np.std([f['train_accuracies'][-1] for f in fold_results]),
+        'mean_val_accuracy': np.mean([f['val_metrics']['accuracy'] for f in fold_results]),
+        'std_val_accuracy': np.std([f['val_metrics']['accuracy'] for f in fold_results]),
+        'mean_val_dp': np.mean([f['val_metrics']['dp'] for f in fold_results]),
+        'std_val_dp': np.std([f['val_metrics']['dp'] for f in fold_results]),
+    }
