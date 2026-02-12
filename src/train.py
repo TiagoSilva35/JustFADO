@@ -20,6 +20,7 @@ import hoeffding_tree
 
 from skmultiflow.trees import HoeffdingTree
 from skmultiflow.trees import HoeffdingAdaptiveTreeClassifier
+from sklearn.model_selection import TimeSeriesSplit
 
 import utils
 import clip_forest
@@ -65,7 +66,7 @@ def train(
     dataset='civil',
     lambda_const=1,
     model_type='forest',
-    max_iter=3,
+    max_iter=1,
     depth=4,
     num_trees=3,
     compute_fairness=True,
@@ -85,28 +86,6 @@ def train(
     penalty_aggression=2.0,
     use_class_weights=False,
 ):
-  """Training function.
-
-  Args:
-    mode:
-    dataset:
-    lambda_const:
-    model_type:
-    max_iter:
-    depth:
-    num_trees:
-    compute_fairness:
-    batch_size:
-    activation:
-    compute_mode:
-    base_gamma:
-    constraint_type:
-    gradient_type:
-    probability:
-
-  Returns:
-
-  """
 
   all_dps = []
   all_accuracies = []
@@ -135,38 +114,50 @@ def train(
   else:
     x_train, y_train, a_train = [], [], []
 
+
   base_dp, _ = utils.get_demographic_parity(y_train, a_train)
   print(f'DP in the original dataset: {base_dp}')
 
-  for _ in range(max_iter):
-    model = None
-    if model_type == 'mlp':
-      model = mlp.FairReLUNetwork(
-          data_dim=data_dim,
-          tree_depth=depth,
-          num_classes=num_class,
-          activation='relu',  
-          use_layer_norm=True,
-          dropout_rate=0.0,  
-          num_layers=2,
-          hidden_multiplier=2,  
-      )
-    elif model_type == 'ht':
-      model = HoeffdingTree()
-
-    elif model_type == 'aht':
-      model = HoeffdingAdaptiveTreeClassifier()
-
-    elif model_type == 'forest':
-      model = forest.FairDecisionForest(
-          num_trees=num_trees,
-          data_dim=data_dim,
-          tree_depth=depth,
-          num_classes=num_class,
-          activation=activation,
-          compute_mode=compute_mode,
-      )
-      if dataset in ['celeba']:
+  tscv = TimeSeriesSplit(n_splits=5)
+  fold_results = []
+  for fold_idx, (train_idx, val_idx) in enumerate(tscv.split(x_train)):
+    print(f"\n{'='*80}")
+    print(f"Fold {fold_idx + 1}/5")
+    print(f"{'='*80}\n")
+    x_train_fold = x_train[train_idx]
+    y_train_fold = y_train[train_idx]
+    a_train_fold = a_train[train_idx]
+    x_val_fold = x_train[val_idx]
+    y_val_fold = y_train[val_idx]
+    a_val_fold = a_train[val_idx]
+    for _ in range(max_iter):
+      # Create a fresh model for each iteration
+      model = None
+      if model_type == 'mlp':
+        model = mlp.FairReLUNetwork(
+            data_dim=data_dim,
+            tree_depth=depth,
+            num_classes=num_class,
+            activation='relu',
+            use_layer_norm=True,
+            dropout_rate=0.0,
+            num_layers=2,
+            hidden_multiplier=2,
+        )
+      elif model_type == 'ht':
+        model = HoeffdingTree()
+      elif model_type == 'aht':
+        model = HoeffdingAdaptiveTreeClassifier()
+      elif model_type == 'forest':
+        model = forest.FairDecisionForest(
+            num_trees=num_trees,
+            data_dim=data_dim,
+            tree_depth=depth,
+            num_classes=num_class,
+            activation=activation,
+            compute_mode=compute_mode,
+        )
+        if dataset in ['celeba']:
           model = clip_forest.FairCLIPDecisionForest(
               num_trees=num_trees,
               data_dim=data_dim,
@@ -176,84 +167,110 @@ def train(
               compute_mode=compute_mode,
           )
 
-    if mode == 'node' and model_type == 'forest':
-      train_func = aranyani.train_online
-      use_correlation_penalty = False
-      print(f"correlation is being used: {use_correlation_penalty}")
-      dp, accuracies = train_func(
-          model,
-          x_train,
-          y_train,
-          a_train,
-          data_dim=data_dim,
-          batch_size=batch_size,
-          tree_depth=depth,
-          compute_fairness=compute_fairness,
-          lambda_const=lambda_const,
-          num_trees=num_trees,
-          base_gamma=base_gamma,
-          constraint_type=constraint_type,
-          gradient_type=gradient_type,
-          local_run=local_run,
-          use_correlation_penalty=use_correlation_penalty,
-          correlation_threshold=correlation_threshold,
-          penalty_aggression=penalty_aggression,
-          use_class_weights=use_class_weights,
-      )
-    elif mode == 'majority':
+      # Train on fold data
+      if mode == 'node' and model_type == 'forest':
+        train_func = aranyani.train_online
+        use_correlation_penalty = False
+        print(f"  correlation is being used: {use_correlation_penalty}")
+        dp, accuracies = train_func(
+            model,
+            x_train_fold,
+            y_train_fold,
+            a_train_fold,
+            data_dim=data_dim,
+            batch_size=batch_size,
+            tree_depth=depth,
+            compute_fairness=compute_fairness,
+            lambda_const=lambda_const,
+            num_trees=num_trees,
+            base_gamma=base_gamma,
+            constraint_type=constraint_type,
+            gradient_type=gradient_type,
+            local_run=local_run,
+            use_correlation_penalty=use_correlation_penalty,
+            correlation_threshold=correlation_threshold,
+            penalty_aggression=penalty_aggression,
+            use_class_weights=use_class_weights,
+        )
+      elif mode == 'majority':
         train_func = majority.train_online
         dp, accuracies = train_func(
             model,
-            x_train,
-            y_train,
-            a_train,
+            x_train_fold,
+            y_train_fold,
+            a_train_fold,
             batch_size=batch_size,
             probability=probability,
             local_run=local_run,
         )
-    elif model_type == 'mlp':
+      elif model_type == 'mlp':
         dp, accuracies = mlp_trainer.train_online(
-          model,
-          x_train,
-          y_train,
-          a_train,
-          data_dim=data_dim,
-          batch_size=batch_size,
-          tree_depth=depth,
-          compute_fairness=compute_fairness,
-          lambda_const=lambda_const,
-          num_trees=num_trees,
-          base_gamma=base_gamma,
-          constraint_type=constraint_type,
-          gradient_type=gradient_type,
-          local_run=local_run
-      )
-    elif model_type in ['ht', 'aht']:
-      dp, accuracies = hoeffding_tree.train_online(
-        model,
-        x_train,
-        y_train,
-        a_train,
-        batch_size=batch_size,
-        local_run=local_run,
-        label_type = 'categorical',
-      )
-    elif mode == 'reservoir':
-      dp, accuracies = reservoir.train_online(
-        model,
-        x_train,
-        y_train,
-        a_train,
-        batch_size=batch_size,
-        tree_depth=depth,
-        compute_fairness=compute_fairness,
-        lambda_const=lambda_const,
-        reservoir_size=reservoir_size,
-        local_run=local_run,)
-    else:
-      dp, accuracies = [], []
+            model,
+            x_train_fold,
+            y_train_fold,
+            a_train_fold,
+            data_dim=data_dim,
+            batch_size=batch_size,
+            tree_depth=depth,
+            compute_fairness=compute_fairness,
+            lambda_const=lambda_const,
+            num_trees=num_trees,
+            base_gamma=base_gamma,
+            constraint_type=constraint_type,
+            gradient_type=gradient_type,
+            local_run=local_run,
+        )
+      elif model_type in ['ht', 'aht']:
+        dp, accuracies = hoeffding_tree.train_online(
+            model,
+            x_train_fold,
+            y_train_fold,
+            a_train_fold,
+            batch_size=batch_size,
+            local_run=local_run,
+            label_type='categorical',
+        )
+      elif mode == 'reservoir':
+        dp, accuracies = reservoir.train_online(
+            model,
+            x_train_fold,
+            y_train_fold,
+            a_train_fold,
+            batch_size=batch_size,
+            tree_depth=depth,
+            compute_fairness=compute_fairness,
+            lambda_const=lambda_const,
+            reservoir_size=reservoir_size,
+            local_run=local_run,
+        )
+      else:
+        dp, accuracies = [], []
 
-    all_dps.append(dp)
-    all_accuracies.append(accuracies)
+      all_dps.append(dp)
+      all_accuracies.append(accuracies)
+
+    val_metrics = utils.get_test_performance(
+        model, x_val_fold, y_val_fold, a_val_fold,
+        data_dim=data_dim, show_confusion_matrix=True,
+    )
+
+    fold_results.append({
+        'fold': fold_idx + 1,
+        'train_dp': dp,
+        'train_accuracies': accuracies,
+        'val_metrics': val_metrics,
+    })
+
     del model
+
+  avg_metrics = utils.aggregate_fold_results(fold_results)
+
+  print(f"\n{'='*80}")
+  print("Cross-Validation Results:")
+  print(f"  Mean Val Accuracy: {avg_metrics['mean_val_accuracy']:.4f} +/- {avg_metrics['std_val_accuracy']:.4f}")
+  print(f"  Mean Val DP: {avg_metrics['mean_val_dp']:.4f} +/- {avg_metrics['std_val_dp']:.4f}")
+  print(f"  Mean Val AUC: {avg_metrics['mean_val_auc']:.4f} +/- {avg_metrics['std_val_auc']:.4f}")
+  print(f"  Mean Val Sensitivity: {avg_metrics['mean_val_sensitivity']:.4f} +/- {avg_metrics['std_val_sensitivity']:.4f}")
+  print(f"{'='*80}\n")
+
   return all_dps, all_accuracies

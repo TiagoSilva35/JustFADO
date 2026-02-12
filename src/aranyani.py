@@ -5,7 +5,6 @@ import tensorflow as tf
 import tqdm
 import wandb
 import utils
-from correlation_tracker import feature_correlation_tracker
 from weight_monitor import ClassWeightMonitor
 
 def train_online(
@@ -28,48 +27,13 @@ def train_online(
     penalty_aggression=2.0,
     use_class_weights=True,
 ):
-  """Online training function with node level fairness constraints.
-  Args:
-    model:
-    inputs:
-    targets:
-    protected_targets:
-    data_dim:
-    batch_size:
-    tree_depth:
-    compute_fairness:
-    lambda_const:
-    num_trees:
-    base_gamma:
-    constraint_type:
-    gradient_type:
-    local_run:
-    use_correlation_penalty:
-    correlation_threshold:
-    penalty_aggression:
-    use_class_weights: Whether to apply inverse-frequency class weights to
-        the cross-entropy loss. Helps with class imbalance.
-  
-  Returns:
-    DP:
-    accuracies:
-"""
-  correlation_tracker = feature_correlation_tracker(
-    num_features=data_dim,
-    ema_decay=0.99,
-    correlation_threshold=correlation_threshold,
-    penalty_base=1.0,
-    penalty_aggression=penalty_aggression,
-    warmup_samples=50,
-    penalty_decay=0.95,
-  ) if use_correlation_penalty else None
-
   weight_updater = ClassWeightMonitor(
     total_num_samples=0,
     num_classes=2,
     alpha=1.0,
     _lambda=1.0,
   )
+  weight_updater = None
   print("weight updater enabled:", weight_updater is not None)
   # creates a tf dataset
   dataset = tf.data.Dataset.from_tensor_slices(
@@ -120,22 +84,6 @@ def train_online(
       inputs_batch,
       targets_batch,
       protected_batch) in enumerate(iterations):
-    print(f"Step {step}: Starting training step with input batch shape {inputs_batch.shape}")
-    if correlation_tracker is not None:
-      correlations, penalties = correlation_tracker.update(inputs_batch.numpy(), protected_batch.numpy())
-
-    if step % 500 == 0 and step > 0 and correlation_tracker is not None:
-      stats = correlation_tracker.get_stats()
-      corr_indices, corr_values = correlation_tracker.get_correlated_features(
-        return_correlations=True
-      )
-      if len(corr_indices) > 0:
-        print(
-          f"Step {step}: Correlated features with protected attribute: "
-          f"indices {corr_indices}, correlations {corr_values}"
-          f"max penalty {stats['penalties'].max():.4f}"
-        )
-
     with tf.GradientTape(persistent=True) as tape:
       # predictions: [batch_size, num_class]
       # y: [num_trees, batch_size, num_internal_nodes]
@@ -152,7 +100,7 @@ def train_online(
         class_weights = tf.gather(weight_updater.class_weights, targets_batch)
         target_loss = criteria(y_true=targets_batch, y_pred=predictions, sample_weight=class_weights)
         weight_updater.total_num_samples += 1
-        weight_updater.get_stats()
+        # weight_updater.get_stats()
       # get demographic parity scores
       y_predictions.extend(y_pred.numpy())
       y_true_all.extend(targets_batch.numpy())  # Track true labels
@@ -166,29 +114,18 @@ def train_online(
       avg_accuracy.update_state(targets_batch, y_pred)
       avg_auc.update_state(targets_batch, y_pred)
       avg_loss.update_state(target_loss)
-      desc=(
+      iterations.set_description(
           f' CE Loss: {avg_loss.result():.3f},'
           f' Accuracy: { avg_accuracy.result():.3%},'
           f' AUC: {avg_auc.result():.3%},'
           f' DP: {dp:.5f},'
       )
-      if correlation_tracker is not None:
-        stats = correlation_tracker.get_stats()
-        desc += f' Corr: {stats["num_correlated"]}'
-      iterations.set_description(desc)
       results = {
-          'CE loss': avg_loss.result(),
-          'Accuracy': avg_accuracy.result(),
-          'AUC': avg_auc.result(),
-          'DP': dp,
+        f' CE Loss: {avg_loss.result():.3f},'
+        f' Accuracy: { avg_accuracy.result():.3%},'
+        f' AUC: {avg_auc.result():.3%},'
+        f' DP: {dp:.5f},'
       }
-
-      if correlation_tracker is not None:
-        stats = correlation_tracker.get_stats()
-        results['num_correlated_features'] = stats['num_correlated']
-        results['max_correlation'] = stats['correlations'].max()
-        results['mean_penalty'] = stats['penalties'].mean()
-
       if not local_run:
         wandb.log(results)
 
@@ -283,11 +220,8 @@ def train_online(
         total_gradients = []
         idx_b = 0
         idx_w = 0
-        if correlation_tracker is not None:
-          # apply correlation penalties to gradients
-          penalty_factors = correlation_tracker.get_penalty_weights(as_tensor=False)
-        else:
-          penalty_factors = np.ones(data_dim)
+
+        penalty_factors = np.ones(data_dim)
         # iterate over all task gradients and add the fairness term
         for idx, grad in enumerate(gradients):
           tree_id = idx // 3 # 3 set of parameters per tree, (W, B, \bf \Theta)
@@ -331,11 +265,6 @@ def train_online(
             huber_abs = tf.multiply(tf.multiply(1-huber_check, signs_y), grad_w_diff)
 
             grad_w = lambda_const * (huber_quadratic + huber_abs)
-
-            if correlation_tracker is not None:
-              penalty_matrix = tf.constant(penalty_factors[:, np.newaxis], dtype=tf.float32)
-              grad_w = grad_w * penalty_matrix
-
             total_gradients.append(grad + grad_w)
             idx_w = idx_w + 1
           else:
