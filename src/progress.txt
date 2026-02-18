@@ -1,0 +1,26 @@
+Lambda = 1.0 (fairness constraint) lambda (weight monitor) = 1, alpha = 1
+Weight updater on:
+    Cross-Validation Results:
+        Mean Val Accuracy: 0.7657 +/- 0.0313
+        Mean Val DP: 0.1158 +/- 0.0804
+        Mean Val AUC: 0.8427 +/- 0.0367
+        Mean Val Sensitivity: 0.7363 +/- 0.0644
+        Mean Val F1-Score: 0.6019 +/- 0.0521
+Weight updater off:
+    Cross-Validation Results:
+        Mean Val Accuracy: 0.8181 +/- 0.0158
+        Mean Val DP: 0.0885 +/- 0.0467
+        Mean Val AUC: 0.8460 +/- 0.0336
+        Mean Val Sensitivity: 0.3920 +/- 0.1134
+        Mean Val F1-Score: 0.4983 +/- 0.1061
+
+Lambda = 1.0 (fairness constraint) lambda (weight monitor) = 0.99 alpha = 1
+Cross-Validation Results:
+  Mean Val Accuracy: 0.7528 +/- 0.0362
+  Mean Val DP: 0.1102 +/- 0.0602
+  Mean Val AUC: 0.8378 +/- 0.0409
+  Mean Val Sensitivity: 0.7602 +/- 0.0424
+  Mean Val F1-Score: 0.5978 +/- 0.0490
+
+
+

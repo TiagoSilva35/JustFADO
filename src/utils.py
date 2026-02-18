@@ -144,6 +144,37 @@ def get_demographic_parity(y_predictions, y_protected):
   demographic_parity = np.abs(raw_diff)
   return demographic_parity, np.copysign(1, raw_diff)
 
+def get_equalized_odds(y_predictions, y_protected, y_true):
+  predictions = np.array(y_predictions)
+  protected_group = np.array(y_protected)
+  true_labels = np.array(y_true)
+
+  mask_p1 = (protected_group == 1) & (true_labels == 1)
+  mask_u1 = (protected_group == 0) & (true_labels == 1)
+  mask_p0 = (protected_group == 1) & (true_labels == 0)
+  mask_u0 = (protected_group == 0) & (true_labels == 0)
+
+  # True Positive Rate (TPR) for protected and unprotected groups
+  protected_tpr = np.mean(predictions[mask_p1]) if np.sum(mask_p1) > 0 else 0.0
+  unprotected_tpr = np.mean(predictions[mask_u1]) if np.sum(mask_u1) > 0 else 0.0
+
+  # False Positive Rate (FPR) for protected and unprotected groups
+  protected_fpr = np.mean(predictions[mask_p0]) if np.sum(mask_p0) > 0 else 0.0
+  unprotected_fpr = np.mean(predictions[mask_u0]) if np.sum(mask_u0) > 0 else 0.0
+
+  tpr_diff = protected_tpr - unprotected_tpr
+  fpr_diff = protected_fpr - unprotected_fpr
+
+  # Return the max violation and the sign of the dominant term
+  if np.abs(tpr_diff) >= np.abs(fpr_diff):
+    equalized_odds = np.abs(tpr_diff)
+    sign = np.copysign(1, tpr_diff)
+  else:
+    equalized_odds = np.abs(fpr_diff)
+    sign = np.copysign(1, fpr_diff)
+
+  return equalized_odds, sign
+
 
 def get_test_performance(model, x_test, y_test, a_test, data_dim,
                         show_confusion_matrix=True):
@@ -171,6 +202,7 @@ def get_test_performance(model, x_test, y_test, a_test, data_dim,
   auc_value = auc.result().numpy()
   
   dp, _ = get_demographic_parity(y_pred, a_test)
+  eo, _ = get_equalized_odds(y_pred, a_test, y_true.numpy())
   
   # Calculate true sensitivity (recall): TP / (TP + FN)
   y_true_np = y_true.numpy()
@@ -182,10 +214,23 @@ def get_test_performance(model, x_test, y_test, a_test, data_dim,
   else:
     sensitivity = 0.0
   
+  predicted_positives = (y_pred_np == 1)
+  if np.sum(predicted_positives) > 0:
+    precision = np.mean(y_true_np[predicted_positives])
+  else:
+    precision = 0.0
+
+  if (precision + sensitivity) > 0:
+    f1 = 2 * (precision * sensitivity) / (precision + sensitivity)
+  else:
+    f1 = 0.0
+
   print(f'Test Accuracy: {acc:.3f}')
   print(f'Test Sensitivity: {sensitivity:.3f}')
   print(f'Test DP: {dp:.3f}')
+  print(f'Test EO: {eo:.3f}')
   print(f'Test AUC: {auc_value:.3f}')
+  print(f'Test F1-Score: {f1:.3f}')
   
   # Display confusion matrix if requested
   if show_confusion_matrix:
@@ -196,7 +241,7 @@ def get_test_performance(model, x_test, y_test, a_test, data_dim,
         title='Test Set Confusion Matrix'
     )
 
-  return {'accuracy': float(acc), 'dp': float(dp), 'sensitivity': float(sensitivity), 'auc': float(auc_value)}
+  return {'accuracy': float(acc), 'dp': float(dp), 'eo': float(eo), 'sensitivity': float(sensitivity), 'auc': float(auc_value), 'f1': float(f1)}
 
 
 def gauss_kernel(x1, x2, beta=1.0):
@@ -242,4 +287,11 @@ def aggregate_fold_results(fold_results):
         'std_val_accuracy': np.std([f['val_metrics']['accuracy'] for f in fold_results]),
         'mean_val_dp': np.mean([f['val_metrics']['dp'] for f in fold_results]),
         'std_val_dp': np.std([f['val_metrics']['dp'] for f in fold_results]),
+        'mean_val_sensitivity': np.mean([f['val_metrics']['sensitivity'] for f in fold_results]),
+        'std_val_sensitivity': np.std([f['val_metrics']['sensitivity'] for f in fold_results]),
+        'mean_val_auc': np.mean([f['val_metrics']['auc'] for f in fold_results]),
+        'std_val_auc': np.std([f['val_metrics']['auc'] for f in fold_results]),
+        'mean_val_f1': np.mean([f['val_metrics'].get('f1', 0) for f in fold_results]),
+        'std_val_f1': np.std([f['val_metrics'].get('f1', 0) for f in fold_results]),
     }
+      
