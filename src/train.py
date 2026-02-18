@@ -81,10 +81,6 @@ def train(
     reservoir_size=100,
     offline_loss_type='mmd',
     local_run=False,
-    use_correlation_penalty=False,
-    correlation_threshold=0.3,
-    penalty_aggression=2.0,
-    use_class_weights=False,
 ):
 
   all_dps = []
@@ -172,7 +168,7 @@ def train(
         train_func = aranyani.train_online
         use_correlation_penalty = False
         print(f"  correlation is being used: {use_correlation_penalty}")
-        dp, accuracies = train_func(
+        dp, eo, accuracies = train_func(
             model,
             x_train_fold,
             y_train_fold,
@@ -187,10 +183,6 @@ def train(
             constraint_type=constraint_type,
             gradient_type=gradient_type,
             local_run=local_run,
-            use_correlation_penalty=use_correlation_penalty,
-            correlation_threshold=correlation_threshold,
-            penalty_aggression=penalty_aggression,
-            use_class_weights=use_class_weights,
         )
       elif mode == 'majority':
         train_func = majority.train_online
@@ -271,6 +263,7 @@ def train(
   print(f"  Mean Val DP: {avg_metrics['mean_val_dp']:.4f} +/- {avg_metrics['std_val_dp']:.4f}")
   print(f"  Mean Val AUC: {avg_metrics['mean_val_auc']:.4f} +/- {avg_metrics['std_val_auc']:.4f}")
   print(f"  Mean Val Sensitivity: {avg_metrics['mean_val_sensitivity']:.4f} +/- {avg_metrics['std_val_sensitivity']:.4f}")
+  print(f"  Mean Val F1-Score: {avg_metrics['mean_val_f1']:.4f} +/- {avg_metrics['std_val_f1']:.4f}")
   print(f"{'='*80}\n")
 
   return all_dps, all_accuracies

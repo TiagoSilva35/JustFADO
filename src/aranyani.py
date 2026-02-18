@@ -7,6 +7,8 @@ import wandb
 import utils
 from weight_monitor import ClassWeightMonitor
 
+SUPPORTED_FAIRNESS_TYPES = ['dp', 'eo']
+
 def train_online(
     model,
     inputs,
@@ -22,18 +24,20 @@ def train_online(
     constraint_type='node',
     gradient_type='vanilla',
     local_run=False,
-    use_correlation_penalty=True,
-    correlation_threshold=0.3,
-    penalty_aggression=2.0,
-    use_class_weights=True,
+    fairness_type='eo',
 ):
+  if fairness_type not in SUPPORTED_FAIRNESS_TYPES:
+    raise ValueError(f"Fairness type {fairness_type} not supported. Choose from {SUPPORTED_FAIRNESS_TYPES}.")
+  else:
+      print(f"Fairness type: {fairness_type}")
   weight_updater = ClassWeightMonitor(
     total_num_samples=0,
     num_classes=2,
-    alpha=1.0,
-    _lambda=1.0,
+    alpha=2.0,
+    _lambda=0.9995,
   )
-  weight_updater = None
+  print(f"lambda for fairness penalty: {lambda_const}")
+  
   print("weight updater enabled:", weight_updater is not None)
   # creates a tf dataset
   dataset = tf.data.Dataset.from_tensor_slices(
@@ -47,27 +51,32 @@ def train_online(
   # choose the optimizer and loss criteria
   optimizer = tf.keras.optimizers.Adam(learning_rate=2e-3)
   criteria = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
-  # to calculate the average accuracy over batches
+
   avg_accuracy = tf.keras.metrics.Accuracy()
   
-  # Accumulates fairness gradients for the protected groups [trees, num_features, num_internal_nodes]
-  gradient_w_a0 = np.zeros([num_trees, data_dim, num_internal_nodes])
-  gradient_w_a1 = np.zeros([num_trees, data_dim, num_internal_nodes])
-  gradient_b_a0 = np.zeros([num_trees, num_internal_nodes])
-  gradient_b_a1 = np.zeros([num_trees, num_internal_nodes])
+  gradient_w = {(a, y): np.zeros([num_trees, data_dim, num_internal_nodes]) 
+                for a in [0, 1] for y in [0, 1]}
+
+  gradient_b = {(a, y): np.zeros([num_trees, num_internal_nodes])
+                for a in [0, 1] for y in [0, 1]}
   
-  # Accumulates node decisions for the protected groups (use numpy for proper mutation)
-  agg_y_a0 = np.zeros([num_trees, num_internal_nodes])
-  agg_y_a1 = np.zeros([num_trees, num_internal_nodes])
+  agg_y = {(a, y): np.zeros([num_trees, num_internal_nodes])
+                for a in [0, 1] for y in [0, 1]}
+
+  
+
+
 
   # avoid runtime error
+  subgroup_count = collections.defaultdict(int)
   protected_class_count = collections.defaultdict(int)
   dp_function = utils.get_demographic_parity
   avg_loss = tf.keras.metrics.Mean()
   avg_auc = tf.keras.metrics.AUC()
   y_predictions = []
-  y_true_all = []  # Track all true labels for confusion matrix
+  y_true_all = []  
   demographic_parities = []
+  equalized_odds = []
   accuracies = []
 
   # hyperparameters
@@ -80,7 +89,7 @@ def train_online(
     all_tree_trainable_vars.extend(tree.trainable_variables)
 
   iterations = tqdm.tqdm(dataset)
-  for step, (
+  for _, (
       inputs_batch,
       targets_batch,
       protected_batch) in enumerate(iterations):
@@ -102,12 +111,17 @@ def train_online(
         weight_updater.total_num_samples += 1
         # weight_updater.get_stats()
       # get demographic parity scores
+
       y_predictions.extend(y_pred.numpy())
       y_true_all.extend(targets_batch.numpy())  # Track true labels
       dp, dp_sign = dp_function(
           y_predictions, protected_targets[: len(y_predictions)])
+      eo, eo_sign = utils.get_equalized_odds(
+          y_predictions, y_true_all, protected_targets[: len(y_predictions)])
+      
       
       demographic_parities.append(dp)
+      equalized_odds.append(eo)
       accuracies.append(avg_accuracy.result().numpy())
       
       # update the average accuracy
@@ -119,161 +133,212 @@ def train_online(
           f' Accuracy: { avg_accuracy.result():.3%},'
           f' AUC: {avg_auc.result():.3%},'
           f' DP: {dp:.5f},'
+          f' EO: {eo:.5f},'
       )
       results = {
-        f' CE Loss: {avg_loss.result():.3f},'
-        f' Accuracy: { avg_accuracy.result():.3%},'
-        f' AUC: {avg_auc.result():.3%},'
-        f' DP: {dp:.5f},'
+        'CE Loss': float(avg_loss.result()),
+        'Accuracy': float(avg_accuracy.result()),
+        'AUC': float(avg_auc.result()),
+        'DP': float(dp),
+        'EO': float(eo),
       }
       if not local_run:
         wandb.log(results)
 
-      # update the task gradients w.r.t. current sample
-      # d L_{CE}(y, \hat{y})/d\theta
       gradients = tape.gradient(target_loss, model.trainable_variables)
       total_gradients = gradients
-      # fairness gradient computation
-      # sign(E_{x~1}[n_i] - E_{x~0}[n_i]) *
-      # (E_{x~1}[dn_i/d\theta] - E_{x~0}[dn_i/d\theta])
-      # where n_i is the decision of the i-th internal node
       if compute_fairness:
-        # iterate over the current batch and aggregate the gradients
         for i, a_label in enumerate(protected_batch.numpy()):
+          a_label = int(a_label)
+          y_label = int(targets_batch.numpy()[i])
           protected_class_count[a_label] += 1
-          # update the aggregate score based on protected label: A.
-          if a_label == 0:
-            agg_y_a0 += node_decisions[:, i].numpy()
-          elif a_label == 1:
-            agg_y_a1 += node_decisions[:, i].numpy()
+          subgroup_count[(a_label, y_label)] += 1
+
+          agg_y[(a_label, y_label)] += node_decisions[:, i].numpy()
+
           if constraint_type == 'node':
-            # compute the gradients w.r.t. node-level decisions
-            # Use the collected trainable variables from all trees
             fair_gradients = tape.gradient(node_decisions[:, i],
                                            all_tree_trainable_vars)
           elif constraint_type == 'leaf':
-            # compute the gradients w.r.t. final forest decisions
             fair_gradients = tape.gradient(
                 predictions[i], model.trainable_variables
             )
           else:
             raise ValueError('Constraint type not identified.')
             
-          # stores the index of the tree to be updated
           idx_b = -1
           idx_w = -1
           for fair_grad in fair_gradients:
             if fair_grad is None:
               continue
             if len(fair_grad.shape) == 1 and fair_grad.shape[0] == num_internal_nodes:
-              # selected parameter B: bias (shape: [num_internal_nodes])
-              # select the group to be updated
-              gradient_theta = gradient_b_a0 if a_label == 0 else gradient_b_a1
               idx_b += 1
+              gradient_theta = gradient_b[(a_label, y_label)] 
               idx_theta = idx_b
             elif len(fair_grad.shape) == 2 and fair_grad.shape[0] == data_dim:
-              # selected parameter W: weight
-              # select the group to be updated
-              gradient_theta = gradient_w_a0 if a_label == 0 else gradient_w_a1
+              gradient_theta = gradient_w[(a_label, y_label)]
               idx_w += 1
               idx_theta = idx_w
             else:
-              # ignore fairness gradients for leaf parameters
               continue
             if gradient_type == 'momentum':
-              # momentum term, g_t = \beta*g_{t-1} + dL
               gradient_theta[idx_theta] = (
                   gradient_theta[idx_theta] * base_gamma
                   + fair_grad.numpy()
               )
             elif gradient_type == 'ema':
-              # momentum term, m_t = \beta*m_{t-1} + dL
-              # g_t = (1 - beta)/(1-beta^t) * m_t
-              # correction factor added later
               gradient_theta[idx_theta] = (
                   gradient_theta[idx_theta] * base_gamma
                   + fair_grad.numpy()
               )
             else:
-              # vanilla averaging
-              # g_t = g_{t-1}*(1-1/t) + dL
-              factor = 1 / protected_class_count[a_label]
+              factor = 1 / subgroup_count[(a_label, y_label)]
               gradient_theta[idx_theta] = (
                   gradient_theta[idx_theta] * (1 - factor)
                   + fair_grad.numpy() * factor
               )
-        # safety check
+        if fairness_type == 'dp':
+          can_compute = protected_class_count[0] > 0 and protected_class_count[1] > 0
+        else:
+          can_compute = all(subgroup_count[(a, y)] > 0 for a in [0, 1] for y in [0, 1])
+
+        if not can_compute:
+            optimizer.apply_gradients(zip(gradients, model.trainable_variables))
+            continue
+        
         if protected_class_count[0] == 0 or protected_class_count[1] == 0:
-          # Still apply task gradients when one group is missing
           optimizer.apply_gradients(zip(gradients, model.trainable_variables))
           continue
         if gradient_type == 'ema':
-          # enable correction factors
-          correction_factor_0 = (1 - base_gamma) / (
-              1 - base_gamma ** protected_class_count[0]
-          )
-          correction_factor_1 = (1 - base_gamma) / (
-              1 - base_gamma ** protected_class_count[1]
-          )
+          if fairness_type == 'dp':
+            correction_factor = {
+              a: (1 - base_gamma)/(1 - base_gamma ** protected_class_count[a])
+              for a in [0, 1]
+            }
+          else:
+            correction_factor = {
+              (a, y): (1 - base_gamma)/(1 - base_gamma ** subgroup_count[(a, y)])
+              for a in [0, 1] for y in [0, 1]
+            }
         else:
-          correction_factor_0, correction_factor_1 = 1.0, 1.0
+          if fairness_type == 'dp':
+            correction_factor = {a: 1.0 for a in [0, 1]}
+          else:
+            correction_factor = {(a, y): 1.0 for a in [0, 1] for y in [0, 1]}
+        
         total_gradients = []
         idx_b = 0
         idx_w = 0
 
-        penalty_factors = np.ones(data_dim)
-        # iterate over all task gradients and add the fairness term
         for idx, grad in enumerate(gradients):
-          tree_id = idx // 3 # 3 set of parameters per tree, (W, B, \bf \Theta)
-          
-          # compute sign(E_{x~1}[n_i] - E_{x~0}[n_i]) for tree_id-th tree
-          F = agg_y_a1[tree_id] / protected_class_count[1] - agg_y_a0[tree_id] / protected_class_count[0]
-          F = tf.convert_to_tensor(F, dtype=tf.float32)
-          
-          if constraint_type == 'node':
-            signs_y = tf.math.sign(F - huber_loss_delta/2)
-          else:
-            signs_y = dp_sign
-          
-          if len(grad.shape) == 1 and grad.shape[0] == num_internal_nodes:
-            # bias parameter selection: B
-            # compute: (E_{x~1}[dn_i/dB] - E_{x~0}[dn_i/dB])
-            grad_b_diff = tf.convert_to_tensor(
-                gradient_b_a1[idx_b] * correction_factor_1
-            ) - tf.convert_to_tensor(
-                gradient_b_a0[idx_b] * correction_factor_0)
-            grad_b_diff = tf.cast(grad_b_diff, tf.float32)
+          tree_id = idx // 3 
+          if fairness_type == 'dp':
+            # agg_y_a1 and agg_y_a0 are the total path probabilities for each protected group
+            agg_y_a1 = agg_y[(1, 0)] + agg_y[(1, 1)] 
+            agg_y_a0 = agg_y[(0, 0)] + agg_y[(0, 1)]
+            # F, the fairness penalty term, is the difference in average path probabilities between protected groups
+            F = agg_y_a1[tree_id] / protected_class_count[1] - agg_y_a0[tree_id] / protected_class_count[0]
+            F = tf.convert_to_tensor(F, dtype=tf.float32)
+            if constraint_type == 'node':
+              signs_y = tf.math.sign(F - huber_loss_delta/2)
+            else:
+              signs_y = dp_sign
             
-            huber_check = tf.cast(tf.math.abs(F) < huber_loss_delta, tf.float32)
-            huber_quadratic = tf.multiply(huber_check * F, grad_b_diff)
-            huber_abs = tf.multiply(tf.multiply(1-huber_check, signs_y), grad_b_diff)
+            gradient_b_a0 = gradient_b[(0, 0)] + gradient_b[(0, 1)]
+            gradient_b_a1 = gradient_b[(1, 0)] + gradient_b[(1, 1)]
+            gradient_w_a0 = gradient_w[(0, 0)] + gradient_w[(0, 1)]
+            gradient_w_a1 = gradient_w[(1, 0)] + gradient_w[(1, 1)]
+            correction_factor_0 = correction_factor[0]
+            correction_factor_1 = correction_factor[1]
 
-            grad_b = lambda_const * (huber_quadratic + huber_abs)
-            total_gradients.append(grad + grad_b)
-            idx_b = idx_b + 1
-          elif len(grad.shape) == 2 and grad.shape[0] == data_dim:
-            # weight parameter selection: W
-            # compute: (E_{x~1}[dn_i/dW] - E_{x~0}[dn_i/dW])
-            grad_w_diff = tf.convert_to_tensor(
-                gradient_w_a1[idx_w] * correction_factor_1
-            ) - tf.convert_to_tensor(
-                gradient_w_a0[idx_w] * correction_factor_0)
-            grad_w_diff = tf.cast(grad_w_diff, tf.float32)
+            # shape 1 is for bias gradients, shape 2 is for weight gradients
+            if len(grad.shape) == 1 and grad.shape[0] == num_internal_nodes:
+        
+              grad_b_diff = tf.convert_to_tensor(
+                  gradient_b_a1[idx_b] * correction_factor_1
+              ) - tf.convert_to_tensor(
+                  gradient_b_a0[idx_b] * correction_factor_0)
+              grad_b_diff = tf.cast(grad_b_diff, tf.float32)
+              
+              
+              huber_check = tf.cast(tf.math.abs(F) < huber_loss_delta, tf.float32)
+              huber_quadratic = tf.multiply(huber_check * F, grad_b_diff)
+              huber_abs = tf.multiply(tf.multiply(1-huber_check, signs_y), grad_b_diff)
+
+              grad_b = lambda_const * (huber_quadratic + huber_abs)
+              total_gradients.append(grad + grad_b)
+              idx_b = idx_b + 1
+            elif len(grad.shape) == 2 and grad.shape[0] == data_dim:
+              grad_w_diff = tf.convert_to_tensor(
+                  gradient_w_a1[idx_w] * correction_factor_1
+              ) - tf.convert_to_tensor(
+                  gradient_w_a0[idx_w] * correction_factor_0)
+              grad_w_diff = tf.cast(grad_w_diff, tf.float32)
+              
+              huber_check = tf.cast(tf.math.abs(F) < huber_loss_delta, tf.float32)
+              huber_quadratic = tf.multiply(tf.multiply(huber_check, F), grad_w_diff)
+              huber_abs = tf.multiply(tf.multiply(1-huber_check, signs_y), grad_w_diff)
+
+              grad_w = lambda_const * (huber_quadratic + huber_abs)
+              total_gradients.append(grad + grad_w)
+              idx_w = idx_w + 1
+            else:
+              total_gradients.append(grad)
+          elif fairness_type == 'eo':
+            # EO: penalize TPR gap (y=1) and FPR gap (y=0) separately, then sum
+            F_y0 = (agg_y[(1, 0)][tree_id] / subgroup_count[(1, 0)]
+                    - agg_y[(0, 0)][tree_id] / subgroup_count[(0, 0)])
+            F_y1 = (agg_y[(1, 1)][tree_id] / subgroup_count[(1, 1)]
+                    - agg_y[(0, 1)][tree_id] / subgroup_count[(0, 1)])
             
-            huber_check = tf.cast(tf.math.abs(F) < huber_loss_delta, tf.float32)
-            huber_quadratic = tf.multiply(tf.multiply(huber_check, F), grad_w_diff)
-            huber_abs = tf.multiply(tf.multiply(1-huber_check, signs_y), grad_w_diff)
+            if len(grad.shape) == 1 and grad.shape[0] == num_internal_nodes:
+              fair_penalty = tf.zeros_like(grad)
+              for y_cond, F_yc_np in [(0, F_y0), (1, F_y1)]:
+                F_yc = tf.convert_to_tensor(F_yc_np, dtype=tf.float32)
+                if constraint_type == 'node':
+                  signs_yc = tf.math.sign(F_yc - huber_loss_delta / 2)
+                else:
+                  signs_yc = eo_sign
 
-            grad_w = lambda_const * (huber_quadratic + huber_abs)
-            total_gradients.append(grad + grad_w)
-            idx_w = idx_w + 1
-          else:
-            # no fairness gradients for the leaf parameters
-            total_gradients.append(grad)
+                grad_b_diff = tf.cast(
+                    tf.convert_to_tensor(gradient_b[(1, y_cond)][idx_b] * correction_factor[(1, y_cond)])
+                    - tf.convert_to_tensor(gradient_b[(0, y_cond)][idx_b] * correction_factor[(0, y_cond)]),
+                    tf.float32)
+
+                huber_check = tf.cast(tf.math.abs(F_yc) < huber_loss_delta, tf.float32)
+                huber_quadratic = tf.multiply(huber_check * F_yc, grad_b_diff)
+                huber_abs = tf.multiply(tf.multiply(1 - huber_check, signs_yc), grad_b_diff)
+                fair_penalty += huber_quadratic + huber_abs
+
+              total_gradients.append(grad + lambda_const * fair_penalty)
+              idx_b = idx_b + 1
+
+            elif len(grad.shape) == 2 and grad.shape[0] == data_dim:
+              fair_penalty = tf.zeros_like(grad)
+              for y_cond, F_yc_np in [(0, F_y0), (1, F_y1)]:
+                F_yc = tf.convert_to_tensor(F_yc_np, dtype=tf.float32)
+                if constraint_type == 'node':
+                  signs_yc = tf.math.sign(F_yc - huber_loss_delta / 2)
+                else:
+                  signs_yc = eo_sign
+
+                grad_w_diff = tf.cast(
+                    tf.convert_to_tensor(gradient_w[(1, y_cond)][idx_w] * correction_factor[(1, y_cond)])
+                    - tf.convert_to_tensor(gradient_w[(0, y_cond)][idx_w] * correction_factor[(0, y_cond)]),
+                    tf.float32)
+                
+                huber_check = tf.cast(tf.math.abs(F_yc) < huber_loss_delta, tf.float32)
+                huber_quadratic = tf.multiply(tf.multiply(huber_check, F_yc), grad_w_diff)
+                huber_abs = tf.multiply(tf.multiply(1 - huber_check, signs_yc), grad_w_diff)
+                fair_penalty += huber_quadratic + huber_abs
+
+              total_gradients.append(grad + lambda_const * fair_penalty)
+              idx_w = idx_w + 1
+            else:
+              total_gradients.append(grad)
         total_gradients = tuple(total_gradients)
       optimizer.apply_gradients(zip(total_gradients, model.trainable_variables))
   
-  # Compute and display final confusion matrix using utility function
   y_true_array = np.array(y_true_all)
   y_pred_array = np.array(y_predictions)
   
@@ -286,12 +351,12 @@ def train_online(
       wandb_module=wandb if not local_run else None
   )
   
-  # Log additional final metrics to wandb
   if not local_run:
     wandb.log({
       "final_accuracy": avg_accuracy.result().numpy(),
       "final_auc": avg_auc.result().numpy(),
       "final_dp": dp,
+      "final_eo": eo,
     })
   
-  return demographic_parities, accuracies
+  return demographic_parities, equalized_odds, accuracies
