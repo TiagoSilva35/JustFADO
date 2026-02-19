@@ -24,18 +24,22 @@ def train_online(
     constraint_type='node',
     gradient_type='vanilla',
     local_run=False,
-    fairness_type='eo',
+    fairness_type='dp',
 ):
   if fairness_type not in SUPPORTED_FAIRNESS_TYPES:
     raise ValueError(f"Fairness type {fairness_type} not supported. Choose from {SUPPORTED_FAIRNESS_TYPES}.")
   else:
-      print(f"Fairness type: {fairness_type}")
+    print(f"Fairness type: {fairness_type}")
+  
   weight_updater = ClassWeightMonitor(
     total_num_samples=0,
     num_classes=2,
     alpha=2.0,
     _lambda=0.9995,
   )
+  
+  weight_updater = None
+  
   print(f"lambda for fairness penalty: {lambda_const}")
   
   print("weight updater enabled:", weight_updater is not None)
@@ -209,6 +213,7 @@ def train_online(
         if protected_class_count[0] == 0 or protected_class_count[1] == 0:
           optimizer.apply_gradients(zip(gradients, model.trainable_variables))
           continue
+        
         if gradient_type == 'ema':
           if fairness_type == 'dp':
             correction_factor = {
@@ -284,16 +289,21 @@ def train_online(
               idx_w = idx_w + 1
             else:
               total_gradients.append(grad)
+              
           elif fairness_type == 'eo':
-            # EO: penalize TPR gap (y=1) and FPR gap (y=0) separately, then sum
-            F_y0 = (agg_y[(1, 0)][tree_id] / subgroup_count[(1, 0)]
-                    - agg_y[(0, 0)][tree_id] / subgroup_count[(0, 0)])
-            F_y1 = (agg_y[(1, 1)][tree_id] / subgroup_count[(1, 1)]
-                    - agg_y[(0, 1)][tree_id] / subgroup_count[(0, 1)])
+            # EO: penalize average of TPR gap (y=1) and FPR gap (y=0)
+            F_y0 = (agg_y[(1, 0)][tree_id] / max(subgroup_count[(1, 0)], 1e-8)
+                    - agg_y[(0, 0)][tree_id] / max(subgroup_count[(0, 0)], 1e-8))
             
+            F_y1 = (agg_y[(1, 1)][tree_id] / max(subgroup_count[(1, 1)], 1e-8)
+                    - agg_y[(0, 1)][tree_id] / max(subgroup_count[(0, 1)], 1e-8))
+        
+            # Compute gradient contributions from both y=0 and y=1 subgroups
             if len(grad.shape) == 1 and grad.shape[0] == num_internal_nodes:
               fair_penalty = tf.zeros_like(grad)
-              for y_cond, F_yc_np in [(0, F_y0), (1, F_y1)]:
+              
+              # Average both violations with 0.5 weight each
+              for y_cond, F_yc_np, weight in [(0, F_y0, 0.5), (1, F_y1, 0.5)]:
                 F_yc = tf.convert_to_tensor(F_yc_np, dtype=tf.float32)
                 if constraint_type == 'node':
                   signs_yc = tf.math.sign(F_yc - huber_loss_delta / 2)
@@ -308,14 +318,16 @@ def train_online(
                 huber_check = tf.cast(tf.math.abs(F_yc) < huber_loss_delta, tf.float32)
                 huber_quadratic = tf.multiply(huber_check * F_yc, grad_b_diff)
                 huber_abs = tf.multiply(tf.multiply(1 - huber_check, signs_yc), grad_b_diff)
-                fair_penalty += huber_quadratic + huber_abs
+                fair_penalty += weight * (huber_quadratic + huber_abs)
 
               total_gradients.append(grad + lambda_const * fair_penalty)
               idx_b = idx_b + 1
 
             elif len(grad.shape) == 2 and grad.shape[0] == data_dim:
               fair_penalty = tf.zeros_like(grad)
-              for y_cond, F_yc_np in [(0, F_y0), (1, F_y1)]:
+              
+              # Average both violations with 0.5 weight each
+              for y_cond, F_yc_np, weight in [(0, F_y0, 0.5), (1, F_y1, 0.5)]:
                 F_yc = tf.convert_to_tensor(F_yc_np, dtype=tf.float32)
                 if constraint_type == 'node':
                   signs_yc = tf.math.sign(F_yc - huber_loss_delta / 2)
@@ -330,7 +342,7 @@ def train_online(
                 huber_check = tf.cast(tf.math.abs(F_yc) < huber_loss_delta, tf.float32)
                 huber_quadratic = tf.multiply(tf.multiply(huber_check, F_yc), grad_w_diff)
                 huber_abs = tf.multiply(tf.multiply(1 - huber_check, signs_yc), grad_w_diff)
-                fair_penalty += huber_quadratic + huber_abs
+                fair_penalty += weight * (huber_quadratic + huber_abs)
 
               total_gradients.append(grad + lambda_const * fair_penalty)
               idx_w = idx_w + 1

@@ -293,5 +293,7 @@ def aggregate_fold_results(fold_results):
         'std_val_auc': np.std([f['val_metrics']['auc'] for f in fold_results]),
         'mean_val_f1': np.mean([f['val_metrics'].get('f1', 0) for f in fold_results]),
         'std_val_f1': np.std([f['val_metrics'].get('f1', 0) for f in fold_results]),
+        'mean_val_eo': np.mean([f['val_metrics']['eo'] for f in fold_results]),
+        'std_val_eo': np.std([f['val_metrics']['eo'] for f in fold_results]),
     }
       
