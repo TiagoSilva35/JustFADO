@@ -131,7 +131,16 @@ def read_adult(path='../data/adult'):
     train_df = pd.read_csv(f, names=columns)
 
   x_train, y_train, a_train = preprocess_adult(train_df)
-  x_test, y_test, a_test = [], [], []
+  
+  # Load test data if available
+  test_file_path = os.path.join(path, 'adult.test')
+  if os.path.exists(test_file_path):
+    with open(test_file_path, 'rb') as f:
+      # Skip the first line if it contains a header or comment
+      test_df = pd.read_csv(f, names=columns, skiprows=1)
+    x_test, y_test, a_test = preprocess_adult(test_df)
+  else:
+    x_test, y_test, a_test = [], [], []
 
   return x_train, x_test, y_train, y_test, a_train, a_test
 

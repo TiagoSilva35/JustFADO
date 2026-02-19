@@ -1,3 +1,15 @@
+import tensorflow as tf
+
+# Configure GPU memory growth before any TensorFlow operations
+gpus = tf.config.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+        print(f"GPU memory growth enabled for {len(gpus)} GPU(s)")
+    except RuntimeError as e:
+        print(f"GPU memory growth setting failed: {e}")
+
 from absl import app
 from train import *
 

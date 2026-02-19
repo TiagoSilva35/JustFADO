@@ -21,7 +21,7 @@ def main(_):
       f'batch_size-{config.batch_size}',
       f'gradient_type-{config.gradient_type}')
 
-  _, _ = train(
+  _, _, _ = train(
       lambda_const=config.lambda_const,
       dataset=config.dataset,
       mode=config.mode,

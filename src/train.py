@@ -56,6 +56,8 @@ flags.DEFINE_float('penalty_aggression', 2.0,
                    'How aggressively to penalize correlated features.')
 flags.DEFINE_bool('use_class_weights', False,
                   'Whether to apply inverse-frequency class weights to the loss.')
+flags.DEFINE_bool('use_test_set', False,
+                  'Whether to use actual test set instead of cross-validation (for adult dataset).')
 
 
 
@@ -81,20 +83,24 @@ def train(
     reservoir_size=100,
     offline_loss_type='mmd',
     local_run=False,
+    use_test_set=True,
 ):
 
   all_dps = []
   all_accuracies = []
+  all_equalized_odds = []
 
   data_dim, num_class = None, None
+  x_test, y_test, a_test = None, None, None  # For test set evaluation
+  
   if dataset == 'adult':
     data_dim = 14
     num_class = 2
-    x_train, _, y_train, _, a_train, _ = data.read_adult()
+    x_train, x_test, y_train, y_test, a_train, a_test = data.read_adult()
   elif dataset == 'census':
     data_dim = 40
     num_class = 2
-    x_train, _, y_train, _, a_train, _ = data.read_census()
+    x_train, x_test, y_train, y_test, a_train, a_test = data.read_census()
   elif dataset == 'compas':
     data_dim = 10
     x_train, y_train, a_train = data.read_compas()
@@ -111,21 +117,46 @@ def train(
     x_train, y_train, a_train = [], [], []
 
 
-  base_dp, _ = utils.get_demographic_parity(y_train, a_train)
-  print(f'DP in the original dataset: {base_dp}')
-
-  tscv = TimeSeriesSplit(n_splits=5)
-  fold_results = []
-  for fold_idx, (train_idx, val_idx) in enumerate(tscv.split(x_train)):
-    print(f"\n{'='*80}")
-    print(f"Fold {fold_idx + 1}/5")
+  print(f'DP in the original dataset: {utils.get_demographic_parity(y_train, a_train)[0]}')
+  print(f"EO in the original dataset: {utils.get_equalized_odds(y_train, a_train, y_train)[0]}")
+  
+  # Decide whether to use test set or cross-validation
+  use_actual_test_set = use_test_set and dataset == 'adult' and len(x_test) > 0
+  
+  if use_actual_test_set:
+    print(f"\nUsing actual test set for evaluation (train size: {len(x_train)}, test size: {len(x_test)})")
     print(f"{'='*80}\n")
-    x_train_fold = x_train[train_idx]
-    y_train_fold = y_train[train_idx]
-    a_train_fold = a_train[train_idx]
-    x_val_fold = x_train[val_idx]
-    y_val_fold = y_train[val_idx]
-    a_val_fold = a_train[val_idx]
+    # Create a single "fold" with train and test sets
+    splits = [(range(len(x_train)), None)] 
+    fold_results = []
+  else:
+    print(f"\nUsing 5-fold time series cross-validation")
+    print(f"{'='*80}\n")
+    tscv = TimeSeriesSplit(n_splits=5)
+    splits = list(tscv.split(x_train))
+    fold_results = []
+  
+  for fold_idx, (train_idx, val_idx) in enumerate(splits):
+    if use_actual_test_set:
+      print(f"\n{'='*80}")
+      print(f"Training on full training set and evaluating on test set")
+      print(f"{'='*80}\n")
+      x_train_fold = x_train
+      y_train_fold = y_train
+      a_train_fold = a_train
+      x_val_fold = x_test
+      y_val_fold = y_test
+      a_val_fold = a_test
+    else:
+      print(f"\n{'='*80}")
+      print(f"Fold {fold_idx + 1}/5")
+      print(f"{'='*80}\n")
+      x_train_fold = x_train[train_idx]
+      y_train_fold = y_train[train_idx]
+      a_train_fold = a_train[train_idx]
+      x_val_fold = x_train[val_idx]
+      y_val_fold = y_train[val_idx]
+      a_val_fold = a_train[val_idx]
     for _ in range(max_iter):
       # Create a fresh model for each iteration
       model = None
@@ -167,7 +198,6 @@ def train(
       if mode == 'node' and model_type == 'forest':
         train_func = aranyani.train_online
         use_correlation_penalty = False
-        print(f"  correlation is being used: {use_correlation_penalty}")
         dp, eo, accuracies = train_func(
             model,
             x_train_fold,
@@ -236,10 +266,11 @@ def train(
             local_run=local_run,
         )
       else:
-        dp, accuracies = [], []
+        dp, accuracies, eo = [], [], []
 
       all_dps.append(dp)
       all_accuracies.append(accuracies)
+      all_equalized_odds.append(eo)
 
     val_metrics = utils.get_test_performance(
         model, x_val_fold, y_val_fold, a_val_fold,
@@ -250,20 +281,35 @@ def train(
         'fold': fold_idx + 1,
         'train_dp': dp,
         'train_accuracies': accuracies,
+        'train_eo': eo,
         'val_metrics': val_metrics,
     })
 
     del model
 
-  avg_metrics = utils.aggregate_fold_results(fold_results)
+  if use_actual_test_set:
+    # For test set evaluation, just report the single result
+    print(f"\n{'='*80}")
+    print("Test Set Results:")
+    test_result = fold_results[0]['val_metrics']
+    print(f"  Test Accuracy: {test_result['accuracy']:.4f}")
+    print(f"  Test DP: {test_result['dp']:.4f}")
+    print(f"  Test AUC: {test_result['auc']:.4f}")
+    print(f"  Test Sensitivity: {test_result['sensitivity']:.4f}")
+    print(f"  Test F1-Score: {test_result['f1']:.4f}")
+    print(f"  Test EO: {test_result['eo']:.4f}")
+    print(f"{'='*80}\n")
+  else:
+    avg_metrics = utils.aggregate_fold_results(fold_results)
 
-  print(f"\n{'='*80}")
-  print("Cross-Validation Results:")
-  print(f"  Mean Val Accuracy: {avg_metrics['mean_val_accuracy']:.4f} +/- {avg_metrics['std_val_accuracy']:.4f}")
-  print(f"  Mean Val DP: {avg_metrics['mean_val_dp']:.4f} +/- {avg_metrics['std_val_dp']:.4f}")
-  print(f"  Mean Val AUC: {avg_metrics['mean_val_auc']:.4f} +/- {avg_metrics['std_val_auc']:.4f}")
-  print(f"  Mean Val Sensitivity: {avg_metrics['mean_val_sensitivity']:.4f} +/- {avg_metrics['std_val_sensitivity']:.4f}")
-  print(f"  Mean Val F1-Score: {avg_metrics['mean_val_f1']:.4f} +/- {avg_metrics['std_val_f1']:.4f}")
-  print(f"{'='*80}\n")
+    print(f"\n{'='*80}")
+    print("Cross-Validation Results:")
+    print(f"  Mean Val Accuracy: {avg_metrics['mean_val_accuracy']:.4f} +/- {avg_metrics['std_val_accuracy']:.4f}")
+    print(f"  Mean Val DP: {avg_metrics['mean_val_dp']:.4f} +/- {avg_metrics['std_val_dp']:.4f}")
+    print(f"  Mean Val AUC: {avg_metrics['mean_val_auc']:.4f} +/- {avg_metrics['std_val_auc']:.4f}")
+    print(f"  Mean Val Sensitivity: {avg_metrics['mean_val_sensitivity']:.4f} +/- {avg_metrics['std_val_sensitivity']:.4f}")
+    print(f"  Mean Val F1-Score: {avg_metrics['mean_val_f1']:.4f} +/- {avg_metrics['std_val_f1']:.4f}")
+    print(f"  Mean Val EO: {avg_metrics['mean_val_eo']:.4f} +/- {avg_metrics['std_val_eo']:.4f}")
+    print(f"{'='*80}\n")
 
-  return all_dps, all_accuracies
+  return all_dps, all_accuracies, all_equalized_odds
