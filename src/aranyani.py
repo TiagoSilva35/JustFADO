@@ -66,7 +66,9 @@ def train_online(
   
   agg_y = {(a, y): np.zeros([num_trees, num_internal_nodes])
                 for a in [0, 1] for y in [0, 1]}
-
+  
+  average_w_fair_grad = []
+  average_b_fair_grad = []
   
 
 
@@ -84,7 +86,7 @@ def train_online(
   accuracies = []
 
   # hyperparameters
-  huber_loss_delta = 0.01
+  huber_loss_delta = 0.1
 
   # Collect all tree trainable variables for fairness gradients
   # (model.layers is a Python list, so we need to manually collect)
@@ -238,12 +240,13 @@ def train_online(
         for idx, grad in enumerate(gradients):
           tree_id = idx // 3 
           if fairness_type == 'dp':
-            # agg_y_a1 and agg_y_a0 are the total path probabilities for each protected group
             agg_y_a1 = agg_y[(1, 0)] + agg_y[(1, 1)] 
             agg_y_a0 = agg_y[(0, 0)] + agg_y[(0, 1)]
-            # F, the fairness penalty term, is the difference in average path probabilities between protected groups
+            
             F = agg_y_a1[tree_id] / protected_class_count[1] - agg_y_a0[tree_id] / protected_class_count[0]
+            
             F = tf.convert_to_tensor(F, dtype=tf.float32)
+            
             if constraint_type == 'node':
               signs_y = tf.math.sign(F - huber_loss_delta/2)
             else:
@@ -271,6 +274,8 @@ def train_online(
               huber_abs = tf.multiply(tf.multiply(1-huber_check, signs_y), grad_b_diff)
 
               grad_b = lambda_const * (huber_quadratic + huber_abs)
+              average_b_fair_grad.append(grad_b)
+              
               total_gradients.append(grad + grad_b)
               idx_b = idx_b + 1
             elif len(grad.shape) == 2 and grad.shape[0] == data_dim:
@@ -285,6 +290,7 @@ def train_online(
               huber_abs = tf.multiply(tf.multiply(1-huber_check, signs_y), grad_w_diff)
 
               grad_w = lambda_const * (huber_quadratic + huber_abs)
+              average_w_fair_grad.append(grad_w)
               total_gradients.append(grad + grad_w)
               idx_w = idx_w + 1
             else:
@@ -305,10 +311,7 @@ def train_online(
               # Average both violations with 0.5 weight each
               for y_cond, F_yc_np, weight in [(0, F_y0, 0.5), (1, F_y1, 0.5)]:
                 F_yc = tf.convert_to_tensor(F_yc_np, dtype=tf.float32)
-                if constraint_type == 'node':
-                  signs_yc = tf.math.sign(F_yc - huber_loss_delta / 2)
-                else:
-                  signs_yc = eo_sign
+                signs_yc = tf.math.sign(F_yc)
 
                 grad_b_diff = tf.cast(
                     tf.convert_to_tensor(gradient_b[(1, y_cond)][idx_b] * correction_factor[(1, y_cond)])
@@ -319,7 +322,8 @@ def train_online(
                 huber_quadratic = tf.multiply(huber_check * F_yc, grad_b_diff)
                 huber_abs = tf.multiply(tf.multiply(1 - huber_check, signs_yc), grad_b_diff)
                 fair_penalty += weight * (huber_quadratic + huber_abs)
-
+              
+              average_b_fair_grad.append(fair_penalty)
               total_gradients.append(grad + lambda_const * fair_penalty)
               idx_b = idx_b + 1
 
@@ -329,10 +333,8 @@ def train_online(
               # Average both violations with 0.5 weight each
               for y_cond, F_yc_np, weight in [(0, F_y0, 0.5), (1, F_y1, 0.5)]:
                 F_yc = tf.convert_to_tensor(F_yc_np, dtype=tf.float32)
-                if constraint_type == 'node':
-                  signs_yc = tf.math.sign(F_yc - huber_loss_delta / 2)
-                else:
-                  signs_yc = eo_sign
+                signs_yc = tf.math.sign(F_yc)
+
 
                 grad_w_diff = tf.cast(
                     tf.convert_to_tensor(gradient_w[(1, y_cond)][idx_w] * correction_factor[(1, y_cond)])
@@ -343,7 +345,8 @@ def train_online(
                 huber_quadratic = tf.multiply(tf.multiply(huber_check, F_yc), grad_w_diff)
                 huber_abs = tf.multiply(tf.multiply(1 - huber_check, signs_yc), grad_w_diff)
                 fair_penalty += weight * (huber_quadratic + huber_abs)
-
+                
+              average_w_fair_grad.append(fair_penalty)
               total_gradients.append(grad + lambda_const * fair_penalty)
               idx_w = idx_w + 1
             else:
@@ -371,4 +374,4 @@ def train_online(
       "final_eo": eo,
     })
   
-  return demographic_parities, equalized_odds, accuracies
+  return demographic_parities, equalized_odds, accuracies, average_w_fair_grad, average_b_fair_grad

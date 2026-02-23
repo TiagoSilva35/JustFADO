@@ -1,0 +1,15 @@
+GPU memory growth enabled for 1 GPU(s)
+DP in the original dataset: 0.19627598779361352
+EO in the original dataset: 0.0
+
+Using actual test set for evaluation (train size: 32561, test size: 16281)
+================================================================================
+
+
+================================================================================
+Training on full training set and evaluating on test set
+================================================================================
+
+Fairness type: dp
+lambda for fairness penalty: 1.0
+weight updater enabled: False

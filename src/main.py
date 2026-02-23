@@ -15,7 +15,7 @@ from train import *
 
 
 def main(_):
-  _, _ = train(
+  _, _, _ = train(
       lambda_const=FLAGS.lambda_const,
       dataset=FLAGS.dataset,
       mode=FLAGS.mode,
@@ -35,6 +35,7 @@ def main(_):
       reservoir_size=FLAGS.reservoir_size,
       offline_loss_type=FLAGS.offline_loss_type,
       local_run=True,
+      drift = FLAGS.drift,
   )
 
 if __name__ == '__main__':

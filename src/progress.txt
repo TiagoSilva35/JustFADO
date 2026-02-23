@@ -22,5 +22,18 @@ Cross-Validation Results:
   Mean Val Sensitivity: 0.7602 +/- 0.0424
   Mean Val F1-Score: 0.5978 +/- 0.0490
 
+Test Set Results (EO):
+  Test Accuracy: 0.8364
+  Test DP: 0.1628
+  Test AUC: 0.8820
+  Test Sensitivity: 0.5702
+  Test F1-Score: 0.6221
+  Test EO: 0.0909
 
-
+Test Set Results (DP):
+  Test Accuracy: 0.8391
+  Test DP: 0.1115
+  Test AUC: 0.8827
+  Test Sensitivity: 0.5094
+  Test F1-Score: 0.5994
+  Test EO: 0.0319

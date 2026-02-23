@@ -21,9 +21,12 @@ import hoeffding_tree
 from skmultiflow.trees import HoeffdingTree
 from skmultiflow.trees import HoeffdingAdaptiveTreeClassifier
 from sklearn.model_selection import TimeSeriesSplit
+from plots import plot_metric_over_iterations
 
 import utils
 import clip_forest
+
+from drift.create_drifted_ds import generate_drifted_dataset
 
 
 flags.DEFINE_string('sweep_id', '-1', 'Wandb sweep ID.')
@@ -58,7 +61,7 @@ flags.DEFINE_bool('use_class_weights', False,
                   'Whether to apply inverse-frequency class weights to the loss.')
 flags.DEFINE_bool('use_test_set', False,
                   'Whether to use actual test set instead of cross-validation (for adult dataset).')
-
+flags.DEFINE_bool('drift', False, 'Whether to apply drift to the dataset.')
 
 
 FLAGS = flags.FLAGS
@@ -84,6 +87,7 @@ def train(
     offline_loss_type='mmd',
     local_run=False,
     use_test_set=True,
+    drift=False,
 ):
 
   all_dps = []
@@ -96,7 +100,7 @@ def train(
   if dataset == 'adult':
     data_dim = 14
     num_class = 2
-    x_train, x_test, y_train, y_test, a_train, a_test = data.read_adult()
+    x_train, x_test, y_train, y_test, a_train, a_test = data.read_adult(drift)
   elif dataset == 'census':
     data_dim = 40
     num_class = 2
@@ -124,23 +128,15 @@ def train(
   use_actual_test_set = use_test_set and dataset == 'adult' and len(x_test) > 0
   
   if use_actual_test_set:
-    print(f"\nUsing actual test set for evaluation (train size: {len(x_train)}, test size: {len(x_test)})")
-    print(f"{'='*80}\n")
-    # Create a single "fold" with train and test sets
     splits = [(range(len(x_train)), None)] 
     fold_results = []
   else:
-    print(f"\nUsing 5-fold time series cross-validation")
-    print(f"{'='*80}\n")
     tscv = TimeSeriesSplit(n_splits=5)
     splits = list(tscv.split(x_train))
     fold_results = []
   
   for fold_idx, (train_idx, val_idx) in enumerate(splits):
     if use_actual_test_set:
-      print(f"\n{'='*80}")
-      print(f"Training on full training set and evaluating on test set")
-      print(f"{'='*80}\n")
       x_train_fold = x_train
       y_train_fold = y_train
       a_train_fold = a_train
@@ -148,9 +144,6 @@ def train(
       y_val_fold = y_test
       a_val_fold = a_test
     else:
-      print(f"\n{'='*80}")
-      print(f"Fold {fold_idx + 1}/5")
-      print(f"{'='*80}\n")
       x_train_fold = x_train[train_idx]
       y_train_fold = y_train[train_idx]
       a_train_fold = a_train[train_idx]
@@ -158,7 +151,6 @@ def train(
       y_val_fold = y_train[val_idx]
       a_val_fold = a_train[val_idx]
     for _ in range(max_iter):
-      # Create a fresh model for each iteration
       model = None
       if model_type == 'mlp':
         model = mlp.FairReLUNetwork(
@@ -194,11 +186,10 @@ def train(
               compute_mode=compute_mode,
           )
 
-      # Train on fold data
       if mode == 'node' and model_type == 'forest':
         train_func = aranyani.train_online
         use_correlation_penalty = False
-        dp, eo, accuracies = train_func(
+        dp, eo, accuracies, average_w_fair_grad, average_b_fair_grad = train_func(
             model,
             x_train_fold,
             y_train_fold,
@@ -214,6 +205,8 @@ def train(
             gradient_type=gradient_type,
             local_run=local_run,
         )
+        print(f"fold {fold_idx + 1} here are the average w fairness gradients: {average_w_fair_grad}")
+        print(f"fold {fold_idx + 1} here are the average b fairness gradients: {average_b_fair_grad}")
       elif mode == 'majority':
         train_func = majority.train_online
         dp, accuracies = train_func(
@@ -268,6 +261,7 @@ def train(
       else:
         dp, accuracies, eo = [], [], []
 
+      
       all_dps.append(dp)
       all_accuracies.append(accuracies)
       all_equalized_odds.append(eo)
@@ -312,4 +306,8 @@ def train(
     print(f"  Mean Val EO: {avg_metrics['mean_val_eo']:.4f} +/- {avg_metrics['std_val_eo']:.4f}")
     print(f"{'='*80}\n")
 
+  plot_metric_over_iterations(all_accuracies, 'Accuracy', model_type, 'dp' if compute_fairness else 'none', constraint_type)
+  plot_metric_over_iterations(all_dps, 'Demographic Parity', model_type, 'dp' if compute_fairness else 'none', constraint_type)
+  plot_metric_over_iterations(all_equalized_odds, 'Equalized Odds', model_type, 'eo' if compute_fairness else 'none', constraint_type)
+  
   return all_dps, all_accuracies, all_equalized_odds
