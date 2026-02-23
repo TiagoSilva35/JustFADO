@@ -21,7 +21,7 @@ import numpy as np
 import pandas as pd
 
 from sklearn import preprocessing
-
+from drift.create_drifted_ds import generate_drifted_dataset
 
 
 # %%
@@ -100,7 +100,7 @@ def preprocess_adult(df):
 # %%
 
 
-def read_adult(path='../data/adult'):
+def read_adult(drift, path='../data/adult'):
   """Read the Adult dataset.
 
   Args:
@@ -129,7 +129,10 @@ def read_adult(path='../data/adult'):
 
   with open(os.path.join(path, 'adult.data'), 'rb') as f:
     train_df = pd.read_csv(f, names=columns)
-
+    
+  if drift:
+    generate_drifted_dataset(train_df)
+  
   x_train, y_train, a_train = preprocess_adult(train_df)
   
   # Load test data if available
