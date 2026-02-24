@@ -21,7 +21,7 @@ import hoeffding_tree
 from skmultiflow.trees import HoeffdingTree
 from skmultiflow.trees import HoeffdingAdaptiveTreeClassifier
 from sklearn.model_selection import TimeSeriesSplit
-from plots import plot_metric_over_iterations
+from plots import plot_metric_over_iterations, plot_metrics_over_timesteps
 
 import utils
 import clip_forest
@@ -189,6 +189,7 @@ def train(
       if mode == 'node' and model_type == 'forest':
         train_func = aranyani.train_online
         use_correlation_penalty = False
+
         dp, eo, accuracies, average_w_fair_grad, average_b_fair_grad = train_func(
             model,
             x_train_fold,
@@ -205,8 +206,7 @@ def train(
             gradient_type=gradient_type,
             local_run=local_run,
         )
-        print(f"fold {fold_idx + 1} here are the average w fairness gradients: {average_w_fair_grad}")
-        print(f"fold {fold_idx + 1} here are the average b fairness gradients: {average_b_fair_grad}")
+
       elif mode == 'majority':
         train_func = majority.train_online
         dp, accuracies = train_func(
@@ -218,6 +218,7 @@ def train(
             probability=probability,
             local_run=local_run,
         )
+
       elif model_type == 'mlp':
         dp, accuracies = mlp_trainer.train_online(
             model,
@@ -277,9 +278,11 @@ def train(
         'train_accuracies': accuracies,
         'train_eo': eo,
         'val_metrics': val_metrics,
+        'model': model if drift else None,
     })
 
-    del model
+    if not drift:
+      del model
 
   if use_actual_test_set:
     # For test set evaluation, just report the single result
@@ -306,8 +309,15 @@ def train(
     print(f"  Mean Val EO: {avg_metrics['mean_val_eo']:.4f} +/- {avg_metrics['std_val_eo']:.4f}")
     print(f"{'='*80}\n")
 
-  plot_metric_over_iterations(all_accuracies, 'Accuracy', model_type, 'dp' if compute_fairness else 'none', constraint_type)
-  plot_metric_over_iterations(all_dps, 'Demographic Parity', model_type, 'dp' if compute_fairness else 'none', constraint_type)
-  plot_metric_over_iterations(all_equalized_odds, 'Equalized Odds', model_type, 'eo' if compute_fairness else 'none', constraint_type)
-  
+
+  # Evaluate metrics over timesteps on drifted test set
+  if drift and x_test is not None and len(x_test) > 0:
+    print("\nEvaluating over timesteps on drifted test set...")
+    timestep_results = utils.evaluate_over_timesteps(
+        fold_results[0]['model'], x_test, y_test, a_test, data_dim=data_dim,
+    )
+    plot_metrics_over_timesteps(timestep_results)
+    # Clean up model
+    del fold_results[0]['model']
+
   return all_dps, all_accuracies, all_equalized_odds

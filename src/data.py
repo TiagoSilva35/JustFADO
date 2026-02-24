@@ -94,6 +94,7 @@ def preprocess_adult(df):
 
   y = np.array(df['income'], dtype=np.int32)
   a = np.array(df['gender'], dtype=np.int32)
+
   return x, y, a
 
 
@@ -129,18 +130,29 @@ def read_adult(drift, path='../data/adult'):
 
   with open(os.path.join(path, 'adult.data'), 'rb') as f:
     train_df = pd.read_csv(f, names=columns)
-    
-  if drift:
-    generate_drifted_dataset(train_df)
-  
+
+
   x_train, y_train, a_train = preprocess_adult(train_df)
-  
+
   # Load test data if available
   test_file_path = os.path.join(path, 'adult.test')
   if os.path.exists(test_file_path):
     with open(test_file_path, 'rb') as f:
-      # Skip the first line if it contains a header or comment
-      test_df = pd.read_csv(f, names=columns, skiprows=1)
+        # Skip the first line if it contains a header or comment
+        df = pd.read_csv(f, names=columns, skiprows=1)
+        print(f"This set contains, {len(df[df['gender'] == ' Female'])} female samples")
+        print(f"Income column unique values: {df['income'].unique()}")
+        print(f"Samples with income >50K: {len(df[df['income'].str.strip() == '>50K'])}")
+        print(f"Samples with income >50K.: {len(df[df['income'].str.strip() == '>50K.'])}")
+        print(f"Male samples with >50K income: {len(df[(df['gender'].str.strip() == 'Male') & (df['income'].str.strip() == '>50K')])}")
+        print(f"Male samples with >50K. income: {len(df[(df['gender'].str.strip() == 'Male') & (df['income'].str.strip() == '>50K.')])}")
+        if drift:
+            print("generate_drifted_dataset")
+            test_df = generate_drifted_dataset(df)
+            print(f"This drifted set contains {len(test_df[test_df['gender'] == ' Female'])} female examples")
+        else:
+            test_df = df
+
     x_test, y_test, a_test = preprocess_adult(test_df)
   else:
     x_test, y_test, a_test = [], [], []
@@ -212,12 +224,12 @@ def preprocess_census(df):
 
 
 def read_census(path='../data/census/'):
-  """Read the Census dataset. 
-  
-  Column names borrowed from: 
+  """Read the Census dataset.
+
+  Column names borrowed from:
   https://docs.1010data.com/Tutorials/MachineLearningExamples/CensusIncomeDataSet.html
   1 unidentified column name marked as 'unk' and dropped later.
-  
+
   Args:
     path:
 
@@ -247,7 +259,7 @@ def read_census(path='../data/census/'):
 def read_jigsaw(path='../data/jigsaw/'):
   with open(os.path.join(path, "jigsaw.pkl"), "rb") as f:
     inputs, texts, Y, A = pickle.load(f)
-  
+
   X = np.array(inputs)
   Y = np.array(Y)
   A = np.array(A)
@@ -274,9 +286,9 @@ def read_compas(path="../data/compas"):
           "sex",
           "race",
           "is_recid"]
-  train_df = pd.read_csv(os.path.join(path, "train.csv"), 
+  train_df = pd.read_csv(os.path.join(path, "train.csv"),
                          names=feature_names, header=None)
-  test_df = pd.read_csv(os.path.join(path, "test.csv"), 
+  test_df = pd.read_csv(os.path.join(path, "test.csv"),
                         names=feature_names, header=None)
 
 
@@ -289,7 +301,7 @@ def read_compas(path="../data/compas"):
   label_encoder = preprocessing.LabelEncoder()
   for feature in categorical_features:
       df[feature] = label_encoder.fit_transform(df[feature])
-  
+
   Y = np.array(df['is_recid'], dtype=np.float32)
   A = np.array(df['race'], dtype=np.float32)
 

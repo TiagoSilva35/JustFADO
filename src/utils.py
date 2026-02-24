@@ -7,6 +7,7 @@ import tensorflow as tf
 from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
+from plots import plot_metric_over_iterations
 
 
 def construct_penalty_mask(tree_depth=4):
@@ -231,7 +232,7 @@ def get_test_performance(model, x_test, y_test, a_test, data_dim,
   print(f'Test EO: {eo:.3f}')
   print(f'Test AUC: {auc_value:.3f}')
   print(f'Test F1-Score: {f1:.3f}')
-  
+
   # Display confusion matrix if requested
   if show_confusion_matrix:
     display_confusion_matrix(
@@ -296,4 +297,63 @@ def aggregate_fold_results(fold_results):
         'mean_val_eo': np.mean([f['val_metrics']['eo'] for f in fold_results]),
         'std_val_eo': np.std([f['val_metrics']['eo'] for f in fold_results]),
     }
-      
+
+
+def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim):
+  """Evaluate a trained model on a test set sample-by-sample over time.
+
+  Walks through the test set one sample at a time, computing cumulative
+  accuracy, demographic parity, and equalized odds at each timestep.
+  This is useful for observing how metrics evolve under distribution drift.
+
+  Args:
+    model: Trained model.
+    x_test: Test features array.
+    y_test: Test labels array.
+    a_test: Test protected attribute array.
+    data_dim: Dimensionality of input features.
+
+  Returns:
+    dict with keys 'accuracy', 'dp', 'eo', each a list of length len(x_test).
+  """
+  y_preds_all = []
+  y_true_all = []
+  a_all = []
+
+  accuracies = []
+  dps = []
+  eos = []
+
+  n_samples = len(x_test)
+  accuracy_metric = tf.keras.metrics.Accuracy()
+
+  for t in range(n_samples):
+    x_t = np.array(x_test[t], dtype=np.float32).reshape(1, data_dim)
+    y_probs = model(tf.convert_to_tensor(x_t), training=False)
+    y_pred = tf.math.argmax(y_probs, axis=-1).numpy()[0]
+
+    y_preds_all.append(y_pred)
+    y_true_all.append(int(y_test[t]))
+    a_all.append(int(a_test[t]))
+
+    # Cumulative accuracy
+    accuracy_metric.update_state([y_test[t]], [y_pred])
+    accuracies.append(float(accuracy_metric.result().numpy()))
+
+    # Need at least a few samples from both groups to compute fairness
+    a_arr = np.array(a_all)
+    if np.sum(a_arr == 0) > 0 and np.sum(a_arr == 1) > 0:
+      dp, _ = get_demographic_parity(y_preds_all, a_all)
+      eo, _ = get_equalized_odds(y_preds_all, a_all, y_true_all)
+      dps.append(float(dp))
+      eos.append(float(eo))
+    else:
+      dps.append(0.0)
+      eos.append(0.0)
+
+  return {
+      'accuracy': accuracies,
+      'dp': dps,
+      'eo': eos,
+      'n_samples': n_samples,
+  }
