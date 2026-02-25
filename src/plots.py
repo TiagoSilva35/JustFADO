@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
+import os
 
 
 def plot_metric_over_iterations(metric_values, metric_name, fairness_type):
@@ -77,3 +78,137 @@ def plot_metrics_over_timesteps(timestep_results, save_path='files/metrics_over_
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     print(f"Timestep metrics plot saved to: {save_path}")
     plt.show()
+
+
+# ---------------------------------------------------------------------------
+# Comparison plots across drift scenarios
+# ---------------------------------------------------------------------------
+
+def plot_scenario_comparison_timesteps(all_results, output_dir='files/experiments'):
+    """Overlay timestep metrics for every scenario.
+
+    Args:
+        all_results: list of dicts, each with keys
+            'scenario', 'timestep_results'.
+        output_dir: directory to save figures.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    metrics = [
+        ('accuracy', 'Accuracy'),
+        ('dp', 'Demographic Parity'),
+        ('eo', 'Equalized Odds'),
+    ]
+
+    # --- One figure per metric, all scenarios overlaid ---
+    for key, label in metrics:
+        fig, ax = plt.subplots(figsize=(16, 6))
+        for res in all_results:
+            ts = res.get('timestep_results')
+            if ts is None:
+                continue
+            n = ts['n_samples']
+            timesteps = np.arange(1, n + 1)
+            ax.plot(timesteps, ts[key], linewidth=1.0, alpha=0.8, label=res['scenario'])
+
+        # Phase boundaries (use first available n_samples)
+        for res in all_results:
+            ts = res.get('timestep_results')
+            if ts is not None:
+                n = ts['n_samples']
+                splits = [0.15, 0.50, 0.60, 0.75]
+                for s in splits:
+                    ax.axvline(x=int(s * n), color='grey', linestyle='--', alpha=0.4)
+                break
+
+        ax.set_xlabel('Timestep', fontsize=12)
+        ax.set_ylabel(label, fontsize=12, fontweight='bold')
+        ax.set_title(f'{label} Over Timesteps – All Scenarios', fontsize=14, fontweight='bold')
+        ax.legend(fontsize=9, loc='best')
+        ax.grid(True, alpha=0.3)
+        plt.tight_layout()
+        path = os.path.join(output_dir, f'comparison_{key}_timesteps.png')
+        plt.savefig(path, dpi=300, bbox_inches='tight')
+        print(f"Saved: {path}")
+        plt.close()
+
+
+def plot_scenario_comparison_bar(all_results, output_dir='files/experiments'):
+    """Bar chart comparing final test metrics across scenarios.
+
+    Args:
+        all_results: list of dicts with 'scenario', 'test_metrics'.
+        output_dir: directory to save figures.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    labels = []
+    acc_vals, dp_vals, eo_vals, f1_vals = [], [], [], []
+    for res in all_results:
+        tm = res.get('test_metrics')
+        if tm is None:
+            continue
+        labels.append(res['scenario'])
+        acc_vals.append(tm.get('accuracy', 0))
+        dp_vals.append(tm.get('dp', 0))
+        eo_vals.append(tm.get('eo', 0))
+        f1_vals.append(tm.get('f1', 0))
+
+    if not labels:
+        print("No test metrics to plot.")
+        return
+
+    x = np.arange(len(labels))
+    width = 0.2
+
+    fig, ax = plt.subplots(figsize=(max(10, len(labels) * 2), 7))
+    ax.bar(x - 1.5 * width, acc_vals, width, label='Accuracy', color='tab:blue')
+    ax.bar(x - 0.5 * width, dp_vals, width, label='DP', color='tab:orange')
+    ax.bar(x + 0.5 * width, eo_vals, width, label='EO', color='tab:red')
+    ax.bar(x + 1.5 * width, f1_vals, width, label='F1', color='tab:green')
+
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, fontsize=9, rotation=25, ha='right')
+    ax.set_ylabel('Metric Value')
+    ax.set_title('Test Metrics – All Drift Scenarios (Aranyani)', fontsize=14, fontweight='bold')
+    ax.legend()
+    ax.grid(axis='y', alpha=0.3)
+    plt.tight_layout()
+    path = os.path.join(output_dir, 'comparison_bar_metrics.png')
+    plt.savefig(path, dpi=300, bbox_inches='tight')
+    print(f"Saved: {path}")
+    plt.close()
+
+
+def plot_summary_heatmap(all_results, output_dir='files/experiments'):
+    """Single-row heatmap of final metrics for each scenario.
+
+    Args:
+        all_results: list of dicts with 'scenario', 'test_metrics'.
+        output_dir: directory to save figures.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    filtered = [r for r in all_results if r.get('test_metrics')]
+    if not filtered:
+        print("No test metrics for heatmap.")
+        return
+
+    scenarios = [r['scenario'] for r in filtered]
+    metric_keys = [('accuracy', 'Accuracy'), ('dp', 'DP'), ('eo', 'EO'), ('f1', 'F1')]
+
+    data = np.full((len(scenarios), len(metric_keys)), np.nan)
+    for i, r in enumerate(filtered):
+        for j, (mk, _) in enumerate(metric_keys):
+            data[i, j] = r['test_metrics'].get(mk, np.nan)
+
+    fig, ax = plt.subplots(figsize=(8, max(3, len(scenarios) * 0.7)))
+    sns.heatmap(data, annot=True, fmt='.3f', cmap='YlGnBu',
+                xticklabels=[ml for _, ml in metric_keys],
+                yticklabels=scenarios, ax=ax, linewidths=0.5)
+    ax.set_title('Aranyani – Metrics by Drift Scenario', fontsize=14, fontweight='bold')
+    plt.tight_layout()
+    path = os.path.join(output_dir, 'heatmap_scenarios.png')
+    plt.savefig(path, dpi=300, bbox_inches='tight')
+    print(f"Saved: {path}")
+    plt.close()

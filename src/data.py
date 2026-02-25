@@ -22,6 +22,7 @@ import pandas as pd
 
 from sklearn import preprocessing
 from drift.create_drifted_ds import generate_drifted_dataset
+from drift.scenarios import get_scenario, SCENARIOS
 
 
 # %%
@@ -101,13 +102,17 @@ def preprocess_adult(df):
 # %%
 
 
-def read_adult(drift, path='../data/adult'):
+def read_adult(drift, path='../data/adult', drift_scenario=None):
   """Read the Adult dataset.
 
   Args:
-    path:
+    drift: bool or str – if True uses default abrupt_gender scenario,
+           if a string it selects the named scenario from drift.scenarios.
+    path: path to the adult data directory.
+    drift_scenario: explicit scenario name (overrides *drift* when given).
 
   Returns:
+    x_train, x_test, y_train, y_test, a_train, a_test
   """
 
   columns = [
@@ -146,9 +151,16 @@ def read_adult(drift, path='../data/adult'):
         print(f"Samples with income >50K.: {len(df[df['income'].str.strip() == '>50K.'])}")
         print(f"Male samples with >50K income: {len(df[(df['gender'].str.strip() == 'Male') & (df['income'].str.strip() == '>50K')])}")
         print(f"Male samples with >50K. income: {len(df[(df['gender'].str.strip() == 'Male') & (df['income'].str.strip() == '>50K.')])}")
-        if drift:
-            print("generate_drifted_dataset")
-            test_df = generate_drifted_dataset(df)
+        _scenario_name = drift_scenario  
+        if _scenario_name is None and isinstance(drift, str) and drift in SCENARIOS:
+            _scenario_name = drift
+        elif _scenario_name is None and drift is True:
+            _scenario_name = 'abrupt_gender'  # backwards-compatible default
+
+        if _scenario_name:
+            scenario_fn = get_scenario(_scenario_name)
+            print(f"Applying drift scenario: {_scenario_name}")
+            test_df = scenario_fn(df)
             print(f"This drifted set contains {len(test_df[test_df['gender'] == ' Female'])} female examples")
         else:
             test_df = df
@@ -158,6 +170,46 @@ def read_adult(drift, path='../data/adult'):
     x_test, y_test, a_test = [], [], []
 
   return x_train, x_test, y_train, y_test, a_train, a_test
+
+
+# %%
+
+
+def load_drifted_test_set(scenario_name, path='../data/adult'):
+  """Load and preprocess only the adult test set with a drift scenario applied.
+
+  This is a lightweight alternative to read_adult() for evaluating an
+  already-trained model against different drift scenarios without reloading
+  the training data.
+
+  Args:
+    scenario_name: name of the drift scenario (key in SCENARIOS dict).
+    path: path to the adult data directory.
+
+  Returns:
+    x_test, y_test, a_test  (NumPy arrays, preprocessed)
+  """
+
+  columns = [
+      'age', 'workclass', 'fnlwgt', 'education', 'education-num',
+      'marital-status', 'occupation', 'relationship', 'race', 'gender',
+      'capital gain', 'capital loss', 'hours per week', 'native-country',
+      'income',
+  ]
+
+  test_file_path = os.path.join(path, 'adult.test')
+  with open(test_file_path, 'rb') as f:
+    df = pd.read_csv(f, names=columns, skiprows=1)
+
+  if scenario_name and scenario_name != 'no_drift':
+    scenario_fn = get_scenario(scenario_name)
+    print(f"Applying drift scenario: {scenario_name}")
+    df = scenario_fn(df)
+  else:
+    print("No drift applied (baseline)")
+
+  x_test, y_test, a_test = preprocess_adult(df)
+  return x_test, y_test, a_test
 
 
 # %%
