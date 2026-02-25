@@ -21,11 +21,9 @@ def main(_):
       f'batch_size-{config.batch_size}',
       f'gradient_type-{config.gradient_type}')
 
-  _, _, _ = train(
+  _, _, _, _, _, _, _ = train(
       lambda_const=config.lambda_const,
       dataset=config.dataset,
-      mode=config.mode,
-      model_type=config.model_type,
       max_iter=config.max_iter,
       depth=config.depth,
       num_trees=config.num_trees,
@@ -36,14 +34,8 @@ def main(_):
       base_gamma=config.base_gamma,
       constraint_type=config.constraint_type,
       gradient_type=config.gradient_type,
-      probability=config.probability,
       encoder_model=config.encoder_model,
-      reservoir_size=config.reservoir_size,
       offline_loss_type=config.offline_loss_type,
-      use_correlation_penalty=config.use_correlation_penalty,
-      correlation_threshold=config.correlation_threshold,
-      penalty_aggression=config.penalty_aggression,
-
   )
   run.finish()
 

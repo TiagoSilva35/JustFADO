@@ -6,8 +6,6 @@ parameters:
     values: [0.0, 0.1, 0.5, 1.0, 5., 10.]
   dataset:
     values: ['adult']
-  mode:
-    values: ['node']
   max_iter:
     values: [1]
   depth:
@@ -20,8 +18,6 @@ parameters:
     values: [1]
   activation:
     values: ['sigmoid']
-  model_type:
-    values: ['forest']
   compute_mode:
     values: ['default']
   base_gamma: 
@@ -30,19 +26,7 @@ parameters:
     values: ['node']
   gradient_type:
     values: ['vanilla']
-  probability:
-    values: [0.5]
   encoder_model:
     values: ['instructor']
-  reservoir_size:
-    values: [500]
   offline_loss_type:
     values: ['mmd']
-  use_correlation_penalty:
-    values: [False]
-  correlation_threshold:
-    values: [0.2]
-  penalty_aggression:
-    values: [2.0]
-  use_class_weights:
-    values: [False]

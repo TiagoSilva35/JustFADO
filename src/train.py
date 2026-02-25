@@ -8,18 +8,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 from absl import flags
 
 import data
-import mlp
-
 import forest
-import majority
-import mlp_trainer
 import aranyani
 
-import reservoir
-import hoeffding_tree
-
-from skmultiflow.trees import HoeffdingTree
-from skmultiflow.trees import HoeffdingAdaptiveTreeClassifier
 from sklearn.model_selection import TimeSeriesSplit
 from plots import plot_metric_over_iterations, plot_metrics_over_timesteps
 
@@ -32,7 +23,6 @@ from drift.create_drifted_ds import generate_drifted_dataset
 flags.DEFINE_string('sweep_id', '-1', 'Wandb sweep ID.')
 flags.DEFINE_float('lambda_const', 0.1, 'Cell to run.')
 flags.DEFINE_string('dataset', 'civil', 'Dataset name.')
-flags.DEFINE_string('mode', 'node', 'Loss mode.')
 flags.DEFINE_integer('max_iter', 1, 'Total number of iterations.')
 flags.DEFINE_integer('depth', 4, 'Tree depth.')
 flags.DEFINE_integer('num_trees', 3, 'Number of trees.')
@@ -41,15 +31,11 @@ flags.DEFINE_bool(
 )
 flags.DEFINE_integer('batch_size', 1, 'Samples in an online batch.')
 flags.DEFINE_string('activation', 'sigmoid', 'Activation function.')
-flags.DEFINE_string('model_type', 'forest', 'Type of f(x).')
 flags.DEFINE_string('compute_mode', 'default', 'log or default.')
 flags.DEFINE_string('base_gamma', None, 'gamma for the gradients.')
 flags.DEFINE_string('constraint_type', 'node', '[node, leaf]')
 flags.DEFINE_string('gradient_type', 'vanilla', '[vanilla, momentum, ema]')
-flags.DEFINE_float('probability', 0.5,
-                   'Probability of selection in majority baseline.')
 flags.DEFINE_string('encoder_model', 'instructor', '[bert, instructor]')
-flags.DEFINE_integer('reservoir_size', 100, 'size of reservoir.')
 flags.DEFINE_string('offline_loss_type', 'mmd', '[mmd, l2, l1]')
 flags.DEFINE_bool('use_correlation_penalty', False, 
                   'Whether to use dynamic correlation-based penalties.')
@@ -62,15 +48,17 @@ flags.DEFINE_bool('use_class_weights', False,
 flags.DEFINE_bool('use_test_set', False,
                   'Whether to use actual test set instead of cross-validation (for adult dataset).')
 flags.DEFINE_bool('drift', False, 'Whether to apply drift to the dataset.')
+flags.DEFINE_bool('run_all_scenarios', False,
+                  'Run Aranyani on every drift scenario, collect results, and plot comparisons.')
+flags.DEFINE_string('drift_scenario', None,
+                    'Specific drift scenario name (e.g. abrupt_gender). Overrides --drift.')
 
 
 FLAGS = flags.FLAGS
 
 def train(
-    mode='node',
     dataset='civil',
     lambda_const=1,
-    model_type='forest',
     max_iter=1,
     depth=4,
     num_trees=3,
@@ -81,14 +69,19 @@ def train(
     base_gamma=None,
     constraint_type='node',
     gradient_type='vanilla',
-    probability=0.5,
     encoder_model='instructor',
-    reservoir_size=100,
     offline_loss_type='mmd',
     local_run=False,
     use_test_set=True,
     drift=False,
+    drift_scenario=None,
 ):
+  """Train Aranyani and return results.
+
+  When drift scenarios are handled externally (e.g. run_all_scenarios),
+  call with drift=False so training uses clean data. The trained model
+  is always returned so callers can evaluate it against arbitrary test sets.
+  """
 
   all_dps = []
   all_accuracies = []
@@ -100,7 +93,9 @@ def train(
   if dataset == 'adult':
     data_dim = 14
     num_class = 2
-    x_train, x_test, y_train, y_test, a_train, a_test = data.read_adult(drift)
+    x_train, x_test, y_train, y_test, a_train, a_test = data.read_adult(
+        drift, drift_scenario=drift_scenario
+    )
   elif dataset == 'census':
     data_dim = 40
     num_class = 2
@@ -151,24 +146,16 @@ def train(
       y_val_fold = y_train[val_idx]
       a_val_fold = a_train[val_idx]
     for _ in range(max_iter):
-      model = None
-      if model_type == 'mlp':
-        model = mlp.FairReLUNetwork(
-            data_dim=data_dim,
-            tree_depth=depth,
-            num_classes=num_class,
-            activation='relu',
-            use_layer_norm=True,
-            dropout_rate=0.0,
-            num_layers=2,
-            hidden_multiplier=2,
-        )
-      elif model_type == 'ht':
-        model = HoeffdingTree()
-      elif model_type == 'aht':
-        model = HoeffdingAdaptiveTreeClassifier()
-      elif model_type == 'forest':
-        model = forest.FairDecisionForest(
+      model = forest.FairDecisionForest(
+          num_trees=num_trees,
+          data_dim=data_dim,
+          tree_depth=depth,
+          num_classes=num_class,
+          activation=activation,
+          compute_mode=compute_mode,
+      )
+      if dataset in ['celeba']:
+        model = clip_forest.FairCLIPDecisionForest(
             num_trees=num_trees,
             data_dim=data_dim,
             tree_depth=depth,
@@ -176,93 +163,24 @@ def train(
             activation=activation,
             compute_mode=compute_mode,
         )
-        if dataset in ['celeba']:
-          model = clip_forest.FairCLIPDecisionForest(
-              num_trees=num_trees,
-              data_dim=data_dim,
-              tree_depth=depth,
-              num_classes=num_class,
-              activation=activation,
-              compute_mode=compute_mode,
-          )
 
-      if mode == 'node' and model_type == 'forest':
-        train_func = aranyani.train_online
-        use_correlation_penalty = False
+      dp, eo, accuracies, average_w_fair_grad, average_b_fair_grad = aranyani.train_online(
+          model,
+          x_train_fold,
+          y_train_fold,
+          a_train_fold,
+          data_dim=data_dim,
+          batch_size=batch_size,
+          tree_depth=depth,
+          compute_fairness=compute_fairness,
+          lambda_const=lambda_const,
+          num_trees=num_trees,
+          base_gamma=base_gamma,
+          constraint_type=constraint_type,
+          gradient_type=gradient_type,
+          local_run=local_run,
+      )
 
-        dp, eo, accuracies, average_w_fair_grad, average_b_fair_grad = train_func(
-            model,
-            x_train_fold,
-            y_train_fold,
-            a_train_fold,
-            data_dim=data_dim,
-            batch_size=batch_size,
-            tree_depth=depth,
-            compute_fairness=compute_fairness,
-            lambda_const=lambda_const,
-            num_trees=num_trees,
-            base_gamma=base_gamma,
-            constraint_type=constraint_type,
-            gradient_type=gradient_type,
-            local_run=local_run,
-        )
-
-      elif mode == 'majority':
-        train_func = majority.train_online
-        dp, accuracies = train_func(
-            model,
-            x_train_fold,
-            y_train_fold,
-            a_train_fold,
-            batch_size=batch_size,
-            probability=probability,
-            local_run=local_run,
-        )
-
-      elif model_type == 'mlp':
-        dp, accuracies = mlp_trainer.train_online(
-            model,
-            x_train_fold,
-            y_train_fold,
-            a_train_fold,
-            data_dim=data_dim,
-            batch_size=batch_size,
-            tree_depth=depth,
-            compute_fairness=compute_fairness,
-            lambda_const=lambda_const,
-            num_trees=num_trees,
-            base_gamma=base_gamma,
-            constraint_type=constraint_type,
-            gradient_type=gradient_type,
-            local_run=local_run,
-        )
-      elif model_type in ['ht', 'aht']:
-        dp, accuracies = hoeffding_tree.train_online(
-            model,
-            x_train_fold,
-            y_train_fold,
-            a_train_fold,
-            batch_size=batch_size,
-            local_run=local_run,
-            label_type='categorical',
-        )
-      elif mode == 'reservoir':
-        dp, accuracies = reservoir.train_online(
-            model,
-            x_train_fold,
-            y_train_fold,
-            a_train_fold,
-            batch_size=batch_size,
-            tree_depth=depth,
-            compute_fairness=compute_fairness,
-            lambda_const=lambda_const,
-            reservoir_size=reservoir_size,
-            local_run=local_run,
-        )
-      else:
-        dp, accuracies, eo = [], [], []
-
-      
       all_dps.append(dp)
       all_accuracies.append(accuracies)
       all_equalized_odds.append(eo)
@@ -278,11 +196,8 @@ def train(
         'train_accuracies': accuracies,
         'train_eo': eo,
         'val_metrics': val_metrics,
-        'model': model if drift else None,
+        'model': model,
     })
-
-    if not drift:
-      del model
 
   if use_actual_test_set:
     # For test set evaluation, just report the single result
@@ -310,14 +225,20 @@ def train(
     print(f"{'='*80}\n")
 
 
-  # Evaluate metrics over timesteps on drifted test set
+  # Evaluate metrics over timesteps on drifted test set (single-scenario mode)
+  timestep_results = None
+  test_metrics = None
   if drift and x_test is not None and len(x_test) > 0:
     print("\nEvaluating over timesteps on drifted test set...")
     timestep_results = utils.evaluate_over_timesteps(
         fold_results[0]['model'], x_test, y_test, a_test, data_dim=data_dim,
     )
     plot_metrics_over_timesteps(timestep_results)
-    # Clean up model
-    del fold_results[0]['model']
 
-  return all_dps, all_accuracies, all_equalized_odds
+  if fold_results and fold_results[0].get('val_metrics'):
+    test_metrics = fold_results[0]['val_metrics']
+
+  # Return the trained model so callers can reuse it for multiple evaluations
+  trained_model = fold_results[0]['model'] if fold_results else None
+
+  return all_dps, all_accuracies, all_equalized_odds, timestep_results, test_metrics, trained_model, data_dim
