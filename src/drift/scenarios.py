@@ -43,7 +43,7 @@ def no_drift(df):
 
 
 # ---------------------------------------------------------------------------
-# Scenario: abrupt gender drift (original behaviour)
+# Scenario: abrupt gender drift
 # ---------------------------------------------------------------------------
 def abrupt_gender(df):
     """Abrupt + slow gender swap for high-income males (original create_drifted_ds)."""
