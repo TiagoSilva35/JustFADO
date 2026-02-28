@@ -118,9 +118,9 @@ def label_flip(df):
     def _flip_income(sample):
         income = str(sample[-1]).strip().rstrip('.')
         if income == '>50K':
-            sample[-1] = ' <=50K'
+            sample[-1] = ' <=50K.'
         else:
-            sample[-1] = ' >50K'
+            sample[-1] = ' >50K.'
 
     # Phase 1 – abrupt label flip (40%)
     for sample in phase1:
@@ -183,9 +183,9 @@ def compound(df):
     def _flip_income(sample):
         income = str(sample[-1]).strip().rstrip('.')
         if income == '>50K':
-            sample[-1] = ' <=50K'
+            sample[-1] = ' <=50K.'
         else:
-            sample[-1] = ' >50K'
+            sample[-1] = ' >50K.'
 
     # Phase 1 – abrupt gender swap + 20% label flip
     for sample in phase1:
