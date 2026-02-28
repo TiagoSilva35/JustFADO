@@ -52,6 +52,10 @@ flags.DEFINE_bool('run_all_scenarios', False,
                   'Run Aranyani on every drift scenario, collect results, and plot comparisons.')
 flags.DEFINE_string('drift_scenario', None,
                     'Specific drift scenario name (e.g. abrupt_gender). Overrides --drift.')
+flags.DEFINE_bool('save_model', False, 'Whether to save the trained model.')
+flags.DEFINE_bool('load_model', False, 'Whether to load an existing model instead of training.')
+flags.DEFINE_string('model_path', None,
+                    'Path to save/load the model. If not specified, will use models/{dataset}_model.')
 
 
 FLAGS = flags.FLAGS
@@ -75,6 +79,9 @@ def train(
     use_test_set=True,
     drift=False,
     drift_scenario=None,
+    save_model=False,
+    load_model=False,
+    model_path=None,
 ):
   """Train Aranyani and return results.
 
@@ -89,6 +96,67 @@ def train(
 
   data_dim, num_class = None, None
   x_test, y_test, a_test = None, None, None  # For test set evaluation
+  
+  # Check if we should load an existing model
+  if load_model:
+    if model_path is None:
+      model_path = f'models/{dataset}_model'
+    
+    model_file = f'{model_path}.pkl'
+    if os.path.exists(model_file):
+      print(f"Loading existing model from {model_file}...")
+      # Determine if it's a CLIP model
+      is_clip = dataset in ['celeba']
+      if is_clip:
+        loaded_model = clip_forest.FairCLIPDecisionForest.load(model_path)
+      else:
+        loaded_model = forest.FairDecisionForest.load(model_path)
+      
+      # Still need to load data for evaluation
+      if dataset == 'adult':
+        data_dim = 14
+        num_class = 2
+        x_train, x_test, y_train, y_test, a_train, a_test = data.read_adult(
+            drift, drift_scenario=drift_scenario
+        )
+      elif dataset == 'census':
+        data_dim = 40
+        num_class = 2
+        x_train, x_test, y_train, y_test, a_train, a_test = data.read_census()
+      elif dataset == 'compas':
+        data_dim = 10
+        x_train, y_train, a_train = data.read_compas()
+        num_class = 2
+      elif dataset == 'jigsaw':
+        data_dim = 768
+        x_train, y_train, a_train = data.read_jigsaw()
+        num_class = 2
+      elif dataset == 'celeba':
+        data_dim = 768
+        x_train, y_train, a_train = data.read_celeba()
+        num_class = 2
+      
+      # Evaluate the loaded model
+      if x_test is not None and len(x_test) > 0:
+        test_metrics = utils.get_test_performance(
+            loaded_model, x_test, y_test, a_test,
+            data_dim=data_dim,
+            show_confusion_matrix=True,
+        )
+        print(f"\n{'='*80}")
+        print("Loaded Model Test Results:")
+        print(f"  Test Accuracy: {test_metrics['accuracy']:.4f}")
+        print(f"  Test DP: {test_metrics['dp']:.4f}")
+        print(f"  Test EO: {test_metrics['eo']:.4f}")
+        print(f"  Test AUC: {test_metrics['auc']:.4f}")
+        print(f"  Test F1-Score: {test_metrics['f1']:.4f}")
+        print(f"{'='*80}\n")
+        
+        return [], [], [], None, test_metrics, loaded_model, data_dim
+      else:
+        return [], [], [], None, None, loaded_model, data_dim
+    else:
+      print(f"Warning: Model file {model_file} not found. Proceeding with training...")
   
   if dataset == 'adult':
     data_dim = 14
@@ -240,5 +308,11 @@ def train(
 
   # Return the trained model so callers can reuse it for multiple evaluations
   trained_model = fold_results[0]['model'] if fold_results else None
+  
+  # Save model if requested
+  if save_model and trained_model is not None:
+    if model_path is None:
+      model_path = f'models/{dataset}_model'
+    trained_model.save(model_path)
 
   return all_dps, all_accuracies, all_equalized_odds, timestep_results, test_metrics, trained_model, data_dim

@@ -24,7 +24,7 @@ def train_online(
     constraint_type='node',
     gradient_type='vanilla',
     local_run=False,
-    fairness_type='dp',
+    fairness_type='eo',
 ):
   if fairness_type not in SUPPORTED_FAIRNESS_TYPES:
     raise ValueError(f"Fairness type {fairness_type} not supported. Choose from {SUPPORTED_FAIRNESS_TYPES}.")
@@ -34,8 +34,8 @@ def train_online(
   weight_updater = ClassWeightMonitor(
     total_num_samples=0,
     num_classes=2,
-    alpha=2.0,
-    _lambda=0.9995,
+    alpha=1.0,
+    _lambda=0.99,
   )
 
   print(f"lambda for fairness penalty: {lambda_const}")
@@ -296,11 +296,11 @@ def train_online(
 
           elif fairness_type == 'eo':
             # EO: penalize average of TPR gap (y=1) and FPR gap (y=0)
-            F_y0 = (agg_y[(1, 0)][tree_id] / max(subgroup_count[(1, 0)], 1e-8)
-                    - agg_y[(0, 0)][tree_id] / max(subgroup_count[(0, 0)], 1e-8))
+            F_y0 = (agg_y[(1, 0)][tree_id] / subgroup_count[(1, 0)]
+                    - agg_y[(0, 0)][tree_id] / subgroup_count[(0, 0)])
 
-            F_y1 = (agg_y[(1, 1)][tree_id] / max(subgroup_count[(1, 1)], 1e-8)
-                    - agg_y[(0, 1)][tree_id] / max(subgroup_count[(0, 1)], 1e-8))
+            F_y1 = (agg_y[(1, 1)][tree_id] / subgroup_count[(1, 1)]
+                    - agg_y[(0, 1)][tree_id] / subgroup_count[(0, 1)])
 
             # Compute gradient contributions from both y=0 and y=1 subgroups
             if len(grad.shape) == 1 and grad.shape[0] == num_internal_nodes:
