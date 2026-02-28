@@ -48,6 +48,9 @@ def _common_train_kwargs():
       encoder_model=FLAGS.encoder_model,
       offline_loss_type=FLAGS.offline_loss_type,
       local_run=True,
+      save_model=FLAGS.save_model,
+      load_model=FLAGS.load_model,
+      model_path=FLAGS.model_path,
   )
 
 
