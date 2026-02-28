@@ -24,7 +24,7 @@ def train_online(
     constraint_type='node',
     gradient_type='vanilla',
     local_run=False,
-    fairness_type='eo',
+    fairness_type='dp',
 ):
   if fairness_type not in SUPPORTED_FAIRNESS_TYPES:
     raise ValueError(f"Fairness type {fairness_type} not supported. Choose from {SUPPORTED_FAIRNESS_TYPES}.")
@@ -37,6 +37,7 @@ def train_online(
     alpha=1.0,
     _lambda=0.99,
   )
+  weight_updater = None
 
   print(f"lambda for fairness penalty: {lambda_const}")
 
