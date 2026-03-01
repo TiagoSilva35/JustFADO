@@ -7,17 +7,17 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 from absl import flags
 
-import data
-import forest
-import aranyani
+import src.helpers.data as data
+import src.forest.forest as forest
+import src.forest.aranyani as aranyani
 
 from sklearn.model_selection import TimeSeriesSplit
-from plots import plot_metric_over_iterations, plot_metrics_over_timesteps
+from src.helpers.plots import plot_metric_over_iterations, plot_metrics_over_timesteps
 
-import utils
-import clip_forest
+import src.helpers.utils as utils
+import src.forest.clip_forest as clip_forest
 
-from drift.create_drifted_ds import generate_drifted_dataset
+from src.drift.create_drifted_ds import generate_drifted_dataset
 
 
 flags.DEFINE_string('sweep_id', '-1', 'Wandb sweep ID.')

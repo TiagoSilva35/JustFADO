@@ -4,8 +4,8 @@ import numpy as np
 import tensorflow as tf
 import tqdm
 import wandb
-import utils
-from weight_monitor import ClassWeightMonitor
+import src.helpers.utils as utils
+from src.helpers.weight_monitor import ClassWeightMonitor
 
 SUPPORTED_FAIRNESS_TYPES = ['dp', 'eo']
 

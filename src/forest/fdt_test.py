@@ -1,5 +1,5 @@
-import fdt
-import forest
+import src.forest.fdt as fdt
+import src.forest.forest as forest
 import tensorflow as tf
 
 import numpy as np

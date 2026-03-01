@@ -7,7 +7,8 @@ import tensorflow as tf
 from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
-from plots import plot_metric_over_iterations
+from river import drift
+from src.helpers.plots import plot_metric_over_iterations
 
 
 def construct_penalty_mask(tree_depth=4):
@@ -323,6 +324,11 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim):
   accuracies = []
   dps = []
   eos = []
+  
+  drifted_points = []
+  
+  #TODO: Test other drift detectors
+  drift_detector = drift.ADWIN() 
 
   n_samples = len(x_test)
   accuracy_metric = tf.keras.metrics.Accuracy()
@@ -335,6 +341,14 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim):
     y_preds_all.append(y_pred)
     y_true_all.append(int(y_test[t]))
     a_all.append(int(a_test[t]))
+
+    error = int(y_pred) != int(y_test[t])
+    drift_detector.update(error)
+    
+    if drift_detector.change_detected:
+      drifted_points.append(t)
+      print(f"Drift detected at sample {t} (error={error})")
+      accuracy_metric = tf.keras.metrics.Accuracy()  
 
     # Cumulative accuracy
     accuracy_metric.update_state([y_test[t]], [y_pred])
@@ -350,10 +364,16 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim):
     else:
       dps.append(0.0)
       eos.append(0.0)
+    
+  if len(drifted_points) > 0:
+    print(f"Drift detected at samples: {drifted_points}")
+  else:
+    print("No drift detected over the test set.")
 
   return {
       'accuracy': accuracies,
       'dp': dps,
       'eo': eos,
       'n_samples': n_samples,
+      'drifted_points': drifted_points,
   }

@@ -1,0 +1,32 @@
+[
+  {
+    "scenario": "no_drift",
+    "test_metrics": null,
+    "error": "[Errno 2] No such file or directory: '../data/adult/adult.test'"
+  },
+  {
+    "scenario": "abrupt_gender",
+    "test_metrics": null,
+    "error": "[Errno 2] No such file or directory: '../data/adult/adult.test'"
+  },
+  {
+    "scenario": "gradual_gender",
+    "test_metrics": null,
+    "error": "[Errno 2] No such file or directory: '../data/adult/adult.test'"
+  },
+  {
+    "scenario": "label_flip",
+    "test_metrics": null,
+    "error": "[Errno 2] No such file or directory: '../data/adult/adult.test'"
+  },
+  {
+    "scenario": "feature_noise",
+    "test_metrics": null,
+    "error": "[Errno 2] No such file or directory: '../data/adult/adult.test'"
+  },
+  {
+    "scenario": "compound",
+    "test_metrics": null,
+    "error": "[Errno 2] No such file or directory: '../data/adult/adult.test'"
+  }
+]
