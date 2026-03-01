@@ -26,15 +26,32 @@ def plot_metric_over_iterations(metric_values, metric_name, fairness_type):
     plt.show()
 
 
-def plot_metrics_over_timesteps(timestep_results, save_path='files/metrics_over_timesteps.png'):
+def _smooth(values, window=50):
+    """Apply a rolling average to reduce noise while preserving trends."""
+    if len(values) < window:
+        return values
+    kernel = np.ones(window) / window
+    # 'valid' mode shrinks the array; pad edges with edge values to keep length
+    padded = np.pad(values, (window // 2, window - window // 2 - 1), mode='edge')
+    return np.convolve(padded, kernel, mode='valid')
+
+
+def plot_metrics_over_timesteps(timestep_results, save_path='files/metrics_over_timesteps.png',
+                                skip_samples=500, smooth_window=50):
     """Plot accuracy, DP, and EO over timesteps with drift phase boundaries.
 
     Args:
         timestep_results: dict with keys 'accuracy', 'dp', 'eo', 'n_samples'.
         save_path: Path to save the figure.
+        skip_samples: Number of initial noisy samples to skip in the plot.
+        smooth_window: Rolling average window size (set to 1 to disable smoothing).
     """
     n = timestep_results['n_samples']
     timesteps = np.arange(1, n + 1)
+
+    # Skip the first noisy samples in the plot
+    plot_start = skip_samples
+    timesteps = timesteps[plot_start:]
 
     # Drift phase boundaries (from create_drifted_ds.py)
     splits = [0.15, 0.5, 0.6, 0.75, 1.0]
@@ -44,22 +61,37 @@ def plot_metrics_over_timesteps(timestep_results, save_path='files/metrics_over_
     fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
 
     metrics = [
-        ('accuracy', 'Accuracy', 'tab:blue'),
-        ('dp', 'Demographic Parity', 'tab:orange'),
-        ('eo', 'Equalized Odds', 'tab:red'),
+        ('accuracy', 'Accuracy',            'tab:blue',   [0.6, 1.0]),
+        ('dp',       'Demographic Parity',   'tab:orange', [0.0, 0.4]),
+        ('eo',       'Equalized Odds',       'tab:red',    [0.0, 0.4]),
     ]
 
     drift_pts = timestep_results.get('drift_points', [])
-    
-    for ax, (key, label, color) in zip(axes, metrics):
-        values = timestep_results[key]
-        ax.plot(timesteps, values, color=color, linewidth=1.0, alpha=0.85)
+    drift_pts_dp = timestep_results.get('drifted_points_dp', [])
+    drift_pts_eo = timestep_results.get('drifted_points_eo', [])
+
+    # Map each metric subplot to its own drift points list
+    metric_drift_pts = {
+        'accuracy': drift_pts,
+        'dp': drift_pts_dp,
+        'eo': drift_pts_eo,
+    }
+
+    for ax, (key, label, color, ylim) in zip(axes, metrics):
+        raw    = np.array(timestep_results[key][plot_start:])
+        values = _smooth(raw, window=smooth_window)
+        # Plot smoothed line with raw values as faint background
+        ax.plot(timesteps, raw,    color=color, linewidth=0.5, alpha=0.25)
+        ax.plot(timesteps, values, color=color, linewidth=1.5, alpha=0.9)
         ax.set_ylabel(label, fontsize=12, fontweight='bold')
+        ax.set_ylim(ylim)
         ax.grid(True, alpha=0.3)
 
-        for pts in drift_pts:
-            ax.axvline(x=pts, color='purple', linestyle='--', alpha=0.7, label='Drift Detected' if pts == drift_pts[0] else "")
-        if drift_pts and ax == axes[0]:
+        pts = metric_drift_pts[key]
+        for p in pts:
+            ax.axvline(x=p, color='purple', linestyle='--', alpha=0.7,
+                       label='Drift Detected' if p == pts[0] else "")
+        if pts and ax == axes[0]:
             ax.legend(fontsize=9)
         
         # Draw drift phase boundaries

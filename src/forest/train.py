@@ -100,7 +100,7 @@ def train(
   # Check if we should load an existing model
   if load_model:
     if model_path is None:
-      model_path = f'models/{dataset}_model'
+      model_path = f'src/models/{dataset}_model'
     
     model_file = f'{model_path}.pkl'
     if os.path.exists(model_file):

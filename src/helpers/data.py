@@ -175,7 +175,7 @@ def read_adult(drift, path='data/adult', drift_scenario=None):
 # %%
 
 
-def load_drifted_test_set(scenario_name, path='../data/adult'):
+def load_drifted_test_set(scenario_name, path='data/adult'):
   """Load and preprocess only the adult test set with a drift scenario applied.
 
   This is a lightweight alternative to read_adult() for evaluating an
