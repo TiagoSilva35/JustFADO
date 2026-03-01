@@ -16,11 +16,11 @@ if gpus:
         print(f"GPU memory growth setting failed: {e}")
 
 from absl import app
-from train import *
-from data import load_drifted_test_set
-from drift.scenarios import SCENARIOS, SCENARIO_DESCRIPTIONS
-from utils import evaluate_over_timesteps, get_test_performance
-from plots import (
+from src.forest.train import *
+from src.helpers.data import load_drifted_test_set
+from src.drift.scenarios import SCENARIOS, SCENARIO_DESCRIPTIONS
+from src.helpers.utils import evaluate_over_timesteps, get_test_performance
+from src.helpers.plots import (
     plot_metrics_over_timesteps,
     plot_scenario_comparison_timesteps,
     plot_scenario_comparison_bar,

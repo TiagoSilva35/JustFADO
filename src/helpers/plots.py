@@ -49,12 +49,19 @@ def plot_metrics_over_timesteps(timestep_results, save_path='files/metrics_over_
         ('eo', 'Equalized Odds', 'tab:red'),
     ]
 
+    drift_pts = timestep_results.get('drift_points', [])
+    
     for ax, (key, label, color) in zip(axes, metrics):
         values = timestep_results[key]
         ax.plot(timesteps, values, color=color, linewidth=1.0, alpha=0.85)
         ax.set_ylabel(label, fontsize=12, fontweight='bold')
         ax.grid(True, alpha=0.3)
 
+        for pts in drift_pts:
+            ax.axvline(x=pts, color='purple', linestyle='--', alpha=0.7, label='Drift Detected' if pts == drift_pts[0] else "")
+        if drift_pts and ax == axes[0]:
+            ax.legend(fontsize=9)
+        
         # Draw drift phase boundaries
         for b in boundaries:
             ax.axvline(x=b, color='grey', linestyle='--', alpha=0.6)

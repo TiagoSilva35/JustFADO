@@ -21,8 +21,8 @@ import numpy as np
 import pandas as pd
 
 from sklearn import preprocessing
-from drift.create_drifted_ds import generate_drifted_dataset
-from drift.scenarios import get_scenario, SCENARIOS
+from src.drift.create_drifted_ds import generate_drifted_dataset
+from src.drift.scenarios import get_scenario, SCENARIOS
 
 
 # %%
@@ -102,7 +102,7 @@ def preprocess_adult(df):
 # %%
 
 
-def read_adult(drift, path='../data/adult', drift_scenario=None):
+def read_adult(drift, path='data/adult', drift_scenario=None):
   """Read the Adult dataset.
 
   Args:

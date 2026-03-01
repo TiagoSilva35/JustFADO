@@ -1,12 +1,13 @@
 absl-py~=0.10
-numpy>=1.19.2,<1.20
+numpy>=1.20.0,<1.24
 pandas==1.2.3
 PyYAML==6.0.1
 scikit_learn==0.24.2
 scikit_multiflow==0.5.3
-tensorflow==2.4.1
-tensorflow_probability==0.12.2
+tensorflow==2.8.0
+tensorflow_probability==0.16.0
 tqdm==4.64.1
 wandb==0.15.2
 matplotlib>=3.3.4,<3.8
 seaborn>=0.11.0
+river==0.10.1

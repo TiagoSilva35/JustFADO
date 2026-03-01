@@ -4,12 +4,10 @@ import tensorflow as tf
 import pickle
 import os
 
-from tensorflow.keras import layers, models
-
-import fdt
+import src.forest.fdt as fdt
 
 
-class FairCLIPDecisionForest(tf.Module):
+class FairDecisionForest(tf.Module):
   """Fair classification decision tree."""
 
   def __init__(self,
@@ -18,7 +16,7 @@ class FairCLIPDecisionForest(tf.Module):
                tree_depth,
                num_classes,
                activation='sigmoid',
-               compute_mode='default',):
+               compute_mode='default'):
     """Constructor.
 
     Args:
@@ -30,13 +28,9 @@ class FairCLIPDecisionForest(tf.Module):
       compute_mode: log or default.
     """
 
-    super(FairCLIPDecisionForest, self).__init__()
+    super(FairDecisionForest, self).__init__()
     assert tree_depth > 1
     assert num_trees >= 1
-    
-    self.base_model = models.Sequential()
-    self.base_model.add(layers.Flatten())
-    
     self.layers = []
     for _ in range(num_trees):
       self.layers.append(fdt.FairDecisionTree(
@@ -45,22 +39,24 @@ class FairCLIPDecisionForest(tf.Module):
   def __call__(self, inputs, training=False):
     all_predictions = []
     all_node_decisions = []
-
-    inputs = tf.cast(inputs, tf.float32)
-    embeddings = self.base_model(inputs)
-
     for layer in self.layers:
-      prediction, node_decisions, _ = layer(embeddings, 
-                                            training=training,
-                                            pred_type='categorical')
-      all_predictions.append(prediction)
-      all_node_decisions.append(node_decisions)
+      if training:
+        # During training, we want to collect predictions and node decisions
+        prediction, node_decisions, _ = layer(inputs, training=training)
+        all_predictions.append(prediction)
+        all_node_decisions.append(node_decisions)
+      else:
+        # During inference, we only want the final prediction
+        prediction = layer(inputs, training=training)
+        all_predictions.append(prediction)
 
     final_prediction = tf.reduce_mean(tf.stack(all_predictions), axis=0)
-    all_node_decisions = tf.stack(all_node_decisions, axis=0)
+
     if training:
+      all_node_decisions = tf.stack(all_node_decisions, axis=0)
       return final_prediction, all_node_decisions
-    return tf.nn.softmax(final_prediction, axis=-1)
+    
+    return final_prediction
   
   def save(self, filepath):
     """Save the model weights and configuration to a file.
@@ -75,7 +71,6 @@ class FairCLIPDecisionForest(tf.Module):
     model_data = {
         'num_trees': len(self.layers),
         'weights': [],
-        'model_type': 'clip',
     }
     
     for tree in self.layers:
@@ -94,7 +89,7 @@ class FairCLIPDecisionForest(tf.Module):
     with open(f'{filepath}.pkl', 'wb') as f:
       pickle.dump(model_data, f)
     
-    print(f"CLIP Model saved to {filepath}.pkl")
+    print(f"Model saved to {filepath}.pkl")
   
   @classmethod
   def load(cls, filepath):
@@ -104,7 +99,7 @@ class FairCLIPDecisionForest(tf.Module):
       filepath: Path to the saved model file (without .pkl extension).
       
     Returns:
-      A FairCLIPDecisionForest instance with loaded weights.
+      A FairDecisionForest instance with loaded weights.
     """
     with open(f'{filepath}.pkl', 'rb') as f:
       model_data = pickle.load(f)
@@ -128,6 +123,5 @@ class FairCLIPDecisionForest(tf.Module):
       model.layers[i].bias.assign(tree_data['bias'])
       model.layers[i].theta.assign(tree_data['theta'])
     
-    print(f"CLIP Model loaded from {filepath}.pkl")
+    print(f"Model loaded from {filepath}.pkl")
     return model
-
