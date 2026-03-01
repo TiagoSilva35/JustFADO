@@ -299,81 +299,145 @@ def aggregate_fold_results(fold_results):
         'std_val_eo': np.std([f['val_metrics']['eo'] for f in fold_results]),
     }
 
-
 def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim):
-  """Evaluate a trained model on a test set sample-by-sample over time.
+    from collections import deque
 
-  Walks through the test set one sample at a time, computing cumulative
-  accuracy, demographic parity, and equalized odds at each timestep.
-  This is useful for observing how metrics evolve under distribution drift.
+    # outputs
+    accuracies = []
+    dps = []
+    eos = []
+    drifted_points = []
+    drifted_points_dp = []
+    drifted_points_eo = []
 
-  Args:
-    model: Trained model.
-    x_test: Test features array.
-    y_test: Test labels array.
-    a_test: Test protected attribute array.
-    data_dim: Dimensionality of input features.
+    # detectors
+    drift_detector_acc = drift.ADWIN(delta=0.002)
+    drift_detector_dp  = drift.ADWIN(delta=1e-5)
+    drift_detector_eo  = drift.ADWIN(delta=1e-5)
 
-  Returns:
-    dict with keys 'accuracy', 'dp', 'eo', each a list of length len(x_test).
-  """
-  y_preds_all = []
-  y_true_all = []
-  a_all = []
+    # window / warmup params (tune to your drift scale)
+    WINDOW_SIZE = 2000
+    WARMUP = 2000        # pause after a drift detection (samples)
+    MIN_SAMPLES = 200    # minimum window size to evaluate
+    MIN_PER_GROUP = 50   # minimum samples per sensitive-group within window
 
-  accuracies = []
-  dps = []
-  eos = []
-  
-  drifted_points = []
-  
-  #TODO: Test other drift detectors
-  drift_detector = drift.ADWIN() 
+    # warmup markers (initial warmup should be >= WINDOW_SIZE or MIN_SAMPLES)
+    dp_warmup_until = WARMUP
+    eo_warmup_until = WARMUP
 
-  n_samples = len(x_test)
-  accuracy_metric = tf.keras.metrics.Accuracy()
+    # buffers for sliding-window computation
+    y_preds_all = []
+    y_true_all = []
+    a_all = []
 
-  for t in range(n_samples):
-    x_t = np.array(x_test[t], dtype=np.float32).reshape(1, data_dim)
-    y_probs = model(tf.convert_to_tensor(x_t), training=False)
-    y_pred = tf.math.argmax(y_probs, axis=-1).numpy()[0]
+    # optional EMA smoothing for DP/EO before feeding detector
+    use_ema = True
+    ema_alpha = 0.2
+    dp_ema = None
+    eo_ema = None
 
-    y_preds_all.append(y_pred)
-    y_true_all.append(int(y_test[t]))
-    a_all.append(int(a_test[t]))
+    n_samples = len(x_test)
+    accuracy_metric = tf.keras.metrics.Accuracy()
 
-    error = int(y_pred) != int(y_test[t])
-    drift_detector.update(error)
-    
-    if drift_detector.change_detected:
-      drifted_points.append(t)
-      print(f"Drift detected at sample {t} (error={error})")
-      accuracy_metric = tf.keras.metrics.Accuracy()  
+    for t in range(n_samples):
+        x_t = np.array(x_test[t], dtype=np.float32).reshape(1, data_dim)
+        y_probs = model(tf.convert_to_tensor(x_t), training=False)
+        y_pred = int(tf.math.argmax(y_probs, axis=-1).numpy()[0])
 
-    # Cumulative accuracy
-    accuracy_metric.update_state([y_test[t]], [y_pred])
-    accuracies.append(float(accuracy_metric.result().numpy()))
+        y_preds_all.append(y_pred)
+        y_true_all.append(int(y_test[t]))
+        a_all.append(int(a_test[t]))
 
-    # Need at least a few samples from both groups to compute fairness
-    a_arr = np.array(a_all)
-    if np.sum(a_arr == 0) > 0 and np.sum(a_arr == 1) > 0:
-      dp, _ = get_demographic_parity(y_preds_all, a_all)
-      eo, _ = get_equalized_odds(y_preds_all, a_all, y_true_all)
-      dps.append(float(dp))
-      eos.append(float(eo))
+        # --- accuracy (per-sample feed to detector) ---
+        error = 1 if y_pred != int(y_test[t]) else 0
+        drift_detector_acc.update(error)
+        if drift_detector_acc.change_detected:
+            drifted_points.append(t)
+            print(f"[ACC] Drift detected at sample {t}")
+            # optional: reset accuracy metric
+            accuracy_metric = tf.keras.metrics.Accuracy()
+
+        # windowed accuracy for plotting (simple moving avg over last WINDOW_SIZE)
+        acc_start = max(0, t + 1 - WINDOW_SIZE)
+        acc_window = y_preds_all[acc_start:]
+        true_window = y_true_all[acc_start:]
+        if len(acc_window) >= 1:
+            # compute windowed accuracy (fast)
+            acc_val = float(np.mean(np.array(acc_window) == np.array(true_window)))
+        else:
+            acc_val = 0.0
+        accuracies.append(acc_val)
+
+        # --- fairness window slices (bounded by WINDOW_SIZE and any custom window start) ---
+        w_start = max(0, t + 1 - WINDOW_SIZE)
+        w_preds = y_preds_all[w_start:]
+        w_true  = y_true_all[w_start:]
+        w_a     = a_all[w_start:]
+
+        # check there are enough samples overall and per-group in the *window*
+        if len(w_preds) >= MIN_SAMPLES and (w_a.count(0) >= MIN_PER_GROUP and w_a.count(1) >= MIN_PER_GROUP):
+            dp_gap, _ = get_demographic_parity(w_preds, w_a)
+            eo_gap, _ = get_equalized_odds(w_preds, w_a, w_true)
+
+            # optional EMA smoothing
+            if use_ema:
+                dp_ema = dp_gap if dp_ema is None else (ema_alpha * dp_gap + (1 - ema_alpha) * dp_ema)
+                eo_ema = eo_gap if eo_ema is None else (ema_alpha * eo_gap + (1 - ema_alpha) * eo_ema)
+                dp_for_detector = float(dp_ema)
+                eo_for_detector = float(eo_ema)
+            else:
+                dp_for_detector = float(dp_gap)
+                eo_for_detector = float(eo_gap)
+
+            # update detectors after warmup
+            if t >= dp_warmup_until:
+                drift_detector_dp.update(dp_for_detector)
+                if drift_detector_dp.change_detected:
+                    drifted_points_dp.append(t)
+                    print(f"[DP] Drift detected at sample {t} (dp_window={dp_gap:.4f})")
+                    # pause DP detection for WARMUP samples (avoid immediate re-fires)
+                    dp_warmup_until = t + WARMUP
+                    # optional: reset detector to clear its internal state
+                    drift_detector_dp = drift.ADWIN(delta=1e-5)
+                    dp_ema = None  # reset ema for new regime
+
+            if t >= eo_warmup_until:
+                drift_detector_eo.update(eo_for_detector)
+                if drift_detector_eo.change_detected:
+                    drifted_points_eo.append(t)
+                    print(f"[EO] Drift detected at sample {t} (eo_window={eo_gap:.4f})")
+                    eo_warmup_until = t + WARMUP
+                    drift_detector_eo = drift.ADWIN(delta=1e-5)
+                    eo_ema = None
+
+            # store *windowed* metrics for plotting (not cumulative)
+            dps.append(float(dp_gap))
+            eos.append(float(eo_gap))
+        else:
+            # not enough data in window yet — append NaN or previous value to keep alignment
+            dps.append(np.nan)
+            eos.append(np.nan)
+
+    # print summary
+    if drifted_points:
+        print(f"Accuracy drift detected at samples: {drifted_points}")
     else:
-      dps.append(0.0)
-      eos.append(0.0)
-    
-  if len(drifted_points) > 0:
-    print(f"Drift detected at samples: {drifted_points}")
-  else:
-    print("No drift detected over the test set.")
+        print("No accuracy drift detected over the test set.")
+    if drifted_points_dp:
+        print(f"DP drift detected at samples: {drifted_points_dp}")
+    else:
+        print("No DP drift detected over the test set.")
+    if drifted_points_eo:
+        print(f"EO drift detected at samples: {drifted_points_eo}")
+    else:
+        print("No EO drift detected over the test set.")
 
-  return {
-      'accuracy': accuracies,
-      'dp': dps,
-      'eo': eos,
-      'n_samples': n_samples,
-      'drifted_points': drifted_points,
-  }
+    return {
+        'accuracy': accuracies,
+        'dp': dps,
+        'eo': eos,
+        'n_samples': n_samples,
+        'drifted_points': drifted_points,
+        'drifted_points_dp': drifted_points_dp,
+        'drifted_points_eo': drifted_points_eo,
+    }
