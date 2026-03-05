@@ -127,7 +127,7 @@ class FairDecisionTree(tf.Module):
     else:
       leaf_probs = tf.math.reduce_prod(probs, axis=1)
       if pred_type == 'categorical':
-          prediction = tf.matmul(leaf_probs, tf.nn.softmax(self.theta, axis=-1))
+          prediction = tf.matmul(leaf_probs, self.theta)  # raw logits; softmax applied at output only
       else:
           prediction = tf.matmul(leaf_probs, self.theta)
 

@@ -4,6 +4,7 @@ import math
 
 import numpy as np
 import tensorflow as tf
+import tqdm
 from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -299,138 +300,143 @@ def aggregate_fold_results(fold_results):
         'std_val_eo': np.std([f['val_metrics']['eo'] for f in fold_results]),
     }
 
-def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim):
-    from collections import deque
-
+def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
+                            test_then_train=False, learning_rate=2e-3,
+                            accuracy_window=200):
     # outputs
     accuracies = []
     dps = []
     eos = []
     drifted_points = []
-    drifted_points_dp = []
-    drifted_points_eo = []
 
-    # detectors
-    drift_detector_acc = drift.ADWIN(delta=0.002)
-    drift_detector_dp  = drift.ADWIN(delta=1e-5)
-    drift_detector_eo  = drift.ADWIN(delta=1e-5)
+    ADWIN_DELTA = 0.05
+    # FAIRNESS_WINDOW is used only for DP/EO which need enough subgroup samples.
+    FAIRNESS_WINDOW  = 500
+    COOLDOWN = 300
+    MIN_SAMPLES_PER_STREAM = 150
+    DRIFT_LR_SPIKE = learning_rate * 10
+    LR_DECAY_STEPS = 500
 
-    # window / warmup params (tune to your drift scale)
-    WINDOW_SIZE = 2000
-    WARMUP = 2000        # pause after a drift detection (samples)
-    MIN_SAMPLES = 200    # minimum window size to evaluate
-    MIN_PER_GROUP = 50   # minimum samples per sensitive-group within window
+    # Rolling window for accuracy — stores the raw correct/incorrect outcome
+    # for the last `accuracy_window` samples.
+    USE_ROLLING = bool(accuracy_window)
+    correct_buffer = []  # ring of 0/1 outcomes (0 = wrong, 1 = correct)
 
-    # warmup markers (initial warmup should be >= WINDOW_SIZE or MIN_SAMPLES)
-    dp_warmup_until = WARMUP
-    eo_warmup_until = WARMUP
-
-    # buffers for sliding-window computation
+    # --- Ensemble accuracy detector ---
+    acc_det = drift.ADWIN(delta=ADWIN_DELTA)
+    acc_det_n = 0
+    last_detected_acc = -COOLDOWN
     y_preds_all = []
     y_true_all = []
     a_all = []
-
-    # optional EMA smoothing for DP/EO before feeding detector
-    use_ema = True
-    ema_alpha = 0.2
-    dp_ema = None
-    eo_ema = None
-
+    test_then_train = False
     n_samples = len(x_test)
-    accuracy_metric = tf.keras.metrics.Accuracy()
+    print("Test then train: ", test_then_train)
+    # Online optimizer and loss (only used when test_then_train=True)
+    if test_then_train:
+        optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+        # train_out[0] is the raw pre-softmax prediction, so use from_logits=True
+        criteria = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+        # Run one dummy step so optimizer variables are initialised and
+        # .learning_rate becomes assignable before any drift spike.
+        _dummy_x = tf.zeros([1, data_dim])
+        _dummy_y = tf.constant([0], dtype=tf.int32)
+        with tf.GradientTape() as _t:
+            _out = model(_dummy_x, training=True)
+            _p   = _out[0] if isinstance(_out, tuple) else _out
+            _l   = criteria(y_true=_dummy_y, y_pred=_p)
+        _g = _t.gradient(_l, model.trainable_variables)
+        optimizer.apply_gradients(zip(_g, model.trainable_variables))
+    # Counts down from LR_DECAY_STEPS to 0 after a genuine concept drift spike.
+    steps_since_drift = 0
 
     for t in range(n_samples):
-        x_t = np.array(x_test[t], dtype=np.float32).reshape(1, data_dim)
-        y_probs = model(tf.convert_to_tensor(x_t), training=False)
-        y_pred = int(tf.math.argmax(y_probs, axis=-1).numpy()[0])
+        x_t = tf.convert_to_tensor(
+            np.array(x_test[t], dtype=np.float32).reshape(1, data_dim)
+        )
+        y_t = int(y_test[t])
+        a_t = int(a_test[t])
+
+        # ── STEP 1: TEST ──────────────────────────────────────────────────────
+        y_probs = model(x_t, training=False)
+        y_pred  = int(tf.math.argmax(y_probs, axis=-1).numpy()[0])
+        error   = int(y_pred != y_t)
 
         y_preds_all.append(y_pred)
-        y_true_all.append(int(y_test[t]))
-        a_all.append(int(a_test[t]))
+        y_true_all.append(y_t)
+        a_all.append(a_t)
 
-        # --- accuracy (per-sample feed to detector) ---
-        error = 1 if y_pred != int(y_test[t]) else 0
-        drift_detector_acc.update(error)
-        if drift_detector_acc.change_detected:
-            drifted_points.append(t)
-            print(f"[ACC] Drift detected at sample {t}")
-            # optional: reset accuracy metric
-            accuracy_metric = tf.keras.metrics.Accuracy()
-
-        # windowed accuracy for plotting (simple moving avg over last WINDOW_SIZE)
-        acc_start = max(0, t + 1 - WINDOW_SIZE)
-        acc_window = y_preds_all[acc_start:]
-        true_window = y_true_all[acc_start:]
-        if len(acc_window) >= 1:
-            # compute windowed accuracy (fast)
-            acc_val = float(np.mean(np.array(acc_window) == np.array(true_window)))
-        else:
-            acc_val = 0.0
+        # Rolling-window accuracy: drop oldest sample when buffer is full
+        correct_buffer.append(int(y_pred == y_t))
+        if USE_ROLLING and len(correct_buffer) > accuracy_window:
+            correct_buffer.pop(0)
+        acc_val = float(sum(correct_buffer)) / len(correct_buffer)
         accuracies.append(acc_val)
 
-        # --- fairness window slices (bounded by WINDOW_SIZE and any custom window start) ---
-        w_start = max(0, t + 1 - WINDOW_SIZE)
+        # Rolling window used only for fairness metrics (needs subgroup samples)
+        w_start = max(0, t + 1 - FAIRNESS_WINDOW)
         w_preds = y_preds_all[w_start:]
         w_true  = y_true_all[w_start:]
         w_a     = a_all[w_start:]
+        y_probs_np  = tf.nn.softmax(y_probs, axis=-1).numpy()[0]
+        model_conf  = float(y_probs_np[y_pred])   
+        label_conf  = float(y_probs_np[y_t])      
+        is_label_noise = (error == 1) and (model_conf > 0.70)
 
-        # check there are enough samples overall and per-group in the *window*
-        if len(w_preds) >= MIN_SAMPLES and (w_a.count(0) >= MIN_PER_GROUP and w_a.count(1) >= MIN_PER_GROUP):
-            dp_gap, _ = get_demographic_parity(w_preds, w_a)
-            eo_gap, _ = get_equalized_odds(w_preds, w_a, w_true)
-
-            # optional EMA smoothing
-            if use_ema:
-                dp_ema = dp_gap if dp_ema is None else (ema_alpha * dp_gap + (1 - ema_alpha) * dp_ema)
-                eo_ema = eo_gap if eo_ema is None else (ema_alpha * eo_gap + (1 - ema_alpha) * eo_ema)
-                dp_for_detector = float(dp_ema)
-                eo_for_detector = float(eo_ema)
+        acc_det.update(error)
+        acc_det_n += 1
+        if (acc_det.change_detected
+                and acc_det_n >= MIN_SAMPLES_PER_STREAM
+                and t - last_detected_acc >= COOLDOWN):
+            drifted_points.append(t)
+            last_detected_acc = t
+            acc_det   = drift.ADWIN(delta=ADWIN_DELTA)
+            acc_det_n = 0
+            if not is_label_noise and test_then_train:
+                # Genuine concept drift — spike LR so the model adapts fast
+                optimizer = tf.keras.optimizers.Adam(learning_rate=DRIFT_LR_SPIKE)
+                steps_since_drift = LR_DECAY_STEPS
+                print(f"[ACC] Concept drift at sample {t} — spiking LR to {DRIFT_LR_SPIKE:.2e}")
             else:
-                dp_for_detector = float(dp_gap)
-                eo_for_detector = float(eo_gap)
+                print(f"[ACC] Label noise drift at sample {t} — skipping LR spike")
 
-            # update detectors after warmup
-            if t >= dp_warmup_until:
-                drift_detector_dp.update(dp_for_detector)
-                if drift_detector_dp.change_detected:
-                    drifted_points_dp.append(t)
-                    print(f"[DP] Drift detected at sample {t} (dp_window={dp_gap:.4f})")
-                    # pause DP detection for WARMUP samples (avoid immediate re-fires)
-                    dp_warmup_until = t + WARMUP
-                    # optional: reset detector to clear its internal state
-                    drift_detector_dp = drift.ADWIN(delta=1e-5)
-                    dp_ema = None  # reset ema for new regime
-
-            if t >= eo_warmup_until:
-                drift_detector_eo.update(eo_for_detector)
-                if drift_detector_eo.change_detected:
-                    drifted_points_eo.append(t)
-                    print(f"[EO] Drift detected at sample {t} (eo_window={eo_gap:.4f})")
-                    eo_warmup_until = t + WARMUP
-                    drift_detector_eo = drift.ADWIN(delta=1e-5)
-                    eo_ema = None
-
-            # store *windowed* metrics for plotting (not cumulative)
-            dps.append(float(dp_gap))
-            eos.append(float(eo_gap))
+        # Fairness metrics
+        w_a_arr = np.array(w_a)
+        if np.sum(w_a_arr == 0) > 0 and np.sum(w_a_arr == 1) > 0:
+            dp_val, _ = get_demographic_parity(w_preds, w_a)
+            eo_val, _ = get_equalized_odds(w_preds, w_a, w_true)
         else:
-            # not enough data in window yet — append NaN or previous value to keep alignment
-            dps.append(np.nan)
-            eos.append(np.nan)
+            dp_val = 0.0
+            eo_val = 0.0
 
-    # print summary
+        dps.append(float(dp_val))
+        eos.append(float(eo_val))
+
+        if test_then_train:
+            # Decay LR back to base after a genuine drift spike
+            if steps_since_drift > 0:
+                alpha = steps_since_drift / LR_DECAY_STEPS
+                current_lr = learning_rate + alpha * (DRIFT_LR_SPIKE - learning_rate)
+                optimizer.learning_rate.assign(float(current_lr))
+                steps_since_drift -= 1
+
+            sample_weight = max(label_conf, 1.0 - model_conf + 1e-6)
+            sample_weight = float(np.clip(sample_weight, 0.05, 1.0))
+
+            y_t_tensor = tf.convert_to_tensor([y_t], dtype=tf.int32)
+            sw_tensor  = tf.constant([sample_weight], dtype=tf.float32)
+            with tf.GradientTape() as tape:
+                train_out = model(x_t, training=True)
+                y_probs_train = train_out[0] if isinstance(train_out, tuple) else train_out
+                loss = criteria(y_true=y_t_tensor, y_pred=y_probs_train,
+                               sample_weight=sw_tensor)
+            grads = tape.gradient(loss, model.trainable_variables)
+            optimizer.apply_gradients(zip(grads, model.trainable_variables))
+
     if drifted_points:
         print(f"Accuracy drift detected at samples: {drifted_points}")
     else:
         print("No accuracy drift detected over the test set.")
-    if drifted_points_dp:
-        print(f"DP drift detected at samples: {drifted_points_dp}")
-    else:
-        print("No DP drift detected over the test set.")
-    if drifted_points_eo:
-        print(f"EO drift detected at samples: {drifted_points_eo}")
-    else:
-        print("No EO drift detected over the test set.")
 
     return {
         'accuracy': accuracies,
@@ -438,6 +444,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim):
         'eo': eos,
         'n_samples': n_samples,
         'drifted_points': drifted_points,
-        'drifted_points_dp': drifted_points_dp,
-        'drifted_points_eo': drifted_points_eo,
     }
+
+

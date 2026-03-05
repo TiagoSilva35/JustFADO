@@ -9,10 +9,10 @@
       "auc": 0.8901994228363037,
       "f1": 0.6173652694610778
     },
-    "elapsed_seconds": 100.5,
-    "final_accuracy": 0.8430072069168091,
-    "final_dp": 0.15282704563081365,
-    "final_eo": 0.1067557156540207
+    "elapsed_seconds": 56.5,
+    "final_accuracy": 0.856,
+    "final_dp": 0.1910810244957778,
+    "final_eo": 0.13873626373626374
   },
   {
     "scenario": "abrupt_gender",
@@ -24,10 +24,10 @@
       "auc": 0.899610161781311,
       "f1": 0.6318459931353528
     },
-    "elapsed_seconds": 105.8,
-    "final_accuracy": 0.8484736680984497,
-    "final_dp": 0.008990255759299237,
-    "final_eo": 0.05474090541197254
+    "elapsed_seconds": 61.4,
+    "final_accuracy": 0.858,
+    "final_dp": 0.17925186684346428,
+    "final_eo": 0.06119937346162453
   },
   {
     "scenario": "gradual_gender",
@@ -39,10 +39,10 @@
       "auc": 0.8935858011245728,
       "f1": 0.6200179802217561
     },
-    "elapsed_seconds": 106.6,
-    "final_accuracy": 0.8442355990409851,
-    "final_dp": 0.08600935644615199,
-    "final_eo": 0.058179622203655565
+    "elapsed_seconds": 62.8,
+    "final_accuracy": 0.856,
+    "final_dp": 0.1910810244957778,
+    "final_eo": 0.13873626373626374
   },
   {
     "scenario": "label_flip",
@@ -54,10 +54,10 @@
       "auc": 0.7183890342712402,
       "f1": 0.456519072733963
     },
-    "elapsed_seconds": 108.7,
-    "final_accuracy": 0.8542354106903076,
-    "final_dp": 0.15282704563081365,
-    "final_eo": 0.21285594532520644
+    "elapsed_seconds": 60.2,
+    "final_accuracy": 0.856,
+    "final_dp": 0.1910810244957778,
+    "final_eo": 0.13873626373626374
   },
   {
     "scenario": "feature_noise",
@@ -69,10 +69,10 @@
       "auc": 0.8497313261032104,
       "f1": 0.5441130298273156
     },
-    "elapsed_seconds": 105.6,
-    "final_accuracy": 0.8216325640678406,
-    "final_dp": 0.12151643750872655,
-    "final_eo": 0.06377066588930996
+    "elapsed_seconds": 63.7,
+    "final_accuracy": 0.854,
+    "final_dp": 0.18309023658315304,
+    "final_eo": 0.16208791208791212
   },
   {
     "scenario": "compound",
@@ -84,9 +84,9 @@
       "auc": 0.7975842356681824,
       "f1": 0.540120562625586
     },
-    "elapsed_seconds": 105.3,
-    "final_accuracy": 0.8478437662124634,
-    "final_dp": 0.009644580526956242,
-    "final_eo": 0.01932469857337373
+    "elapsed_seconds": 61.7,
+    "final_accuracy": 0.858,
+    "final_dp": 0.17925186684346428,
+    "final_eo": 0.06119937346162453
   }
 ]

@@ -102,8 +102,149 @@ def gradual_gender(df):
 
 
 # ---------------------------------------------------------------------------
-# Scenario: label flip drift
+# Scenario: gender–relationship decoupling
 # ---------------------------------------------------------------------------
+def gender_relationship_decouple(df):
+    """Break the learned correlation between sex and relationship role.
+
+    In the training data, 'Husband' is almost exclusively Male and 'Wife' is
+    almost exclusively Female.  The model (and its fairness penalty) relies on
+    this co-occurrence.  During drift phases we swap relationship roles between
+    genders so that Male samples appear as 'Wife' and Female samples appear as
+    'Husband'.  This invalidates the model's internal representation of sex
+    without changing the income label, so accuracy drops are purely due to
+    the broken feature correlation.
+
+    Phase 1 (abrupt): 100% of qualifying samples are swapped.
+    Phase 2 (gradual): swap probability decays 80% → 10%.
+    """
+    random.seed(SEED)
+    columns = df.columns
+    X = df.values.tolist()
+    warmup, phase1, recovery1, phase2, recovery2 = _split_phases(X)
+
+    # col indices (0-based): gender=9, relationship=7
+    GENDER_IDX = 9
+    REL_IDX = 7
+
+    def _swap_rel(sample):
+        gender = str(sample[GENDER_IDX]).strip()
+        rel = str(sample[REL_IDX]).strip()
+        if gender == 'Male' and rel == 'Husband':
+            sample[REL_IDX] = ' Wife'
+        elif gender == 'Female' and rel == 'Wife':
+            sample[REL_IDX] = ' Husband'
+
+    # Phase 1 – abrupt: swap all qualifying samples
+    for sample in phase1:
+        _swap_rel(sample)
+
+    # Phase 2 – gradual: decaying probability
+    for i, sample in enumerate(phase2):
+        prob = 0.80 - 0.70 * (i / max(len(phase2) - 1, 1))
+        if random.random() < prob:
+            _swap_rel(sample)
+
+    return pd.DataFrame(warmup + phase1 + recovery1 + phase2 + recovery2, columns=columns)
+
+
+# ---------------------------------------------------------------------------
+# Scenario: female income parity shift
+# ---------------------------------------------------------------------------
+def female_income_parity(df):
+    """Abruptly equalise the income distribution between genders.
+
+    In the original data, ~30% of Males earn >50K vs ~11% of Females.
+    This drift promotes Female samples: during phase 1 all Female <=50K
+    samples are flipped to >50K (simulating a policy change / pay-gap
+    closure).  This creates a real shift in P(Y|A=Female) that the model
+    was never trained on, directly stressing the fairness-accuracy trade-off.
+
+    Phase 1 (abrupt): all Female <=50K → >50K.
+    Phase 2 (gradual): reversion — flip probability decays 70% → 0%.
+    """
+    random.seed(SEED)
+    columns = df.columns
+    X = df.values.tolist()
+    warmup, phase1, recovery1, phase2, recovery2 = _split_phases(X)
+
+    GENDER_IDX = 9
+    INCOME_IDX = -1
+
+    def _promote(sample):
+        income = str(sample[INCOME_IDX]).strip().rstrip('.')
+        if income == '<=50K':
+            sample[INCOME_IDX] = ' >50K.'
+
+    def _demote(sample):
+        income = str(sample[INCOME_IDX]).strip().rstrip('.')
+        if income == '>50K':
+            sample[INCOME_IDX] = ' <=50K.'
+
+    for sample in phase1:
+        if str(sample[GENDER_IDX]).strip() == 'Female':
+            _promote(sample)
+
+    for i, sample in enumerate(phase2):
+        prob = 0.70 * (1.0 - i / max(len(phase2) - 1, 1))
+        if str(sample[GENDER_IDX]).strip() == 'Female' and random.random() < prob:
+            _demote(sample)
+
+    return pd.DataFrame(warmup + phase1 + recovery1 + phase2 + recovery2, columns=columns)
+
+
+# ---------------------------------------------------------------------------
+# Scenario: occupation gender reversal
+# ---------------------------------------------------------------------------
+def occupation_gender_reversal(df):
+    """Swap gender in occupations that are strongly gender-stereotyped.
+
+    The model learns that certain occupations (Exec-managerial, Craft-repair,
+    Transport-moving) are Male-dominated and others (Adm-clerical,
+    Priv-house-serv, Other-service) are Female-dominated.  This drift abruptly
+    swaps the gender label for samples in these stereotyped occupations,
+    breaking the occupation–gender co-occurrence the model relies on.
+
+    Unlike abrupt_gender (which only touches high-income males), this hits
+    *all* income levels and a wider range of occupations, causing a larger and
+    more uniform accuracy drop.
+
+    Phase 1 (abrupt): 100% swap in stereotyped occupations.
+    Phase 2 (slow):   50% swap, decaying to 10%.
+    """
+    random.seed(SEED)
+    columns = df.columns
+    X = df.values.tolist()
+    warmup, phase1, recovery1, phase2, recovery2 = _split_phases(X)
+
+    # col indices
+    GENDER_IDX = 9
+    OCC_IDX    = 6
+
+    # Occupations where gender is strongly stereotyped in this dataset
+    MALE_DOMINATED   = {'Exec-managerial', 'Craft-repair', 'Transport-moving',
+                        'Farming-fishing', 'Protective-serv'}
+    FEMALE_DOMINATED = {'Adm-clerical', 'Other-service', 'Priv-house-serv'}
+
+    def _swap_gender(sample):
+        gender = str(sample[GENDER_IDX]).strip()
+        occ    = str(sample[OCC_IDX]).strip()
+        if gender == 'Male' and occ in MALE_DOMINATED:
+            sample[GENDER_IDX] = ' Female'
+        elif gender == 'Female' and occ in FEMALE_DOMINATED:
+            sample[GENDER_IDX] = ' Male'
+
+    # Phase 1 – abrupt: swap all stereotyped samples
+    for sample in phase1:
+        _swap_gender(sample)
+
+    # Phase 2 – gradual: decaying probability
+    for i, sample in enumerate(phase2):
+        prob = 0.50 - 0.40 * (i / max(len(phase2) - 1, 1))
+        if random.random() < prob:
+            _swap_gender(sample)
+
+    return pd.DataFrame(warmup + phase1 + recovery1 + phase2 + recovery2, columns=columns)
 def label_flip(df):
     """Flip income labels for a subset of samples in drift phases.
 
@@ -221,6 +362,9 @@ SCENARIOS = {
     'label_flip': label_flip,
     'feature_noise': feature_noise,
     'compound': compound,
+    'gender_relationship_decouple': gender_relationship_decouple,
+    'female_income_parity': female_income_parity,
+    'occupation_gender_reversal': occupation_gender_reversal,
 }
 
 SCENARIO_DESCRIPTIONS = {
@@ -230,6 +374,9 @@ SCENARIO_DESCRIPTIONS = {
     'label_flip': 'Label flip in drift phases (40% abrupt, 30%→5% gradual)',
     'feature_noise': 'Gaussian noise on numerical features',
     'compound': 'Gender swap + label flip combined',
+    'gender_relationship_decouple': 'Break Husband/Wife ↔ Male/Female co-occurrence',
+    'female_income_parity': 'Abrupt female income promotion (P(Y|Female) equalised)',
+    'occupation_gender_reversal': 'Swap gender in strongly stereotyped occupations',
 }
 
 

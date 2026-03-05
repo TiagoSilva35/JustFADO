@@ -56,6 +56,9 @@ flags.DEFINE_bool('save_model', False, 'Whether to save the trained model.')
 flags.DEFINE_bool('load_model', False, 'Whether to load an existing model instead of training.')
 flags.DEFINE_string('model_path', None,
                     'Path to save/load the model. If not specified, will use models/{dataset}_model.')
+flags.DEFINE_bool('prequential', False,
+                  'Use test-then-train (prequential) evaluation with drift reaction '
+                  'instead of inference-only evaluation.')
 
 
 FLAGS = flags.FLAGS
@@ -82,6 +85,7 @@ def train(
     save_model=False,
     load_model=False,
     model_path=None,
+    prequential=False,
 ):
   """Train Aranyani and return results.
 
@@ -151,8 +155,23 @@ def train(
         print(f"  Test AUC: {test_metrics['auc']:.4f}")
         print(f"  Test F1-Score: {test_metrics['f1']:.4f}")
         print(f"{'='*80}\n")
-        
-        return [], [], [], None, test_metrics, loaded_model, data_dim
+        if prequential:
+            print("\nRunning prequential (test-then-train) evaluation...")
+            # Reload a fresh copy so baseline and prequential start from
+            # the same weights and we can compare fairly.
+            preq_model = forest.FairDecisionForest.load(model_path)
+            preq_results = utils.evaluate_over_timesteps(
+                preq_model, x_test, y_test, a_test, data_dim=data_dim,
+                test_then_train=True,
+            )
+            plot_metrics_over_timesteps(preq_results,
+                                        save_path='files/metrics_prequential.png')
+            # Return prequential results as the primary timestep_results
+            timestep_results = preq_results
+        else:
+            timestep_results = None
+
+        return [], [], [], timestep_results, test_metrics, loaded_model, data_dim
       else:
         return [], [], [], None, None, loaded_model, data_dim
     else:
@@ -297,11 +316,17 @@ def train(
   timestep_results = None
   test_metrics = None
   if drift and x_test is not None and len(x_test) > 0:
-    print("\nEvaluating over timesteps on drifted test set...")
-    timestep_results = utils.evaluate_over_timesteps(
-        fold_results[0]['model'], x_test, y_test, a_test, data_dim=data_dim,
-    )
-    plot_metrics_over_timesteps(timestep_results)
+    if prequential:
+      print("\nRunning prequential (test-then-train) evaluation...")
+      import copy
+      preq_model = copy.deepcopy(fold_results[0]['model'])
+      preq_results = utils.evaluate_over_timesteps(
+          preq_model, x_test, y_test, a_test, data_dim=data_dim,
+          test_then_train=True,
+      )
+      plot_metrics_over_timesteps(preq_results,
+                                  save_path='files/metrics_prequential.png')
+      timestep_results = preq_results
 
   if fold_results and fold_results[0].get('val_metrics'):
     test_metrics = fold_results[0]['val_metrics']

@@ -22,6 +22,7 @@ from src.drift.scenarios import SCENARIOS, SCENARIO_DESCRIPTIONS
 from src.helpers.utils import evaluate_over_timesteps, get_test_performance
 from src.helpers.plots import (
     plot_metrics_over_timesteps,
+    plot_per_tree_accuracy,
     plot_scenario_comparison_timesteps,
     plot_scenario_comparison_bar,
     plot_summary_heatmap,
@@ -51,6 +52,7 @@ def _common_train_kwargs():
       save_model=FLAGS.save_model,
       load_model=FLAGS.load_model,
       model_path=FLAGS.model_path,
+      prequential=FLAGS.prequential,
   )
 
 
@@ -77,6 +79,9 @@ def _evaluate_scenario(model, data_dim, scenario_name):
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     per_path = os.path.join(OUTPUT_DIR, f'timesteps_{scenario_name}.png')
     plot_metrics_over_timesteps(timestep_results, save_path=per_path)
+    if 'per_tree_accuracy' in timestep_results:
+      tree_path = os.path.join(OUTPUT_DIR, f'per_tree_accuracy_{scenario_name}.png')
+      plot_per_tree_accuracy(timestep_results, save_path=tree_path)
 
   return {
       'scenario': scenario_name,
