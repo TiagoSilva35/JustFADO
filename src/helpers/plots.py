@@ -37,85 +37,156 @@ def _smooth(values, window=50):
 
 
 def plot_metrics_over_timesteps(timestep_results, save_path='files/metrics_over_timesteps.png',
-                                skip_samples=500, smooth_window=50):
+                                skip_samples=0, smooth_window=100):
     """Plot accuracy, DP, and EO over timesteps with drift phase boundaries.
 
+    All metrics are rolling-window values (computed in utils.py with WINDOW_SIZE=500).
+    smooth_window applies a light visual smoothing on top to remove remaining noise.
+
     Args:
-        timestep_results: dict with keys 'accuracy', 'dp', 'eo', 'n_samples'.
+        timestep_results: dict returned by evaluate_over_timesteps.
         save_path: Path to save the figure.
-        skip_samples: Number of initial noisy samples to skip in the plot.
-        smooth_window: Rolling average window size (set to 1 to disable smoothing).
+        skip_samples: Number of initial samples to skip in the plot.
+        smooth_window: Rolling average window for visual smoothing only.
     """
     n = timestep_results['n_samples']
-    timesteps = np.arange(1, n + 1)
-
-    # Skip the first noisy samples in the plot
     plot_start = skip_samples
-    timesteps = timesteps[plot_start:]
+    timesteps = np.arange(1, n + 1)[plot_start:]
 
-    # Drift phase boundaries (from create_drifted_ds.py)
+    # Ground-truth drift phase boundaries (from create_drifted_ds.py)
     splits = [0.15, 0.5, 0.6, 0.75, 1.0]
     boundaries = [int(s * n) for s in splits[:-1]]
     phase_labels = ['Warmup', 'Abrupt Drift', 'Recovery 1', 'Slow Drift', 'Recovery 2']
+    colors_bg    = ['#d4edda', '#f8d7da',     '#d1ecf1',    '#fff3cd',    '#d4edda']
 
     fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
+    fig.suptitle('Metrics Over Timesteps (Drifted Test Set)',
+                 fontsize=14, fontweight='bold')
 
     metrics = [
-        ('accuracy', 'Accuracy',            'tab:blue',   [0.6, 1.0]),
-        ('dp',       'Demographic Parity',   'tab:orange', [0.0, 0.4]),
-        ('eo',       'Equalized Odds',       'tab:red',    [0.0, 0.4]),
+        ('accuracy', 'Accuracy',           'tab:blue',   [0.5, 1.0]),
+        ('dp',       'Demographic Parity',  'tab:orange', [0.0, 0.5]),
+        ('eo',       'Equalized Odds',      'tab:red',    [0.0, 0.5]),
     ]
 
-    drift_pts = timestep_results.get('drift_points', [])
-    drift_pts_dp = timestep_results.get('drifted_points_dp', [])
-    drift_pts_eo = timestep_results.get('drifted_points_eo', [])
-
-    # Map each metric subplot to its own drift points list
     metric_drift_pts = {
-        'accuracy': drift_pts,
-        'dp': drift_pts_dp,
-        'eo': drift_pts_eo,
+        'accuracy': timestep_results.get('drifted_points', []),
+        'dp':       timestep_results.get('drifted_points_dp', []),
+        'eo':       timestep_results.get('drifted_points_eo', []),
     }
 
     for ax, (key, label, color, ylim) in zip(axes, metrics):
-        raw    = np.array(timestep_results[key][plot_start:])
-        values = _smooth(raw, window=smooth_window)
-        # Plot smoothed line with raw values as faint background
-        ax.plot(timesteps, raw,    color=color, linewidth=0.5, alpha=0.25)
-        ax.plot(timesteps, values, color=color, linewidth=1.5, alpha=0.9)
-        ax.set_ylabel(label, fontsize=12, fontweight='bold')
+        values = _smooth(np.array(timestep_results[key][plot_start:], dtype=float),
+                         window=smooth_window)
+        ax.plot(timesteps, values, color=color, linewidth=1.8)
+        ax.set_ylabel(label, fontsize=11, fontweight='bold')
         ax.set_ylim(ylim)
         ax.grid(True, alpha=0.3)
 
+        # Detected drift markers
         pts = metric_drift_pts[key]
+        first = True
         for p in pts:
-            ax.axvline(x=p, color='purple', linestyle='--', alpha=0.7,
-                       label='Drift Detected' if p == pts[0] else "")
-        if pts and ax == axes[0]:
-            ax.legend(fontsize=9)
-        
-        # Draw drift phase boundaries
-        for b in boundaries:
-            ax.axvline(x=b, color='grey', linestyle='--', alpha=0.6)
+            ax.axvline(x=p, color='purple', linestyle='--', linewidth=1.2, alpha=0.8,
+                       label='Drift detected' if first else '_nolegend_')
+            first = False
+        if pts:
+            ax.legend(fontsize=9, loc='lower left')
 
-        # Shade and label phases
+        # Phase shading + boundary lines + labels (top subplot only)
         prev = 0
-        colors_bg = ['#d4edda', '#f8d7da', '#d1ecf1', '#fff3cd', '#d4edda']
         for i, b in enumerate(boundaries + [n]):
-            ax.axvspan(prev, b, alpha=0.08, color=colors_bg[i])
-            if ax == axes[0]:
-                mid = (prev + b) / 2
-                ax.text(mid, ax.get_ylim()[1] if ax.get_ylim()[1] != 0 else 1.0,
-                        phase_labels[i], ha='center', va='bottom',
-                        fontsize=9, fontstyle='italic', alpha=0.7)
+            ax.axvspan(prev, b, alpha=0.07, color=colors_bg[i], zorder=0)
+            if prev > 0:
+                ax.axvline(x=prev, color='grey', linestyle=':', linewidth=0.8, alpha=0.5)
+            if ax is axes[0]:
+                ax.text((prev + b) / 2, ylim[1] * 0.97,
+                        phase_labels[i], ha='center', va='top',
+                        fontsize=8, fontstyle='italic', color='dimgrey')
             prev = b
 
     axes[-1].set_xlabel('Timestep', fontsize=12, fontweight='bold')
-    axes[0].set_title('Metrics Over Timesteps (Drifted Test Set)', fontsize=14, fontweight='bold')
-
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     print(f"Timestep metrics plot saved to: {save_path}")
+    plt.show()
+
+
+def plot_per_tree_accuracy(timestep_results, save_path='files/per_tree_accuracy.png',
+                           skip_samples=0, smooth_window=100):
+    """Plot the rolling-window accuracy of each individual tree over timesteps.
+
+    Args:
+        timestep_results: dict returned by evaluate_over_timesteps (must contain
+            'per_tree_accuracy').
+        save_path: Path to save the figure.
+        skip_samples: Number of initial samples to skip in the plot.
+        smooth_window: Rolling average window for visual smoothing.
+    """
+    per_tree = timestep_results.get('per_tree_accuracy')
+    if not per_tree:
+        print("No per-tree accuracy data found in timestep_results.")
+        return
+
+    n = timestep_results['n_samples']
+    plot_start = skip_samples
+    timesteps = np.arange(1, n + 1)[plot_start:]
+
+    # Phase boundaries
+    splits = [0.15, 0.5, 0.6, 0.75, 1.0]
+    boundaries = [int(s * n) for s in splits[:-1]]
+    phase_labels = ['Warmup', 'Abrupt Drift', 'Recovery 1', 'Slow Drift', 'Recovery 2']
+    colors_bg    = ['#d4edda', '#f8d7da',     '#d1ecf1',    '#fff3cd',    '#d4edda']
+
+    palette = plt.cm.tab10.colors
+    fig, ax = plt.subplots(figsize=(14, 5))
+    fig.suptitle('Per-Tree Rolling Accuracy Over Timesteps', fontsize=14, fontweight='bold')
+
+    for tree_id, tree_accs in enumerate(per_tree):
+        values = _smooth(np.array(tree_accs[plot_start:], dtype=float), window=smooth_window)
+        ax.plot(timesteps, values, linewidth=1.6, color=palette[tree_id % len(palette)],
+                label=f'Tree {tree_id}')
+
+    # Ensemble accuracy for reference
+    ensemble = _smooth(np.array(timestep_results['accuracy'][plot_start:], dtype=float),
+                       window=smooth_window)
+    ax.plot(timesteps, ensemble, linewidth=2.2, color='black', linestyle='--',
+            label='Ensemble')
+
+    # Drift markers
+    for p in timestep_results.get('drifted_points', []):
+        ax.axvline(x=p, color='purple', linestyle='--', linewidth=1.0, alpha=0.7)
+
+    # Tree-reset markers (one colour per tree, labelled once)
+    reset_events = timestep_results.get('tree_reset_events', [])
+    reset_labeled = set()
+    for ev in reset_events:
+        tid = ev['tree_id']
+        col = palette[tid % len(palette)]
+        label = f'Tree {tid} reset' if tid not in reset_labeled else '_nolegend_'
+        ax.axvline(x=ev['timestep'], color=col, linestyle=':', linewidth=1.4,
+                   alpha=0.9, label=label)
+        reset_labeled.add(tid)
+
+    # Phase shading
+    prev = 0
+    for i, b in enumerate(boundaries + [n]):
+        ax.axvspan(prev, b, alpha=0.07, color=colors_bg[i], zorder=0)
+        if prev > 0:
+            ax.axvline(x=prev, color='grey', linestyle=':', linewidth=0.8, alpha=0.5)
+        ax.text((prev + b) / 2, 0.99, phase_labels[i], ha='center', va='top',
+                fontsize=8, fontstyle='italic', color='dimgrey',
+                transform=ax.get_xaxis_transform())
+        prev = b
+
+    ax.set_xlabel('Timestep', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Accuracy', fontsize=12, fontweight='bold')
+    ax.set_ylim([0.4, 1.0])
+    ax.grid(True, alpha=0.3)
+    ax.legend(fontsize=9, loc='lower left')
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"Per-tree accuracy plot saved to: {save_path}")
     plt.show()
 
 
@@ -148,7 +219,8 @@ def plot_scenario_comparison_timesteps(all_results, output_dir='files/experiment
                 continue
             n = ts['n_samples']
             timesteps = np.arange(1, n + 1)
-            ax.plot(timesteps, ts[key], linewidth=1.0, alpha=0.8, label=res['scenario'])
+            values = _smooth(np.array(ts[key], dtype=float), window=50)
+            ax.plot(timesteps, values, linewidth=1.0, alpha=0.8, label=res['scenario'])
 
         # Phase boundaries (use first available n_samples)
         for res in all_results:

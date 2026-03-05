@@ -50,14 +50,50 @@ class FairDecisionForest(tf.Module):
         prediction = layer(inputs, training=training)
         all_predictions.append(prediction)
 
-    final_prediction = tf.reduce_mean(tf.stack(all_predictions), axis=0)
+    stacked_predictions = tf.stack(all_predictions, axis=0)  # [num_trees, batch_size, num_classes]
+    final_prediction = tf.reduce_mean(stacked_predictions, axis=0)
 
     if training:
       all_node_decisions = tf.stack(all_node_decisions, axis=0)
-      return final_prediction, all_node_decisions
+      return final_prediction, all_node_decisions, stacked_predictions
     
     return final_prediction
   
+  def predict_per_tree(self, inputs):
+    """Run inference and return per-tree predictions.
+
+    Args:
+      inputs: Input tensor of shape [batch_size, data_dim].
+
+    Returns:
+      stacked_predictions: Tensor of shape [num_trees, batch_size, num_classes].
+      final_prediction: Averaged prediction of shape [batch_size, num_classes].
+    """
+    all_predictions = []
+    for layer in self.layers:
+      prediction = layer(inputs, training=False)
+      all_predictions.append(prediction)
+    stacked_predictions = tf.stack(all_predictions, axis=0)
+    final_prediction = tf.reduce_mean(stacked_predictions, axis=0)
+    return stacked_predictions, final_prediction
+
+  def reset_tree(self, tree_id):
+    """Reinitialise only the leaf parameters (theta) of a single tree.
+
+    The routing structure (weight, bias) is preserved so the tree keeps
+    its learned split decisions. Only the leaf class distributions are
+    re-randomised, allowing the tree to quickly adapt to a new target
+    distribution after drift without discarding routing knowledge.
+
+    Args:
+      tree_id: Index into self.layers of the tree to reset.
+    """
+    tree = self.layers[tree_id]
+    num_leaves  = tree.theta.shape[0]
+    num_classes = tree.theta.shape[1]
+
+    tree.theta.assign(tf.random.uniform([num_leaves, num_classes]))
+
   def save(self, filepath):
     """Save the model weights and configuration to a file.
     

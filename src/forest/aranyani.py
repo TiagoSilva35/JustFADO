@@ -53,7 +53,8 @@ def train_online(
 
   # choose the optimizer and loss criteria
   optimizer = tf.keras.optimizers.Adam(learning_rate=2e-3)
-  criteria = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False)
+  # During training the forest returns raw pre-softmax logits, so use from_logits=True
+  criteria = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
   avg_accuracy = tf.keras.metrics.Accuracy()
 
@@ -101,7 +102,8 @@ def train_online(
     with tf.GradientTape(persistent=True) as tape:
       # predictions: [batch_size, num_class]
       # y: [num_trees, batch_size, num_internal_nodes]
-      predictions, node_decisions = model(inputs_batch, training=True)
+      # per_tree_predictions: [num_trees, batch_size, num_class]
+      predictions, node_decisions, per_tree_predictions = model(inputs_batch, training=True)
 
       # y_pred: [batch_size]
       y_pred = tf.math.argmax(predictions, axis=-1)
@@ -131,14 +133,23 @@ def train_online(
 
       # update the average accuracy
       avg_accuracy.update_state(targets_batch, y_pred)
-      avg_auc.update_state(targets_batch, y_pred)
+      probs_for_metrics = tf.nn.softmax(predictions, axis=-1)
+      avg_auc.update_state(targets_batch, probs_for_metrics[:, 1])  # use positive-class probability
       avg_loss.update_state(target_loss)
+      per_tree_losses = [
+          float(criteria(y_true=targets_batch, y_pred=per_tree_predictions[t]))
+          for t in range(num_trees)
+      ]
+      per_tree_loss_str = ', '.join(
+          f'Tree {t}: {loss:.3f}' for t, loss in enumerate(per_tree_losses)
+      )
       iterations.set_description(
           f' CE Loss: {avg_loss.result():.3f},'
           f' Accuracy: { avg_accuracy.result():.3%},'
           f' AUC: {avg_auc.result():.3%},'
           f' DP: {dp:.5f},'
           f' EO: {eo:.5f},'
+          f' [{per_tree_loss_str}]'
       )
       results = {
         'CE Loss': float(avg_loss.result()),
