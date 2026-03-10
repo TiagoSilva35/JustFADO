@@ -19,13 +19,14 @@ from absl import app
 from src.forest.train import *
 from src.helpers.data import load_drifted_test_set
 from src.drift.scenarios import SCENARIOS, SCENARIO_DESCRIPTIONS
-from src.helpers.utils import evaluate_over_timesteps, get_test_performance
+from src.helpers.utils import evaluate_over_timesteps, evaluate_arf_over_timesteps, get_test_performance
 from src.helpers.plots import (
     plot_metrics_over_timesteps,
     plot_per_tree_accuracy,
     plot_scenario_comparison_timesteps,
     plot_scenario_comparison_bar,
     plot_summary_heatmap,
+    plot_aranyani_vs_arf,
 )
 
 OUTPUT_DIR = 'files/experiments'
@@ -72,21 +73,30 @@ def _evaluate_scenario(model, data_dim, scenario_name):
   test_metrics = get_test_performance(
       model, x_test, y_test, a_test, data_dim=data_dim,
   )
+
+  # Run ARF baseline on the same stream
+  arf_results = evaluate_arf_over_timesteps(x_test, y_test, a_test)
+
   elapsed = round(time.time() - start, 1)
 
-  # Save per-scenario timestep plot
+  # Save per-scenario timestep plots
+  os.makedirs(OUTPUT_DIR, exist_ok=True)
   if timestep_results is not None:
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
     per_path = os.path.join(OUTPUT_DIR, f'timesteps_{scenario_name}.png')
     plot_metrics_over_timesteps(timestep_results, save_path=per_path)
     if 'per_tree_accuracy' in timestep_results:
       tree_path = os.path.join(OUTPUT_DIR, f'per_tree_accuracy_{scenario_name}.png')
       plot_per_tree_accuracy(timestep_results, save_path=tree_path)
+    # Per-scenario Aranyani vs ARF comparison
+    cmp_path = os.path.join(OUTPUT_DIR, f'aranyani_vs_arf_{scenario_name}.png')
+    plot_aranyani_vs_arf(timestep_results, arf_results, save_path=cmp_path,
+                         scenario_name=scenario_name)
 
   return {
       'scenario': scenario_name,
       'test_metrics': test_metrics,
       'timestep_results': timestep_results,
+      'arf_results': arf_results,
       'elapsed_seconds': elapsed,
   }
 
@@ -191,11 +201,22 @@ def main(_):
   else:
     # Single run (original behaviour)
     drift_on = FLAGS.drift or (FLAGS.drift_scenario is not None)
-    _, _, _, _, _, _, _ = train(
+    _, _, _, timestep_results, _, _, data_dim = train(
         drift=drift_on,
         drift_scenario=FLAGS.drift_scenario,
         **kwargs,
     )
+    # If prequential evaluation ran, also run ARF on the same stream and
+    # save a head-to-head comparison plot.
+    if timestep_results is not None and FLAGS.drift_scenario:
+      scenario = FLAGS.drift_scenario
+      x_test, y_test, a_test = load_drifted_test_set(scenario)
+      arf_results = evaluate_arf_over_timesteps(x_test, y_test, a_test)
+      os.makedirs(OUTPUT_DIR, exist_ok=True)
+      cmp_path = os.path.join(OUTPUT_DIR, f'aranyani_vs_arf_{scenario}.png')
+      plot_aranyani_vs_arf(timestep_results, arf_results,
+                           save_path=cmp_path, scenario_name=scenario)
+      print(f"Aranyani vs ARF comparison saved to: {cmp_path}")
 
 
 if __name__ == '__main__':

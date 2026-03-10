@@ -323,3 +323,82 @@ def plot_summary_heatmap(all_results, output_dir='files/experiments'):
     plt.savefig(path, dpi=300, bbox_inches='tight')
     print(f"Saved: {path}")
     plt.close()
+
+
+# ---------------------------------------------------------------------------
+# Aranyani vs ARF comparison plots
+# ---------------------------------------------------------------------------
+
+def plot_aranyani_vs_arf(aranyani_results, arf_results, save_path,
+                         scenario_name='', smooth_window=100, skip_samples=0):
+    """Single figure comparing Aranyani and ARF across accuracy, DP, and EO.
+
+    Args:
+        aranyani_results: dict from evaluate_over_timesteps.
+        arf_results: dict from evaluate_arf_over_timesteps.
+        save_path: Path to save the figure.
+        scenario_name: Used in the figure title.
+        smooth_window: Rolling average window for visual smoothing.
+        skip_samples: Number of initial samples to skip.
+    """
+    n = aranyani_results['n_samples']
+    plot_start = skip_samples
+    timesteps = np.arange(1, n + 1)[plot_start:]
+
+    splits = [0.15, 0.5, 0.6, 0.75, 1.0]
+    boundaries = [int(s * n) for s in splits[:-1]]
+    phase_labels = ['Warmup', 'Abrupt Drift', 'Recovery 1', 'Slow Drift', 'Recovery 2']
+    colors_bg    = ['#d4edda', '#f8d7da', '#d1ecf1', '#fff3cd', '#d4edda']
+
+    metrics = [
+        ('accuracy', 'Accuracy',          [0.5, 1.0]),
+        ('dp',       'Demographic Parity', [0.0, 0.5]),
+        ('eo',       'Equalized Odds',     [0.0, 0.5]),
+    ]
+
+    title = f'Aranyani vs ARF – {scenario_name}' if scenario_name else 'Aranyani vs ARF'
+    fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
+    fig.suptitle(title, fontsize=14, fontweight='bold')
+
+    for ax, (key, label, ylim) in zip(axes, metrics):
+        aran_vals = _smooth(np.array(aranyani_results[key][plot_start:], dtype=float),
+                            window=smooth_window)
+        arf_vals  = _smooth(np.array(arf_results[key][plot_start:], dtype=float),
+                            window=smooth_window)
+
+        ax.plot(timesteps, aran_vals, color='tab:blue',   linewidth=1.8, label='Aranyani')
+        ax.plot(timesteps, arf_vals,  color='tab:orange', linewidth=1.8,
+                linestyle='--', label='ARF')
+
+        ax.set_ylabel(label, fontsize=11, fontweight='bold')
+        ax.set_ylim(ylim)
+        ax.grid(True, alpha=0.3)
+
+        # Aranyani drift detection markers
+        first = True
+        for p in aranyani_results.get('drifted_points', []):
+            ax.axvline(x=p, color='purple', linestyle='--', linewidth=1.2, alpha=0.8,
+                       label='Drift detected (Aranyani)' if first else '_nolegend_')
+            first = False
+
+        ax.legend(fontsize=9, loc='lower left')
+
+        # Phase shading
+        prev = 0
+        for i, b in enumerate(boundaries + [n]):
+            ax.axvspan(prev, b, alpha=0.07, color=colors_bg[i], zorder=0)
+            if prev > 0:
+                ax.axvline(x=prev, color='grey', linestyle=':', linewidth=0.8, alpha=0.5)
+            if ax is axes[0]:
+                ax.text((prev + b) / 2, ylim[1] * 0.97,
+                        phase_labels[i], ha='center', va='top',
+                        fontsize=8, fontstyle='italic', color='dimgrey')
+            prev = b
+
+    axes[-1].set_xlabel('Timestep', fontsize=12, fontweight='bold')
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"Aranyani vs ARF plot saved to: {save_path}")
+    plt.close()
+
+

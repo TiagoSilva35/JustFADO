@@ -163,6 +163,14 @@ def train(
             preq_results = utils.evaluate_over_timesteps(
                 preq_model, x_test, y_test, a_test, data_dim=data_dim,
                 test_then_train=True,
+                compute_fairness=compute_fairness,
+                fairness_type='dp',  # prequential evaluation focuses on DP for now
+                lambda_const=lambda_const,
+                tree_depth=depth,
+                num_trees=num_trees,
+                constraint_type=constraint_type,
+                gradient_type=gradient_type,
+                base_gamma=base_gamma,
             )
             plot_metrics_over_timesteps(preq_results,
                                         save_path='files/metrics_prequential.png')
@@ -323,6 +331,14 @@ def train(
       preq_results = utils.evaluate_over_timesteps(
           preq_model, x_test, y_test, a_test, data_dim=data_dim,
           test_then_train=True,
+          compute_fairness=compute_fairness,
+          fairness_type='dp',  # prequential evaluation focuses on DP for now
+          lambda_const=lambda_const,
+          tree_depth=depth,
+          num_trees=num_trees,
+          constraint_type=constraint_type,
+          gradient_type=gradient_type,
+          base_gamma=base_gamma,
       )
       plot_metrics_over_timesteps(preq_results,
                                   save_path='files/metrics_prequential.png')
