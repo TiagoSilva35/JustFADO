@@ -97,11 +97,17 @@ class FairDecisionTree(tf.Module):
         dtype=tf.float32,
         name='mask'
     )
+    self.temperature = tf.Variable(
+        1.0, 
+        name='temperature',
+        trainable=False,
+        dtype=tf.float32
+    )
     self.compute_mode = compute_mode
 
   def __call__(self, inputs, training=False, pred_type='categorical'):
-    raw_node_decisions = self.activation(
-        tf.matmul(inputs, self.weight) + self.bias)
+    logits = (tf.matmul(inputs, self.weight) + self.bias) / self.temperature
+    raw_node_decisions = self.activation(logits)
 
     y = tf.expand_dims(raw_node_decisions, axis=2)
     y_repeated = tf.repeat(y, self.num_leaves, axis=2)

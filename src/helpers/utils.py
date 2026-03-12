@@ -276,9 +276,9 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
 
     ADWIN_DELTA_WARN    = 0.05   # fires early (fast but noisier)
     ADWIN_DELTA_CONFIRM = 0.002   # confirmed drift (slower but reliable)
-    DRIFT_LR_PREWARM    = learning_rate * 2   # gentle warm-up on warning
-    DRIFT_LR_SPIKE      = learning_rate * 5  # full spike on confirmed drift
-    LR_DECAY_STEPS      = 500
+    DRIFT_LR_PREWARM    = learning_rate * 1.5   # gentle warm-up on warning
+    DRIFT_LR_SPIKE      = learning_rate * 3  # full spike on confirmed drift
+    LR_DECAY_STEPS      = 3000
     FAIRNESS_WINDOW     = 500
     COOLDOWN            = 200    
     MIN_SAMPLES_PER_STREAM = 3
@@ -294,6 +294,8 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     acc_det_n = 0
     in_warning = False           
     last_detected_acc = -COOLDOWN
+    recovering_from_drift = False
+    baseline_accuracy = 0.0
     y_preds_all = []
     y_true_all = []
     a_all = []
@@ -341,6 +343,8 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         label_conf  = float(y_probs_np[y_t])      
         is_label_noise = (error == 1) and (model_conf > 0.70)
 
+        
+        
         warn_det.update(error)
         acc_det.update(error)
         acc_det_n += 1
@@ -366,8 +370,14 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
             acc_det_n = 0
             optimizer = tf.keras.optimizers.Adam(learning_rate=DRIFT_LR_SPIKE)
-            steps_since_drift = LR_DECAY_STEPS
-            print(f"[DRIFT] Concept drift confirmed at sample {t} — spiking LR to {DRIFT_LR_SPIKE:.2e}")
+            # steps_since_drift = LR_DECAY_STEPS
+            baseline_accuracy = np.mean(accuracies[max(0, t - 1000):t]) if t > 1000 else np.mean(accuracies)
+            recovering_from_drift = True
+            
+            print(f"[DRIFT] Concept drift confirmed at sample {t} — spiking LR to {DRIFT_LR_SPIKE:.2e} and making hard routing decisions")
+            for tree in model.layers:
+                if hasattr(tree, 'temperature'):
+                    tree.temperature.assign(0.1)
             # if compute_fairness:
             #     gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count = \
             #         init_fairness_state(num_trees, data_dim, num_internal_nodes)
@@ -383,11 +393,28 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
 
         dps.append(float(dp_val))
         eos.append(float(eo_val))
-        if steps_since_drift > 0:
+        
+        if steps_since_drift > 0 and not recovering_from_drift:
             alpha = steps_since_drift / LR_DECAY_STEPS
-            current_lr = learning_rate + alpha * (DRIFT_LR_SPIKE - learning_rate)
+            current_lr = learning_rate + alpha * (DRIFT_LR_PREWARM - learning_rate)
             optimizer.learning_rate.assign(float(current_lr))
             steps_since_drift -= 1
+        elif recovering_from_drift:
+            current_acc = acc_val
+            if current_acc >= baseline_accuracy:
+                recovering_from_drift = False
+                optimizer.learning_rate.assign(float(learning_rate))
+                for tree in model.layers:
+                    if hasattr(tree, 'temperature'):
+                        tree.temperature.assign(1.0)
+                print(f"[RECOVERY] Performance restored at sample {t}. Returning to baseline LR and soft decisions.")
+            else:
+                optimizer.learning_rate.assign(float(DRIFT_LR_SPIKE))
+                for tree in model.layers:
+                    if hasattr(tree, 'temperature'):
+                        current_temp = float(tree.temperature.value())
+                        new_temp = min(1.0, current_temp + 0.002)
+                        tree.temperature.assign(new_temp)
 
             y_t_tensor = tf.convert_to_tensor([y_t], dtype=tf.int32)
             with tf.GradientTape(persistent=compute_fairness) as tape:
