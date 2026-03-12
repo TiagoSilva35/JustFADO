@@ -368,11 +368,11 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             optimizer = tf.keras.optimizers.Adam(learning_rate=DRIFT_LR_SPIKE)
             steps_since_drift = LR_DECAY_STEPS
             print(f"[DRIFT] Concept drift confirmed at sample {t} — spiking LR to {DRIFT_LR_SPIKE:.2e}")
-            if compute_fairness:
-                gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count = \
-                    init_fairness_state(num_trees, data_dim, num_internal_nodes)
-                fairness_start = len(y_preds_all)
-                print(f"[DRIFT] Fairness state reset at sample {t}")
+            # if compute_fairness:
+            #     gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count = \
+            #         init_fairness_state(num_trees, data_dim, num_internal_nodes)
+            #     fairness_start = len(y_preds_all)
+            #     print(f"[DRIFT] Fairness state reset at sample {t}")
         w_a_arr = np.array(w_a)
         if np.sum(w_a_arr == 0) > 0 and np.sum(w_a_arr == 1) > 0:
             dp_val, _ = get_demographic_parity(w_preds, w_a)
@@ -389,17 +389,12 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             optimizer.learning_rate.assign(float(current_lr))
             steps_since_drift -= 1
 
-            sample_weight = max(label_conf, 1.0 - model_conf + 1e-6)
-            sample_weight = float(np.clip(sample_weight, 0.05, 1.0))
-
             y_t_tensor = tf.convert_to_tensor([y_t], dtype=tf.int32)
-            sw_tensor  = tf.constant([sample_weight], dtype=tf.float32)
             with tf.GradientTape(persistent=compute_fairness) as tape:
                 train_out = model(x_t, training=True)
                 y_probs_train = train_out[0] if isinstance(train_out, tuple) else train_out
                 node_decisions_train = train_out[1] if isinstance(train_out, tuple) else None
-                loss = criteria(y_true=y_t_tensor, y_pred=y_probs_train,
-                               sample_weight=sw_tensor)
+                loss = criteria(y_true=y_t_tensor, y_pred=y_probs_train)
                 if compute_fairness and node_decisions_train is not None:
                     accumulate_fairness_stats(
                         tape, [a_t], [y_t],
