@@ -80,10 +80,6 @@ def _evaluate_scenario(model, data_dim, scenario_name):
   if timestep_results is not None:
     per_path = os.path.join(OUTPUT_DIR, f'timesteps_{scenario_name}.png')
     plot_metrics_over_timesteps(timestep_results, save_path=per_path)
-    if 'per_tree_accuracy' in timestep_results:
-      tree_path = os.path.join(OUTPUT_DIR, f'per_tree_accuracy_{scenario_name}.png')
-      plot_per_tree_accuracy(timestep_results, save_path=tree_path)
-    # Per-scenario Aranyani vs ARF comparison
     cmp_path = os.path.join(OUTPUT_DIR, f'aranyani_vs_arf_{scenario_name}.png')
     plot_aranyani_vs_arf(timestep_results, arf_results, save_path=cmp_path,
                          scenario_name=scenario_name)
@@ -149,10 +145,7 @@ def run_all_scenarios(kwargs):
   print(" Generating comparison plots ...")
   print(f"{'='*80}\n")
 
-  plot_scenario_comparison_timesteps(all_results, output_dir=OUTPUT_DIR)
-  plot_scenario_comparison_bar(all_results, output_dir=OUTPUT_DIR)
-  plot_summary_heatmap(all_results, output_dir=OUTPUT_DIR)
-
+ 
   # ── Save results JSON ───────────────────────────────────────────────
   os.makedirs(OUTPUT_DIR, exist_ok=True)
   json_results = []
