@@ -79,9 +79,8 @@ def compute_fairness_gradients(
     else:
         can_compute = all(subgroup_count[(a, y)] > 0 for a in [0, 1] for y in [0, 1])
 
-    # if not can_compute:
-    #     print(f"[FAIRNESS DEBUG] can_compute=False — protected_class_count={dict(protected_class_count)}, subgroup_count={dict(subgroup_count)}")
-    #     return gradients
+    if not can_compute:
+        return gradients
 
     if gradient_type == 'ema':
         if fairness_type == 'dp':
