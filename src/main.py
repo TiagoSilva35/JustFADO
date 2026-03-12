@@ -22,10 +22,6 @@ from src.drift.scenarios import SCENARIOS, SCENARIO_DESCRIPTIONS
 from src.helpers.utils import evaluate_over_timesteps, evaluate_arf_over_timesteps, get_test_performance
 from src.helpers.plots import (
     plot_metrics_over_timesteps,
-    plot_per_tree_accuracy,
-    plot_scenario_comparison_timesteps,
-    plot_scenario_comparison_bar,
-    plot_summary_heatmap,
     plot_aranyani_vs_arf,
 )
 

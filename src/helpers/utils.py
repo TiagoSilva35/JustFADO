@@ -9,7 +9,7 @@ from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
 from river import drift
-from src.helpers.plots import plot_metric_over_iterations
+from src.helpers.plots import plot_metrics_over_timesteps
 from river.ensemble import AdaptiveRandomForestClassifier
 from src.forest.initializers import init_fairness_state, accumulate_fairness_stats, compute_fairness_gradients
 
@@ -263,10 +263,10 @@ def aggregate_fold_results(fold_results):
     }
 
 def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
-                            test_then_train=False, learning_rate=2e-3,
+                            test_then_train=True, learning_rate=2e-3,
                             accuracy_window=200,
-                            compute_fairness=False, fairness_type='dp',
-                            lambda_const=1, tree_depth=3, num_trees=3,
+                            compute_fairness=True, fairness_type='dp',
+                            lambda_const=0.1, tree_depth=3, num_trees=3,
                             constraint_type='node', gradient_type='vanilla',
                             base_gamma=0.9):
     accuracies = []
@@ -281,7 +281,11 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     LR_DECAY_STEPS      = 500
     FAIRNESS_WINDOW     = 500
     COOLDOWN            = 200    
-    MIN_SAMPLES_PER_STREAM = 10  
+    MIN_SAMPLES_PER_STREAM = 3
+
+    print(f"Evaluating model over {len(x_test)} timesteps with test-then-train={test_then_train}\n\
+          Fairness penalty lambda: {lambda_const}, fairness type: {fairness_type}")
+
 
     USE_ROLLING = bool(accuracy_window)
     correct_buffer = []
@@ -293,23 +297,11 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     y_preds_all = []
     y_true_all = []
     a_all = []
-    test_then_train = True
     n_samples = len(x_test)
-    print("Test then train: ", test_then_train)
-    if test_then_train:
-        optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
-        criteria = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
-        _dummy_x = tf.zeros([1, data_dim])
-        _dummy_y = tf.constant([0], dtype=tf.int32)
-        with tf.GradientTape() as _t:
-            _out = model(_dummy_x, training=True)
-            _p   = _out[0] if isinstance(_out, tuple) else _out
-            _l   = criteria(y_true=_dummy_y, y_pred=_p)
-        _g = _t.gradient(_l, model.trainable_variables)
-        optimizer.apply_gradients(zip(_g, model.trainable_variables))
+    optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+    criteria = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
     steps_since_drift = 0
-    fairness_start = 0        # index into y_preds_all where current window begins
-    fairness_lambda_boost = 0  # steps remaining at boosted lambda
+    fairness_start = 0
 
     if compute_fairness:
         num_internal_nodes = 2 ** tree_depth - 1
@@ -326,7 +318,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         y_t = int(y_test[t])
         a_t = int(a_test[t])
 
-        # ── STEP 1: TEST ──────────────────────────────────────────────────────
         y_probs = model(x_t, training=False)
         y_pred  = int(tf.math.argmax(y_probs, axis=-1).numpy()[0])
         error   = int(y_pred != y_t)
@@ -335,14 +326,12 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         y_true_all.append(y_t)
         a_all.append(a_t)
 
-        # Rolling-window accuracy: drop oldest sample when buffer is full
         correct_buffer.append(int(y_pred == y_t))
         if USE_ROLLING and len(correct_buffer) > accuracy_window:
             correct_buffer.pop(0)
         acc_val = float(sum(correct_buffer)) / len(correct_buffer)
         accuracies.append(acc_val)
 
-        # Rolling window for fairness metrics: bounded to post-drift predictions
         w_start = max(fairness_start, len(y_preds_all) - FAIRNESS_WINDOW)
         w_preds = y_preds_all[w_start:]
         w_true  = y_true_all[w_start:]
@@ -360,8 +349,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                 and not in_warning
                 and acc_det_n >= MIN_SAMPLES_PER_STREAM
                 and t - last_detected_acc >= COOLDOWN
-                and not is_label_noise
-                and test_then_train):
+                and not is_label_noise):
             in_warning = True
             optimizer.learning_rate.assign(float(DRIFT_LR_PREWARM))
             steps_since_drift = LR_DECAY_STEPS
@@ -377,15 +365,13 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             acc_det   = drift.ADWIN(delta=ADWIN_DELTA_CONFIRM)
             warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
             acc_det_n = 0
-            if test_then_train:
-                optimizer = tf.keras.optimizers.Adam(learning_rate=DRIFT_LR_SPIKE)
-                steps_since_drift = LR_DECAY_STEPS
-                print(f"[DRIFT] Concept drift confirmed at sample {t} — spiking LR to {DRIFT_LR_SPIKE:.2e}")
+            optimizer = tf.keras.optimizers.Adam(learning_rate=DRIFT_LR_SPIKE)
+            steps_since_drift = LR_DECAY_STEPS
+            print(f"[DRIFT] Concept drift confirmed at sample {t} — spiking LR to {DRIFT_LR_SPIKE:.2e}")
             if compute_fairness:
                 gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count = \
                     init_fairness_state(num_trees, data_dim, num_internal_nodes)
                 fairness_start = len(y_preds_all)
-                fairness_lambda_boost = FAIRNESS_WINDOW
                 print(f"[DRIFT] Fairness state reset at sample {t}")
         w_a_arr = np.array(w_a)
         if np.sum(w_a_arr == 0) > 0 and np.sum(w_a_arr == 1) > 0:
@@ -397,13 +383,11 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
 
         dps.append(float(dp_val))
         eos.append(float(eo_val))
-
-        if test_then_train:
-            if steps_since_drift > 0:
-                alpha = steps_since_drift / LR_DECAY_STEPS
-                current_lr = learning_rate + alpha * (DRIFT_LR_SPIKE - learning_rate)
-                optimizer.learning_rate.assign(float(current_lr))
-                steps_since_drift -= 1
+        if steps_since_drift > 0:
+            alpha = steps_since_drift / LR_DECAY_STEPS
+            current_lr = learning_rate + alpha * (DRIFT_LR_SPIKE - learning_rate)
+            optimizer.learning_rate.assign(float(current_lr))
+            steps_since_drift -= 1
 
             sample_weight = max(label_conf, 1.0 - model_conf + 1e-6)
             sample_weight = float(np.clip(sample_weight, 0.05, 1.0))
@@ -416,27 +400,29 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                 node_decisions_train = train_out[1] if isinstance(train_out, tuple) else None
                 loss = criteria(y_true=y_t_tensor, y_pred=y_probs_train,
                                sample_weight=sw_tensor)
-            grads = tape.gradient(loss, model.trainable_variables)
-            if compute_fairness and node_decisions_train is not None:
-                accumulate_fairness_stats(
-                    tape, [a_t], [y_t],
-                    node_decisions_train, y_probs_train,
-                    all_tree_trainable_vars, model.trainable_variables,
-                    gradient_w, gradient_b, agg_y,
-                    subgroup_count, protected_class_count,
-                    num_internal_nodes, data_dim,
-                    constraint_type, gradient_type, base_gamma,
-                )
-                effective_lambda = lambda_const * 3.0 if fairness_lambda_boost > 0 else lambda_const
-                fairness_lambda_boost = max(0, fairness_lambda_boost - 1)
-                grads = compute_fairness_gradients(
-                    grads, gradient_w, gradient_b, agg_y,
-                    subgroup_count, protected_class_count,
-                    fairness_type, effective_lambda,
-                    num_internal_nodes, data_dim, num_trees,
-                    gradient_type, base_gamma,
-                )
+                if compute_fairness and node_decisions_train is not None:
+                    accumulate_fairness_stats(
+                        tape, [a_t], [y_t],
+                        node_decisions_train, y_probs_train,
+                        all_tree_trainable_vars, model.trainable_variables,
+                        gradient_w, gradient_b, agg_y,
+                        subgroup_count, protected_class_count,
+                        num_internal_nodes, data_dim,
+                        constraint_type, gradient_type, base_gamma,
+                    )
+                grads = tape.gradient(loss, model.trainable_variables)
+                if compute_fairness and node_decisions_train is not None:
+                    grads = compute_fairness_gradients(
+                        grads, gradient_w, gradient_b, agg_y,
+                        subgroup_count, protected_class_count,
+                        fairness_type, lambda_const,
+                        num_internal_nodes, data_dim, num_trees,
+                        gradient_type, base_gamma,
+                    )
+            if compute_fairness:
                 del tape
+
+            assert len(grads) == len(model.trainable_variables) and len(grads) > 0, "Problem with loss gradients"
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
 
     if drifted_points:
@@ -515,7 +501,7 @@ def evaluate_arf_over_timesteps(x_test, y_test, a_test, accuracy_window=200):
         'dp': dps,
         'eo': eos,
         'n_samples': n_samples,
-        'drifted_points': [],  # ARF reacts internally; no explicit detection points
+        'drifted_points': [],  
     }
 
 
