@@ -35,6 +35,11 @@ def accumulate_fairness_stats(
         elif constraint_type == 'leaf':
             fair_gradients = tape.gradient(predictions[i], model_trainable_vars)
 
+        # none_count = sum(1 for g in fair_gradients if g is None)
+        # nonzero_norms = [float(tf.norm(g).numpy()) for g in fair_gradients if g is not None]
+        # if len(nonzero_norms) == 0 or all(n == 0.0 for n in nonzero_norms[:3]):
+        #     print(f"[ACCUM DEBUG] a={a_label} y={y_label} none={none_count}/{len(fair_gradients)} norms={nonzero_norms[:6]}")
+
         idx_b = idx_w = -1
         for fair_grad in fair_gradients:
             if fair_grad is None:
@@ -74,8 +79,9 @@ def compute_fairness_gradients(
     else:
         can_compute = all(subgroup_count[(a, y)] > 0 for a in [0, 1] for y in [0, 1])
 
-    if not can_compute:
-        return gradients
+    # if not can_compute:
+    #     print(f"[FAIRNESS DEBUG] can_compute=False — protected_class_count={dict(protected_class_count)}, subgroup_count={dict(subgroup_count)}")
+    #     return gradients
 
     if gradient_type == 'ema':
         if fairness_type == 'dp':
@@ -91,8 +97,17 @@ def compute_fairness_gradients(
     total_gradients = []
     idx_b = idx_w = 0
 
-    for idx, grad in enumerate(gradients):
-        tree_id = idx // 3
+    for grad in gradients:
+        # Derive tree_id from how many W/B variables we've seen so far.
+        # Each tree contributes exactly one W and one B, so whichever counter
+        # is about to be incremented gives the current tree index.
+        if len(grad.shape) == 2 and grad.shape[0] == data_dim:
+            tree_id = idx_w
+        elif len(grad.shape) == 1 and grad.shape[0] == num_internal_nodes:
+            tree_id = idx_b
+        else:
+            # theta or other variable — assign to the most recent tree
+            tree_id = max(idx_w, idx_b) - 1 if max(idx_w, idx_b) > 0 else 0
 
         if fairness_type == 'dp':
             agg_a1 = agg_y[(1, 0)] + agg_y[(1, 1)]
@@ -119,6 +134,8 @@ def compute_fairness_gradients(
                                - tf.convert_to_tensor(gw_a0[idx_w] * cf0), tf.float32)
                 hc = tf.cast(tf.math.abs(F) < huber_loss_delta, tf.float32)
                 penalty = lambda_const * (tf.multiply(tf.multiply(hc, F), diff) + tf.multiply(tf.multiply(1 - hc, signs_y), diff))
+                #if idx_w == 0:
+                #    print(f"[FAIRNESS DEBUG dp] tree=0 F_norm={float(tf.norm(F)):.4e} diff_norm={float(tf.norm(diff)):.4e} penalty_norm={float(tf.norm(penalty)):.4e} lambda={lambda_const}")
                 total_gradients.append(grad + penalty)
                 idx_w += 1
             else:
