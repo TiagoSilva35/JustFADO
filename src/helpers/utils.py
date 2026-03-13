@@ -266,7 +266,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                             test_then_train=True, learning_rate=2e-3,
                             accuracy_window=200,
                             compute_fairness=True, fairness_type='dp',
-                            lambda_const=0.1, tree_depth=3, num_trees=3,
+                            lambda_const=0.01, tree_depth=3, num_trees=3,
                             constraint_type='node', gradient_type='vanilla',
                             base_gamma=0.9):
     accuracies = []
@@ -274,15 +274,15 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     eos = []
     drifted_points = []
 
-    ADWIN_DELTA_WARN    = 0.05   # fires early (fast but noisier)
-    ADWIN_DELTA_CONFIRM = 0.002   # confirmed drift (slower but reliable)
-    DRIFT_LR_PREWARM    = learning_rate * 1.5   # gentle warm-up on warning
-    DRIFT_LR_SPIKE      = learning_rate * 3  # full spike on confirmed drift
-    LR_DECAY_STEPS      = 3000
+    ADWIN_DELTA_WARN    = 0.05   
+    ADWIN_DELTA_CONFIRM = 0.002 
+    DRIFT_LR_PREWARM    = learning_rate * 5.0  
+    DRIFT_LR_SPIKE      = learning_rate * 10.0
+    LR_DECAY_STEPS      = 2000
     FAIRNESS_WINDOW     = 500
     COOLDOWN            = 200    
-    MIN_SAMPLES_PER_STREAM = 3
-
+    MIN_SAMPLES_PER_STREAM = 30
+    lambda_const = 0.0
     print(f"Evaluating model over {len(x_test)} timesteps with test-then-train={test_then_train}\n\
           Fairness penalty lambda: {lambda_const}, fairness type: {fairness_type}")
 
@@ -303,6 +303,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     criteria = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
     steps_since_drift = 0
+    decay_from_lr = float(DRIFT_LR_PREWARM)
     fairness_start = 0
 
     if compute_fairness:
@@ -356,6 +357,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                 and not is_label_noise):
             in_warning = True
             optimizer.learning_rate.assign(float(DRIFT_LR_PREWARM))
+            decay_from_lr = float(DRIFT_LR_PREWARM)
             steps_since_drift = LR_DECAY_STEPS
             warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
             print(f"[WARN] Drift warning at sample {t} — pre-warming LR to {DRIFT_LR_PREWARM:.2e}")
@@ -378,11 +380,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             for tree in model.layers:
                 if hasattr(tree, 'temperature'):
                     tree.temperature.assign(0.1)
-            # if compute_fairness:
-            #     gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count = \
-            #         init_fairness_state(num_trees, data_dim, num_internal_nodes)
-            #     fairness_start = len(y_preds_all)
-            #     print(f"[DRIFT] Fairness state reset at sample {t}")
         w_a_arr = np.array(w_a)
         if np.sum(w_a_arr == 0) > 0 and np.sum(w_a_arr == 1) > 0:
             dp_val, _ = get_demographic_parity(w_preds, w_a)
@@ -396,18 +393,19 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         
         if steps_since_drift > 0 and not recovering_from_drift:
             alpha = steps_since_drift / LR_DECAY_STEPS
-            current_lr = learning_rate + alpha * (DRIFT_LR_PREWARM - learning_rate)
+            current_lr = learning_rate + alpha * (decay_from_lr - learning_rate)
             optimizer.learning_rate.assign(float(current_lr))
             steps_since_drift -= 1
         elif recovering_from_drift:
             current_acc = acc_val
             if current_acc >= baseline_accuracy:
                 recovering_from_drift = False
-                optimizer.learning_rate.assign(float(learning_rate))
+                decay_from_lr = float(optimizer.learning_rate)
+                steps_since_drift = LR_DECAY_STEPS
                 for tree in model.layers:
                     if hasattr(tree, 'temperature'):
                         tree.temperature.assign(1.0)
-                print(f"[RECOVERY] Performance restored at sample {t}. Returning to baseline LR and soft decisions.")
+                print(f"[RECOVERY] Performance restored at sample {t}. Decaying LR from {decay_from_lr:.2e} to {learning_rate:.2e} over {LR_DECAY_STEPS} steps.")
             else:
                 optimizer.learning_rate.assign(float(DRIFT_LR_SPIKE))
                 for tree in model.layers:
@@ -524,6 +522,134 @@ def evaluate_arf_over_timesteps(x_test, y_test, a_test, accuracy_window=200):
         'eo': eos,
         'n_samples': n_samples,
         'drifted_points': [],  
+    }
+
+
+def _compute_dp_from_preds(preds, groups):
+    groups_arr = np.array(groups)
+    if np.sum(groups_arr == 0) == 0 or np.sum(groups_arr == 1) == 0:
+        return 0.0
+    preds_arr = np.array(preds)
+    return float(np.abs(np.mean(preds_arr[groups_arr == 1]) - np.mean(preds_arr[groups_arr == 0])))
+
+
+def _choose_group_threshold_for_target_dp(probs_window, groups_window, target_dp,
+                                          unprotected_threshold=0.5,
+                                          threshold_grid=None):
+    if threshold_grid is None:
+        threshold_grid = np.linspace(0.05, 0.95, 37)
+
+    best_threshold = float(unprotected_threshold)
+    best_gap = float('inf')
+    best_deviation = float('inf')
+
+    probs_arr = np.array(probs_window, dtype=float)
+    groups_arr = np.array(groups_window, dtype=int)
+
+    for protected_threshold in threshold_grid:
+        preds = [
+            int(
+                p >= (protected_threshold if g == 1 else unprotected_threshold)
+            )
+            for p, g in zip(probs_arr, groups_arr)
+        ]
+        candidate_dp = _compute_dp_from_preds(preds, groups_arr)
+        gap = abs(candidate_dp - float(target_dp))
+        deviation = abs(float(protected_threshold) - float(unprotected_threshold))
+
+        if (gap < best_gap) or (np.isclose(gap, best_gap) and deviation < best_deviation):
+            best_gap = gap
+            best_deviation = deviation
+            best_threshold = float(protected_threshold)
+
+    return best_threshold
+
+
+def evaluate_fair_arf_over_timesteps(x_test, y_test, a_test, target_dp_series,
+                                     accuracy_window=200, fairness_window=500,
+                                     unprotected_threshold=0.5,
+                                     threshold_grid=None):
+    arf = AdaptiveRandomForestClassifier(seed=42)
+
+    accuracies = []
+    dps = []
+    eos = []
+    dp_target_errors = []
+    protected_thresholds = []
+
+    correct_buffer = []
+    USE_ROLLING = bool(accuracy_window)
+    y_preds_all = []
+    y_true_all = []
+    a_all = []
+    p1_all = []
+    n_samples = len(x_test)
+
+    print(f"Running Fair-ARF (DP-targeted) prequentially on {n_samples} samples...")
+
+    for t in range(n_samples):
+        x_t = np.array(x_test[t], dtype=np.float32)
+        y_t = int(y_test[t])
+        a_t = int(a_test[t])
+
+        x_dict = {i: float(v) for i, v in enumerate(x_t)}
+
+        proba = arf.predict_proba_one(x_dict)
+        p1 = float(proba.get(1, 0.0)) if proba is not None else 0.0
+        p1_all.append(p1)
+        a_all.append(a_t)
+
+        target_dp = float(target_dp_series[t]) if t < len(target_dp_series) else float(target_dp_series[-1])
+
+        w_start = max(0, t + 1 - fairness_window)
+        probs_window = p1_all[w_start:]
+        groups_window = a_all[w_start:]
+
+        protected_threshold = _choose_group_threshold_for_target_dp(
+            probs_window=probs_window,
+            groups_window=groups_window,
+            target_dp=target_dp,
+            unprotected_threshold=unprotected_threshold,
+            threshold_grid=threshold_grid,
+        )
+        protected_thresholds.append(float(protected_threshold))
+
+        chosen_threshold = protected_threshold if a_t == 1 else unprotected_threshold
+        y_pred = int(p1 >= chosen_threshold)
+
+        y_preds_all.append(y_pred)
+        y_true_all.append(y_t)
+
+        correct_buffer.append(int(y_pred == y_t))
+        if USE_ROLLING and len(correct_buffer) > accuracy_window:
+            correct_buffer.pop(0)
+        accuracies.append(float(sum(correct_buffer)) / len(correct_buffer))
+
+        w_preds = y_preds_all[w_start:]
+        w_true = y_true_all[w_start:]
+        w_a = a_all[w_start:]
+        w_a_arr = np.array(w_a)
+        if np.sum(w_a_arr == 0) > 0 and np.sum(w_a_arr == 1) > 0:
+            dp_val, _ = get_demographic_parity(w_preds, w_a)
+            eo_val, _ = get_equalized_odds(w_preds, w_a, w_true)
+        else:
+            dp_val = 0.0
+            eo_val = 0.0
+        dps.append(float(dp_val))
+        eos.append(float(eo_val))
+        dp_target_errors.append(abs(float(dp_val) - target_dp))
+
+        arf.learn_one(x_dict, y_t)
+
+    print("Fair-ARF evaluation complete.")
+    return {
+        'accuracy': accuracies,
+        'dp': dps,
+        'eo': eos,
+        'n_samples': n_samples,
+        'drifted_points': [],
+        'dp_target_errors': dp_target_errors,
+        'protected_thresholds': protected_thresholds,
     }
 
 
