@@ -72,7 +72,8 @@ def plot_metrics_over_timesteps(timestep_results, save_path='files/metrics_over_
 
 
 def plot_aranyani_vs_arf(aranyani_results, arf_results, save_path,
-                        scenario_name='', smooth_window=100, skip_samples=0):
+                        scenario_name='', smooth_window=100, skip_samples=0,
+                        fair_arf_results=None):
     n = aranyani_results['n_samples']
     plot_start = skip_samples
     timesteps = np.arange(1, n + 1)[plot_start:]
@@ -83,7 +84,15 @@ def plot_aranyani_vs_arf(aranyani_results, arf_results, save_path,
         ('eo',       'Equalized Odds'),
     ]
 
-    title = f'Aranyani vs ARF \u2013 {scenario_name}' if scenario_name else 'Aranyani vs ARF'
+    title = (
+        f'Aranyani vs ARF vs Fair-ARF - {scenario_name}'
+        if fair_arf_results is not None and scenario_name
+        else (
+            'Aranyani vs ARF vs Fair-ARF'
+            if fair_arf_results is not None
+            else (f'Aranyani vs ARF - {scenario_name}' if scenario_name else 'Aranyani vs ARF')
+        )
+    )
     fig, axes = plt.subplots(3, 1, figsize=(14, 12), sharex=True)
     fig.suptitle(title, fontsize=14, fontweight='bold')
 
@@ -98,8 +107,23 @@ def plot_aranyani_vs_arf(aranyani_results, arf_results, save_path,
         ax.plot(timesteps, aran_vals, color='tab:blue',   linewidth=1.8, label='Aranyani')
         ax.plot(timesteps, arf_vals,  color='tab:orange', linewidth=1.8,
                 linestyle='--', label='ARF')
+        if fair_arf_results is not None:
+            fair_vals = _smooth(
+                np.array(fair_arf_results[key][plot_start:], dtype=float),
+                window=smooth_window,
+            )
+            ax.plot(
+                timesteps,
+                fair_vals,
+                color='tab:green',
+                linewidth=1.8,
+                linestyle='-.',
+                label='Fair-ARF (DP-targeted)',
+            )
         ax.set_ylabel(label, fontsize=11, fontweight='bold')
         combined = np.concatenate([aran_vals, arf_vals])
+        if fair_arf_results is not None:
+            combined = np.concatenate([combined, fair_vals])
         ax.set_ylim(_dynamic_ylim(combined))
         ax.grid(True, alpha=0.3)
 
@@ -113,5 +137,5 @@ def plot_aranyani_vs_arf(aranyani_results, arf_results, save_path,
     axes[-1].set_xlabel('Timestep', fontsize=12, fontweight='bold')
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
-    print(f"Aranyani vs ARF plot saved to: {save_path}")
+    print(f"Comparison plot saved to: {save_path}")
     plt.close()

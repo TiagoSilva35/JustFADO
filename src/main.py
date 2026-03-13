@@ -19,7 +19,12 @@ from absl import app
 from src.forest.train import *
 from src.helpers.data import load_drifted_test_set
 from src.drift.scenarios import SCENARIOS, SCENARIO_DESCRIPTIONS
-from src.helpers.utils import evaluate_over_timesteps, evaluate_arf_over_timesteps, get_test_performance
+from src.helpers.utils import (
+  evaluate_over_timesteps,
+  evaluate_arf_over_timesteps,
+  evaluate_fair_arf_over_timesteps,
+  get_test_performance,
+)
 from src.helpers.plots import (
     plot_metrics_over_timesteps,
     plot_aranyani_vs_arf,
@@ -72,6 +77,12 @@ def _evaluate_scenario(model, data_dim, scenario_name):
 
   # Run ARF baseline on the same stream
   arf_results = evaluate_arf_over_timesteps(x_test, y_test, a_test)
+  fair_arf_results = evaluate_fair_arf_over_timesteps(
+      x_test,
+      y_test,
+      a_test,
+      target_dp_series=timestep_results['dp'],
+  )
 
   elapsed = round(time.time() - start, 1)
 
@@ -82,13 +93,24 @@ def _evaluate_scenario(model, data_dim, scenario_name):
     plot_metrics_over_timesteps(timestep_results, save_path=per_path)
     cmp_path = os.path.join(OUTPUT_DIR, f'aranyani_vs_arf_{scenario_name}.png')
     plot_aranyani_vs_arf(timestep_results, arf_results, save_path=cmp_path,
-                         scenario_name=scenario_name)
+               scenario_name=scenario_name,
+               fair_arf_results=fair_arf_results)
+
+    arf_final_acc = arf_results['accuracy'][-1] if arf_results['accuracy'] else 0.0
+    fair_arf_final_acc = fair_arf_results['accuracy'][-1] if fair_arf_results['accuracy'] else 0.0
+    dp_target_mae = (
+      float(sum(fair_arf_results['dp_target_errors'])) / len(fair_arf_results['dp_target_errors'])
+      if fair_arf_results['dp_target_errors'] else None
+    )
 
   return {
       'scenario': scenario_name,
       'test_metrics': test_metrics,
       'timestep_results': timestep_results,
       'arf_results': arf_results,
+      'fair_arf_results': fair_arf_results,
+      'arf_to_fair_arf_accuracy_drop': float(arf_final_acc - fair_arf_final_acc),
+      'fair_arf_dp_target_mae': dp_target_mae,
       'elapsed_seconds': elapsed,
   }
 
@@ -156,6 +178,16 @@ def run_all_scenarios(kwargs):
       jr['final_accuracy'] = ts['accuracy'][-1] if ts['accuracy'] else None
       jr['final_dp'] = ts['dp'][-1] if ts['dp'] else None
       jr['final_eo'] = ts['eo'][-1] if ts['eo'] else None
+    arf = r.get('arf_results')
+    if arf:
+      jr['arf_final_accuracy'] = arf['accuracy'][-1] if arf['accuracy'] else None
+      jr['arf_final_dp'] = arf['dp'][-1] if arf['dp'] else None
+      jr['arf_final_eo'] = arf['eo'][-1] if arf['eo'] else None
+    fair_arf = r.get('fair_arf_results')
+    if fair_arf:
+      jr['fair_arf_final_accuracy'] = fair_arf['accuracy'][-1] if fair_arf['accuracy'] else None
+      jr['fair_arf_final_dp'] = fair_arf['dp'][-1] if fair_arf['dp'] else None
+      jr['fair_arf_final_eo'] = fair_arf['eo'][-1] if fair_arf['eo'] else None
     json_results.append(jr)
 
   json_path = os.path.join(OUTPUT_DIR, 'results.json')
@@ -167,14 +199,19 @@ def run_all_scenarios(kwargs):
   print(f"\n{'='*80}")
   print(f" SUMMARY")
   print(f"{'='*80}")
-  print(f"{'Scenario':<20s} {'Acc':>7s} {'DP':>7s} {'EO':>7s} {'F1':>7s} {'Time':>7s}")
-  print('-' * 60)
+  print(f"{'Scenario':<20s} {'AranAcc':>8s} {'ARFAcc':>8s} {'FARFAcc':>8s} {'Drop':>8s} {'DP-MAE':>8s}")
+  print('-' * 74)
   for r in all_results:
     tm = r.get('test_metrics')
-    if tm:
+    arf = r.get('arf_results')
+    fair_arf = r.get('fair_arf_results')
+    if tm and arf and fair_arf:
       print(f"{r['scenario']:<20s} "
-            f"{tm['accuracy']:>7.4f} {tm['dp']:>7.4f} {tm['eo']:>7.4f} "
-            f"{tm['f1']:>7.4f} {r.get('elapsed_seconds', 0):>6.1f}s")
+            f"{tm['accuracy']:>8.4f} "
+            f"{arf['accuracy'][-1]:>8.4f} "
+            f"{fair_arf['accuracy'][-1]:>8.4f} "
+            f"{r.get('arf_to_fair_arf_accuracy_drop', 0.0):>8.4f} "
+            f"{(r.get('fair_arf_dp_target_mae') or 0.0):>8.4f}")
     else:
       err = r.get('error', 'N/A')
       print(f"{r['scenario']:<20s}  FAILED ({err[:40]})")
@@ -201,10 +238,17 @@ def main(_):
       scenario = FLAGS.drift_scenario
       x_test, y_test, a_test = load_drifted_test_set(scenario)
       arf_results = evaluate_arf_over_timesteps(x_test, y_test, a_test)
+      fair_arf_results = evaluate_fair_arf_over_timesteps(
+          x_test,
+          y_test,
+          a_test,
+          target_dp_series=timestep_results['dp'],
+      )
       os.makedirs(OUTPUT_DIR, exist_ok=True)
       cmp_path = os.path.join(OUTPUT_DIR, f'aranyani_vs_arf_{scenario}.png')
       plot_aranyani_vs_arf(timestep_results, arf_results,
-                           save_path=cmp_path, scenario_name=scenario)
+                           save_path=cmp_path, scenario_name=scenario,
+                           fair_arf_results=fair_arf_results)
       print(f"Aranyani vs ARF comparison saved to: {cmp_path}")
 
 
