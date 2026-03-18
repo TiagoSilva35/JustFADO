@@ -2,6 +2,7 @@
 
 
 import os
+import yaml
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -62,6 +63,33 @@ flags.DEFINE_bool('prequential', False,
 
 
 FLAGS = flags.FLAGS
+NSGA2_PREQ_CONFIG_PATH = 'files/nsga2_prequential_config.yaml'
+
+
+def _load_prequential_nsga2_config():
+  cfg = {
+      'enabled': False,
+      'fairness_type': 'dp',
+      'population_size': 8,
+      'generations': 4,
+      'sample_size': 800,
+      'seed': 42,
+      'target_drift_rate': 0.01,
+  }
+  if not os.path.exists(NSGA2_PREQ_CONFIG_PATH):
+    return cfg
+  with open(NSGA2_PREQ_CONFIG_PATH) as f:
+    loaded = yaml.safe_load(f) or {}
+  if not isinstance(loaded, dict):
+    return cfg
+  section = loaded.get('nsga2_prequential', loaded)
+  if not isinstance(section, dict):
+    return cfg
+  cfg.update(section)
+  cfg['fairness_type'] = str(cfg.get('fairness_type', 'dp')).lower()
+  if cfg['fairness_type'] not in ['dp', 'eo']:
+    cfg['fairness_type'] = 'dp'
+  return cfg
 
 def train(
     dataset='civil',
@@ -156,6 +184,7 @@ def train(
         print(f"  Test F1-Score: {test_metrics['f1']:.4f}")
         print(f"{'='*80}\n")
         if prequential:
+            preq_cfg = _load_prequential_nsga2_config()
             print("\nRunning prequential (test-then-train) evaluation...")
             # Reload a fresh copy so baseline and prequential start from
             # the same weights and we can compare fairly.
@@ -164,13 +193,21 @@ def train(
                 preq_model, x_test, y_test, a_test, data_dim=data_dim,
                 test_then_train=True,
                 compute_fairness=compute_fairness,
-                fairness_type='dp',  # prequential evaluation focuses on DP for now
+                fairness_type=preq_cfg['fairness_type'],
                 lambda_const=lambda_const,
                 tree_depth=depth,
                 num_trees=num_trees,
                 constraint_type=constraint_type,
                 gradient_type=gradient_type,
                 base_gamma=base_gamma,
+                enable_nsga2_tuning=bool(preq_cfg['enabled']),
+                nsga2_config={
+                    'population_size': int(preq_cfg['population_size']),
+                    'generations': int(preq_cfg['generations']),
+                    'sample_size': int(preq_cfg['sample_size']),
+                    'seed': int(preq_cfg['seed']),
+                    'target_drift_rate': float(preq_cfg['target_drift_rate']),
+                },
             )
             plot_metrics_over_timesteps(preq_results,
                                         save_path='files/metrics_prequential.png')
@@ -325,6 +362,7 @@ def train(
   test_metrics = None
   if drift and x_test is not None and len(x_test) > 0:
     if prequential:
+      preq_cfg = _load_prequential_nsga2_config()
       print("\nRunning prequential (test-then-train) evaluation...")
       import copy
       preq_model = copy.deepcopy(fold_results[0]['model'])
@@ -332,13 +370,21 @@ def train(
           preq_model, x_test, y_test, a_test, data_dim=data_dim,
           test_then_train=True,
           compute_fairness=compute_fairness,
-          fairness_type='dp',  # prequential evaluation focuses on DP for now
+          fairness_type=preq_cfg['fairness_type'],
           lambda_const=lambda_const,
           tree_depth=depth,
           num_trees=num_trees,
           constraint_type=constraint_type,
           gradient_type=gradient_type,
           base_gamma=base_gamma,
+          enable_nsga2_tuning=bool(preq_cfg['enabled']),
+          nsga2_config={
+              'population_size': int(preq_cfg['population_size']),
+              'generations': int(preq_cfg['generations']),
+              'sample_size': int(preq_cfg['sample_size']),
+              'seed': int(preq_cfg['seed']),
+              'target_drift_rate': float(preq_cfg['target_drift_rate']),
+          },
       )
       plot_metrics_over_timesteps(preq_results,
                                   save_path='files/metrics_prequential.png')

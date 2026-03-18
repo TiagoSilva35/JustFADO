@@ -70,13 +70,12 @@ def display_confusion_matrix(y_true, y_pred, save_path='files/confusion_matrix.p
       print(f"  Specificity:          {specificity:.4f}")
     
     if tp + fp > 0:
-      precision = tp / (tp + fp)
-      print(f"  Precision:            {precision:.4f}")
-    
-    if (tp + fp > 0) and (tp + fn > 0):
-      f1 = 2 * (precision * recall) / (precision + recall)
-      print(f"  F1-Score:             {f1:.4f}")
-    
+        precision = tp / (tp + fp)
+        print(f"  Precision:            {precision:.4f}")
+        if (tp + fn > 0):
+            f1 = 2 * (precision * recall) / (precision + recall)
+            print(f"  F1-Score:             {f1:.4f}")
+
     print(f"  Accuracy:             {accuracy:.4f}")
   
   # Plot confusion matrix
@@ -266,23 +265,120 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                             test_then_train=True, learning_rate=2e-3,
                             accuracy_window=200,
                             compute_fairness=True, fairness_type='dp',
-                            lambda_const=0.01, tree_depth=3, num_trees=3,
+                            lambda_const=0.1, tree_depth=3, num_trees=3,
                             constraint_type='node', gradient_type='vanilla',
-                            base_gamma=0.9):
+                            base_gamma=0.9,
+                            static_params=None,
+                            enable_nsga2_tuning=False,
+                            nsga2_config=None):
     accuracies = []
     dps = []
     eos = []
     drifted_points = []
 
-    ADWIN_DELTA_WARN    = 0.05   
-    ADWIN_DELTA_CONFIRM = 0.002 
-    DRIFT_LR_PREWARM    = learning_rate * 5.0  
-    DRIFT_LR_SPIKE      = learning_rate * 10.0
-    LR_DECAY_STEPS      = 2000
-    FAIRNESS_WINDOW     = 500
-    COOLDOWN            = 200    
-    MIN_SAMPLES_PER_STREAM = 30
-    lambda_const = 0.0
+    defaults = {
+        'adwin_delta_warn': 0.00001,
+        'adwin_delta_confirm': 0.02,
+        'drift_lr_prewarm_mult': 5.0,
+        'drift_lr_spike_mult': 10.0,
+        'lr_decay_steps': 3000,
+        'fairness_window': 500,
+        'cooldown': 200,
+        'min_samples_per_stream': 30,
+        'lambda_const': float(lambda_const),
+    }
+    if static_params:
+        defaults.update(static_params)
+
+    if enable_nsga2_tuning and test_then_train:
+        from src.helpers.nsga2_tuner import run_nsga2
+        search_cfg = {
+            'population_size': 8,
+            'generations': 4,
+            'sample_size': min(len(x_test), 800),
+            'seed': 42,
+            'target_drift_rate': 0.01,
+        }
+        if nsga2_config:
+            search_cfg.update(nsga2_config)
+        tune_n = max(1, int(search_cfg['sample_size']))
+
+        if hasattr(model, 'get_weights') and hasattr(model, 'set_weights'):
+            base_weights = model.get_weights()
+            x_tune = x_test[:tune_n]
+            y_tune = y_test[:tune_n]
+            a_tune = a_test[:tune_n]
+
+            bounds = {
+                'adwin_delta_warn': (1e-6, 5e-3),
+                'adwin_delta_confirm': (5e-4, 5e-2),
+                'drift_lr_prewarm_mult': (1.0, 12.0),
+                'drift_lr_spike_mult': (2.0, 20.0),
+                'lr_decay_steps': (300.0, 6000.0),
+                'fairness_window': (100.0, 2000.0),
+                'cooldown': (20.0, 800.0),
+                'min_samples_per_stream': (10.0, 120.0),
+                'lambda_const': (0.0, 1.0),
+            }
+
+            def _objective(candidate):
+                candidate = dict(candidate)
+                candidate['lr_decay_steps'] = int(round(candidate['lr_decay_steps']))
+                candidate['fairness_window'] = int(round(candidate['fairness_window']))
+                candidate['cooldown'] = int(round(candidate['cooldown']))
+                candidate['min_samples_per_stream'] = int(round(candidate['min_samples_per_stream']))
+                model.set_weights(base_weights)
+                run = evaluate_over_timesteps(
+                    model, x_tune, y_tune, a_tune, data_dim=data_dim,
+                    test_then_train=True,
+                    learning_rate=learning_rate,
+                    accuracy_window=accuracy_window,
+                    compute_fairness=compute_fairness,
+                    fairness_type=fairness_type,
+                    lambda_const=lambda_const,
+                    tree_depth=tree_depth,
+                    num_trees=num_trees,
+                    constraint_type=constraint_type,
+                    gradient_type=gradient_type,
+                    base_gamma=base_gamma,
+                    static_params=candidate,
+                    enable_nsga2_tuning=False,
+                    nsga2_config=None,
+                )
+                window = min(100, len(run['accuracy']))
+                recent_acc = float(np.mean(run['accuracy'][-window:])) if window else 0.0
+                fairness_series = run['dp'] if fairness_type == 'dp' else run['eo']
+                recent_fair = float(np.mean(np.abs(fairness_series[-window:]))) if window else 0.0
+                drift_rate = float(len(run['drifted_points'])) / max(1, int(run['n_samples']))
+                drift_obj = abs(drift_rate - float(search_cfg['target_drift_rate']))
+                return (1.0 - recent_acc, recent_fair, drift_obj)
+
+            best_candidate, best_objective, _, _ = run_nsga2(
+                objective_fn=_objective,
+                bounds=bounds,
+                population_size=int(search_cfg['population_size']),
+                generations=int(search_cfg['generations']),
+                seed=int(search_cfg['seed']),
+            )
+            best_candidate['lr_decay_steps'] = int(round(best_candidate['lr_decay_steps']))
+            best_candidate['fairness_window'] = int(round(best_candidate['fairness_window']))
+            best_candidate['cooldown'] = int(round(best_candidate['cooldown']))
+            best_candidate['min_samples_per_stream'] = int(round(best_candidate['min_samples_per_stream']))
+            defaults.update(best_candidate)
+            model.set_weights(base_weights)
+            print(f"[NSGA2] Tuned params selected: {best_candidate} with objectives {best_objective}")
+        else:
+            print("[NSGA2] Model does not expose get_weights/set_weights; skipping tuner.")
+
+    ADWIN_DELTA_WARN = float(defaults['adwin_delta_warn'])
+    ADWIN_DELTA_CONFIRM = float(defaults['adwin_delta_confirm'])
+    DRIFT_LR_PREWARM = learning_rate * float(defaults['drift_lr_prewarm_mult'])
+    DRIFT_LR_SPIKE = learning_rate * float(defaults['drift_lr_spike_mult'])
+    LR_DECAY_STEPS = int(defaults['lr_decay_steps'])
+    FAIRNESS_WINDOW = int(defaults['fairness_window'])
+    COOLDOWN = int(defaults['cooldown'])
+    MIN_SAMPLES_PER_STREAM = int(defaults['min_samples_per_stream'])
+    lambda_const = float(defaults['lambda_const'])
     print(f"Evaluating model over {len(x_test)} timesteps with test-then-train={test_then_train}\n\
           Fairness penalty lambda: {lambda_const}, fairness type: {fairness_type}")
 
@@ -346,8 +442,8 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
 
         
         
-        warn_det.update(error)
-        acc_det.update(error)
+        warn_det.update(error) #type: ignore
+        acc_det.update(error) #type: ignore
         acc_det_n += 1
 
         if (warn_det.change_detected
@@ -372,7 +468,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
             acc_det_n = 0
             optimizer = tf.keras.optimizers.Adam(learning_rate=DRIFT_LR_SPIKE)
-            # steps_since_drift = LR_DECAY_STEPS
+            steps_since_drift = LR_DECAY_STEPS
             baseline_accuracy = np.mean(accuracies[max(0, t - 1000):t]) if t > 1000 else np.mean(accuracies)
             recovering_from_drift = True
             
@@ -460,7 +556,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
 
 
 def evaluate_arf_over_timesteps(x_test, y_test, a_test, accuracy_window=200):
-    arf = AdaptiveRandomForestClassifier(seed=42)
+    arf = AdaptiveRandomForestClassifier(seed=42, n_models=3, max_depth=3)
 
     accuracies = []
     dps = []
@@ -569,7 +665,7 @@ def evaluate_fair_arf_over_timesteps(x_test, y_test, a_test, target_dp_series,
                                      accuracy_window=200, fairness_window=500,
                                      unprotected_threshold=0.5,
                                      threshold_grid=None):
-    arf = AdaptiveRandomForestClassifier(seed=42)
+    arf = AdaptiveRandomForestClassifier(seed=42, n_models=3, max_depth=3)
 
     accuracies = []
     dps = []
@@ -651,5 +747,4 @@ def evaluate_fair_arf_over_timesteps(x_test, y_test, a_test, target_dp_series,
         'dp_target_errors': dp_target_errors,
         'protected_thresholds': protected_thresholds,
     }
-
 
