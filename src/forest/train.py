@@ -91,6 +91,92 @@ def _load_prequential_nsga2_config():
     cfg['fairness_type'] = 'dp'
   return cfg
 
+
+def _tune_prequential_static_params(base_model, x_stream, y_stream, a_stream, data_dim,
+                                    compute_fairness, lambda_const, depth, num_trees,
+                                    constraint_type, gradient_type, base_gamma, preq_cfg):
+  if not bool(preq_cfg['enabled']):
+    return None
+  if x_stream is None or len(x_stream) == 0:
+    return None
+  print("\nRunning NSGA-II tuning on training stream...")
+  from src.helpers.nsga2_tuner import run_nsga2
+  import copy
+  model = copy.deepcopy(base_model)
+  tune_n = min(len(x_stream), int(preq_cfg['sample_size']))
+  x_tune = x_stream[:tune_n]
+  y_tune = y_stream[:tune_n]
+  a_tune = a_stream[:tune_n]
+
+  model_vars = list(getattr(model, 'variables', [])) or list(getattr(model, 'trainable_variables', []))
+  if not model_vars:
+    print("[NSGA2] Model has no variables to snapshot; skipping tuner.")
+    return None
+  base_state = [v.numpy().copy() for v in model_vars]
+
+  bounds = {
+      'adwin_delta_warn': (1e-6, 5e-3),
+      'adwin_delta_confirm': (5e-4, 5e-2),
+      'drift_lr_prewarm_mult': (1.0, 12.0),
+      'drift_lr_spike_mult': (0.0, 20.0),
+      'lr_decay_steps': (1.0, 6000.0),
+      'fairness_window': (1.0, 2000.0),
+      'cooldown': (0.0, 800.0),
+      'min_samples_per_stream': (1.0, 120.0),
+      'lambda_const': (0.0, 10.0),
+  }
+
+  def _restore_state():
+    for var, value in zip(model_vars, base_state):
+      var.assign(value)
+
+  def _objective(candidate):
+    candidate = dict(candidate)
+    candidate['lr_decay_steps'] = int(round(candidate['lr_decay_steps']))
+    candidate['fairness_window'] = int(round(candidate['fairness_window']))
+    candidate['cooldown'] = int(round(candidate['cooldown']))
+    candidate['min_samples_per_stream'] = int(round(candidate['min_samples_per_stream']))
+    _restore_state()
+    run = utils.evaluate_over_timesteps(
+        model, x_tune, y_tune, a_tune, data_dim=data_dim,
+        test_then_train=True,
+        compute_fairness=compute_fairness,
+        fairness_type=preq_cfg['fairness_type'],
+        lambda_const=lambda_const,
+        tree_depth=depth,
+        num_trees=num_trees,
+        constraint_type=constraint_type,
+        gradient_type=gradient_type,
+        base_gamma=base_gamma,
+        static_params=candidate,
+    )
+    window = min(100, len(run['accuracy']))
+    if window:
+      recent_acc = float(sum(run['accuracy'][-window:]) / window)
+      fairness_series = run['dp'] if preq_cfg['fairness_type'] == 'dp' else run['eo']
+      recent_fair = float(sum(abs(v) for v in fairness_series[-window:]) / window)
+    else:
+      recent_acc = 0.0
+      recent_fair = 0.0
+    drift_rate = float(len(run['drifted_points'])) / max(1, int(run['n_samples']))
+    drift_obj = abs(drift_rate - float(preq_cfg['target_drift_rate']))
+    return (1.0 - recent_acc, recent_fair, drift_obj)
+
+  best_candidate, best_objective, _, _ = run_nsga2(
+      objective_fn=_objective,
+      bounds=bounds,
+      population_size=int(preq_cfg['population_size']),
+      generations=int(preq_cfg['generations']),
+      seed=int(preq_cfg['seed']),
+  )
+  best_candidate['lr_decay_steps'] = int(round(best_candidate['lr_decay_steps']))
+  best_candidate['fairness_window'] = int(round(best_candidate['fairness_window']))
+  best_candidate['cooldown'] = int(round(best_candidate['cooldown']))
+  best_candidate['min_samples_per_stream'] = int(round(best_candidate['min_samples_per_stream']))
+  _restore_state()
+  print(f"[NSGA2] Tuned params selected: {best_candidate} with objectives {best_objective}")
+  return best_candidate
+
 def train(
     dataset='civil',
     lambda_const=1,
@@ -193,14 +279,7 @@ def train(
                 constraint_type=constraint_type,
                 gradient_type=gradient_type,
                 base_gamma=base_gamma,
-                enable_nsga2_tuning=bool(preq_cfg['enabled']),
-                nsga2_config={
-                    'population_size': int(preq_cfg['population_size']),
-                    'generations': int(preq_cfg['generations']),
-                    'sample_size': int(preq_cfg['sample_size']),
-                    'seed': int(preq_cfg['seed']),
-                    'target_drift_rate': float(preq_cfg['target_drift_rate']),
-                },
+                static_params=None,
             )
             plot_metrics_over_timesteps(preq_results,
                                         save_path='files/metrics_prequential.png')
@@ -370,14 +449,7 @@ def train(
           constraint_type=constraint_type,
           gradient_type=gradient_type,
           base_gamma=base_gamma,
-          enable_nsga2_tuning=bool(preq_cfg['enabled']),
-          nsga2_config={
-              'population_size': int(preq_cfg['population_size']),
-              'generations': int(preq_cfg['generations']),
-              'sample_size': int(preq_cfg['sample_size']),
-              'seed': int(preq_cfg['seed']),
-              'target_drift_rate': float(preq_cfg['target_drift_rate']),
-          },
+          static_params=None,
       )
       plot_metrics_over_timesteps(preq_results,
                                   save_path='files/metrics_prequential.png')

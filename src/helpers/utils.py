@@ -268,9 +268,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                             lambda_const=0.1, tree_depth=3, num_trees=3,
                             constraint_type='node', gradient_type='vanilla',
                             base_gamma=0.9,
-                            static_params=None,
-                            enable_nsga2_tuning=True,
-                            nsga2_config=None):
+                            static_params=None):
     accuracies = []
     dps = []
     eos = []
@@ -288,119 +286,19 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         'lambda_const': float(lambda_const),
     }
     if static_params:
+        print("Overriding default static parameters with provided values:")
+        for key, value in static_params.items():
+            print(f"  {key}: {value}")
         defaults.update(static_params)
-
-    if enable_nsga2_tuning and test_then_train:
-        from src.helpers.nsga2_tuner import run_nsga2
-        search_cfg = {
-            'population_size': 8,
-            'generations': 4,
-            'sample_size': min(len(x_test), 800),
-            'seed': 42,
-            'target_drift_rate': 0.01,
-        }
-        if nsga2_config:
-            search_cfg.update(nsga2_config)
-        tune_n = max(1, int(search_cfg['sample_size']))
-
-        model_vars = list(getattr(model, 'variables', []))
-        if not model_vars:
-            model_vars = list(getattr(model, 'trainable_variables', []))
-
-        if model_vars:
-            trainable_count = len(list(getattr(model, 'trainable_variables', [])))
-            assert len(model_vars) >= trainable_count, (
-                f"NSGA2 snapshot coverage error: model.variables={len(model_vars)} "
-                f"< trainable_variables={trainable_count}"
-            )
-            base_state = [tf.identity(v) for v in model_vars]
-            assert len(base_state) == len(model_vars) and len(base_state) > 0, (
-                "NSGA2 snapshot initialization failed: invalid state size"
-            )
-            print(f"[NSGA2] Snapshotting {len(model_vars)} model variables.")
-            x_tune = x_test[:tune_n]
-            y_tune = y_test[:tune_n]
-            a_tune = a_test[:tune_n]
-
-            bounds = {
-                'adwin_delta_warn': (1e-6, 5e-3),
-                'adwin_delta_confirm': (5e-4, 5e-2),
-                'drift_lr_prewarm_mult': (1.0, 12.0),
-                'drift_lr_spike_mult': (2.0, 20.0),
-                'lr_decay_steps': (300.0, 6000.0),
-                'fairness_window': (100.0, 2000.0),
-                'cooldown': (20.0, 800.0),
-                'min_samples_per_stream': (10.0, 120.0),
-                'lambda_const': (0.0, 1.0),
-            }
-
-            def _objective(candidate):
-                candidate = dict(candidate)
-                candidate['lr_decay_steps'] = int(round(candidate['lr_decay_steps']))
-                candidate['fairness_window'] = int(round(candidate['fairness_window']))
-                candidate['cooldown'] = int(round(candidate['cooldown']))
-                candidate['min_samples_per_stream'] = int(round(candidate['min_samples_per_stream']))
-                for var, val in zip(model_vars, base_state):
-                    assert var.shape == val.shape and var.dtype == val.dtype, (
-                        f"NSGA2 restore mismatch for {getattr(var, 'name', 'var')}: "
-                        f"shape {var.shape} vs {val.shape}, dtype {var.dtype} vs {val.dtype}"
-                    )
-                    var.assign(val)
-                run = evaluate_over_timesteps(
-                    model, x_tune, y_tune, a_tune, data_dim=data_dim,
-                    test_then_train=True,
-                    learning_rate=learning_rate,
-                    accuracy_window=accuracy_window,
-                    compute_fairness=compute_fairness,
-                    fairness_type=fairness_type,
-                    lambda_const=lambda_const,
-                    tree_depth=tree_depth,
-                    num_trees=num_trees,
-                    constraint_type=constraint_type,
-                    gradient_type=gradient_type,
-                    base_gamma=base_gamma,
-                    static_params=candidate,
-                    enable_nsga2_tuning=False,
-                    nsga2_config=None,
-                )
-                window = min(100, len(run['accuracy']))
-                recent_acc = float(np.mean(run['accuracy'][-window:])) if window else 0.0
-                fairness_series = run['dp'] if fairness_type == 'dp' else run['eo']
-                recent_fair = float(np.mean(np.abs(fairness_series[-window:]))) if window else 0.0
-                drift_rate = float(len(run['drifted_points'])) / max(1, int(run['n_samples']))
-                drift_obj = abs(drift_rate - float(search_cfg['target_drift_rate']))
-                return (1.0 - recent_acc, recent_fair, drift_obj)
-
-            best_candidate, best_objective, _, _ = run_nsga2(
-                objective_fn=_objective,
-                bounds=bounds,
-                population_size=int(search_cfg['population_size']),
-                generations=int(search_cfg['generations']),
-                seed=int(search_cfg['seed']),
-            )
-            best_candidate['lr_decay_steps'] = int(round(best_candidate['lr_decay_steps']))
-            best_candidate['fairness_window'] = int(round(best_candidate['fairness_window']))
-            best_candidate['cooldown'] = int(round(best_candidate['cooldown']))
-            best_candidate['min_samples_per_stream'] = int(round(best_candidate['min_samples_per_stream']))
-            defaults.update(best_candidate)
-            for var, val in zip(model_vars, base_state):
-                assert var.shape == val.shape and var.dtype == val.dtype, (
-                    f"NSGA2 final restore mismatch for {getattr(var, 'name', 'var')}: "
-                    f"shape {var.shape} vs {val.shape}, dtype {var.dtype} vs {val.dtype}"
-                )
-                var.assign(val)
-            print(f"[NSGA2] Tuned params selected: {best_candidate} with objectives {best_objective}")
-        else:
-            print("[NSGA2] Model has no variables to snapshot; skipping tuner.")
 
     ADWIN_DELTA_WARN = float(defaults['adwin_delta_warn'])
     ADWIN_DELTA_CONFIRM = float(defaults['adwin_delta_confirm'])
     DRIFT_LR_PREWARM = learning_rate * float(defaults['drift_lr_prewarm_mult'])
     DRIFT_LR_SPIKE = learning_rate * float(defaults['drift_lr_spike_mult'])
-    LR_DECAY_STEPS = int(defaults['lr_decay_steps'])
-    FAIRNESS_WINDOW = int(defaults['fairness_window'])
-    COOLDOWN = int(defaults['cooldown'])
-    MIN_SAMPLES_PER_STREAM = int(defaults['min_samples_per_stream'])
+    LR_DECAY_STEPS = max(1, int(defaults['lr_decay_steps']))
+    FAIRNESS_WINDOW = max(1, int(defaults['fairness_window']))
+    COOLDOWN = max(0, int(defaults['cooldown']))
+    MIN_SAMPLES_PER_STREAM = max(1, int(defaults['min_samples_per_stream']))
     lambda_const = float(defaults['lambda_const'])
     print(f"Evaluating model over {len(x_test)} timesteps with test-then-train={test_then_train}\n\
           Fairness penalty lambda: {lambda_const}, fairness type: {fairness_type}")
@@ -533,6 +431,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                         new_temp = min(1.0, current_temp + 0.002)
                         tree.temperature.assign(new_temp)
 
+        if test_then_train:
             y_t_tensor = tf.convert_to_tensor([y_t], dtype=tf.int32)
             with tf.GradientTape(persistent=compute_fairness) as tape:
                 train_out = model(x_t, training=True)
@@ -575,6 +474,17 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         'eo': eos,
         'n_samples': n_samples,
         'drifted_points': drifted_points,
+        'static_params_used': {
+            'adwin_delta_warn': ADWIN_DELTA_WARN,
+            'adwin_delta_confirm': ADWIN_DELTA_CONFIRM,
+            'drift_lr_prewarm_mult': float(defaults['drift_lr_prewarm_mult']),
+            'drift_lr_spike_mult': float(defaults['drift_lr_spike_mult']),
+            'lr_decay_steps': LR_DECAY_STEPS,
+            'fairness_window': FAIRNESS_WINDOW,
+            'cooldown': COOLDOWN,
+            'min_samples_per_stream': MIN_SAMPLES_PER_STREAM,
+            'lambda_const': lambda_const,
+        },
     }
 
 

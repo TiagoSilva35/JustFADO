@@ -6,3 +6,7 @@ NSGA2 integration log
 - train.py now reads fairness metric + NSGA-II settings from config file when prequential evaluation runs.
 - Removed get_weights/set_weights dependency in tuner; now snapshots/restores tf.Module variables directly.
 - Added explicit NSGA-II assertions for snapshot coverage (variables vs trainables) and restore shape/dtype checks.
+- NSGA-II tuning now runs on training stream only; test prequential evaluation uses frozen tuned params.
+- Prequential loop now applies train step on every sample when test_then_train=True (no skipped updates).
+- Removed tuning application from test prequential runs; testing now uses fixed static parameters only.
+- Fully extracted NSGA-II out of evaluate_over_timesteps; function now only evaluates with provided static_params.
