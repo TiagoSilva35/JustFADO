@@ -99,7 +99,7 @@ def _tune_prequential_static_params(base_model, x_stream, y_stream, a_stream, da
     return None
   if x_stream is None or len(x_stream) == 0:
     return None
-  print("\nRunning NSGA-II tuning on training stream...")
+  print(f"\nRunning NSGA-II tuning on training stream ({len(x_stream)} samples available)...")
   from src.helpers.nsga2_tuner import run_nsga2
   import copy
   model = copy.deepcopy(base_model)
@@ -249,19 +249,21 @@ def train(
       
       # Evaluate the loaded model
       if x_test is not None and len(x_test) > 0:
-        test_metrics = utils.get_test_performance(
-            loaded_model, x_test, y_test, a_test,
-            data_dim=data_dim,
-            show_confusion_matrix=True,
-        )
-        print(f"\n{'='*80}")
-        print("Loaded Model Test Results:")
-        print(f"  Test Accuracy: {test_metrics['accuracy']:.4f}")
-        print(f"  Test DP: {test_metrics['dp']:.4f}")
-        print(f"  Test EO: {test_metrics['eo']:.4f}")
-        print(f"  Test AUC: {test_metrics['auc']:.4f}")
-        print(f"  Test F1-Score: {test_metrics['f1']:.4f}")
-        print(f"{'='*80}\n")
+        test_metrics = None
+        if not prequential:
+          test_metrics = utils.get_test_performance(
+              loaded_model, x_test, y_test, a_test,
+              data_dim=data_dim,
+              show_confusion_matrix=True,
+          )
+          print(f"\n{'='*80}")
+          print("Loaded Model Test Results:")
+          print(f"  Test Accuracy: {test_metrics['accuracy']:.4f}")
+          print(f"  Test DP: {test_metrics['dp']:.4f}")
+          print(f"  Test EO: {test_metrics['eo']:.4f}")
+          print(f"  Test AUC: {test_metrics['auc']:.4f}")
+          print(f"  Test F1-Score: {test_metrics['f1']:.4f}")
+          print(f"{'='*80}\n")
         if prequential:
             preq_cfg = _load_prequential_nsga2_config()
             tuned_static_params = _tune_prequential_static_params(
@@ -394,10 +396,13 @@ def train(
       all_accuracies.append(accuracies)
       all_equalized_odds.append(eo)
 
-    val_metrics = utils.get_test_performance(
-        model, x_val_fold, y_val_fold, a_val_fold,
-        data_dim=data_dim, show_confusion_matrix=True,
-    )
+    if use_actual_test_set and prequential:
+      val_metrics = None
+    else:
+      val_metrics = utils.get_test_performance(
+          model, x_val_fold, y_val_fold, a_val_fold,
+          data_dim=data_dim, show_confusion_matrix=True,
+      )
 
     fold_results.append({
         'fold': fold_idx + 1,
@@ -408,7 +413,7 @@ def train(
         'model': model,
     })
 
-  if use_actual_test_set:
+  if use_actual_test_set and not prequential:
     # For test set evaluation, just report the single result
     print(f"\n{'='*80}")
     print("Test Set Results:")

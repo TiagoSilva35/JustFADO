@@ -10,3 +10,4 @@ NSGA2 integration log
 - Prequential loop now applies train step on every sample when test_then_train=True (no skipped updates).
 - Removed tuning application from test prequential runs; testing now uses fixed static parameters only.
 - Fully extracted NSGA-II out of evaluate_over_timesteps; function now only evaluates with provided static_params.
+- For prequential runs, test-set metric pass before tuning was disabled to avoid touching test data before final evaluation.
