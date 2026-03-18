@@ -115,13 +115,6 @@ def train(
     model_path=None,
     prequential=False,
 ):
-  """Train Aranyani and return results.
-
-  When drift scenarios are handled externally (e.g. run_all_scenarios),
-  call with drift=False so training uses clean data. The trained model
-  is always returned so callers can evaluate it against arbitrary test sets.
-  """
-
   all_dps = []
   all_accuracies = []
   all_equalized_odds = []
