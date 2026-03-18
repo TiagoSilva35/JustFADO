@@ -264,6 +264,11 @@ def train(
         print(f"{'='*80}\n")
         if prequential:
             preq_cfg = _load_prequential_nsga2_config()
+            tuned_static_params = _tune_prequential_static_params(
+                loaded_model, x_train, y_train, a_train, data_dim,
+                compute_fairness, lambda_const, depth, num_trees,
+                constraint_type, gradient_type, base_gamma, preq_cfg,
+            )
             print("\nRunning prequential (test-then-train) evaluation...")
             # Reload a fresh copy so baseline and prequential start from
             # the same weights and we can compare fairly.
@@ -279,7 +284,7 @@ def train(
                 constraint_type=constraint_type,
                 gradient_type=gradient_type,
                 base_gamma=base_gamma,
-                static_params=None,
+                static_params=tuned_static_params,
             )
             plot_metrics_over_timesteps(preq_results,
                                         save_path='files/metrics_prequential.png')
@@ -435,6 +440,11 @@ def train(
   if drift and x_test is not None and len(x_test) > 0:
     if prequential:
       preq_cfg = _load_prequential_nsga2_config()
+      tuned_static_params = _tune_prequential_static_params(
+          fold_results[0]['model'], x_train, y_train, a_train, data_dim,
+          compute_fairness, lambda_const, depth, num_trees,
+          constraint_type, gradient_type, base_gamma, preq_cfg,
+      )
       print("\nRunning prequential (test-then-train) evaluation...")
       import copy
       preq_model = copy.deepcopy(fold_results[0]['model'])
@@ -449,7 +459,7 @@ def train(
           constraint_type=constraint_type,
           gradient_type=gradient_type,
           base_gamma=base_gamma,
-          static_params=None,
+          static_params=tuned_static_params,
       )
       plot_metrics_over_timesteps(preq_results,
                                   save_path='files/metrics_prequential.png')
