@@ -4,3 +4,5 @@ NSGA2 integration log
 - Tuned constants can now include: ADWIN deltas, LR multipliers, LR decay steps, fairness window, cooldown, min samples, and lambda_const.
 - Replaced new prequential flags with file-based config in files/nsga2_prequential_config.yaml.
 - train.py now reads fairness metric + NSGA-II settings from config file when prequential evaluation runs.
+- Removed get_weights/set_weights dependency in tuner; now snapshots/restores tf.Module variables directly.
+- Added explicit NSGA-II assertions for snapshot coverage (variables vs trainables) and restore shape/dtype checks.

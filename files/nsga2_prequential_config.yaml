@@ -1,5 +1,5 @@
 nsga2_prequential:
-  enabled: false
+  enabled: true
   fairness_type: dp
   population_size: 8
   generations: 4

@@ -269,7 +269,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                             constraint_type='node', gradient_type='vanilla',
                             base_gamma=0.9,
                             static_params=None,
-                            enable_nsga2_tuning=False,
+                            enable_nsga2_tuning=True,
                             nsga2_config=None):
     accuracies = []
     dps = []
@@ -303,8 +303,21 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             search_cfg.update(nsga2_config)
         tune_n = max(1, int(search_cfg['sample_size']))
 
-        if hasattr(model, 'get_weights') and hasattr(model, 'set_weights'):
-            base_weights = model.get_weights()
+        model_vars = list(getattr(model, 'variables', []))
+        if not model_vars:
+            model_vars = list(getattr(model, 'trainable_variables', []))
+
+        if model_vars:
+            trainable_count = len(list(getattr(model, 'trainable_variables', [])))
+            assert len(model_vars) >= trainable_count, (
+                f"NSGA2 snapshot coverage error: model.variables={len(model_vars)} "
+                f"< trainable_variables={trainable_count}"
+            )
+            base_state = [tf.identity(v) for v in model_vars]
+            assert len(base_state) == len(model_vars) and len(base_state) > 0, (
+                "NSGA2 snapshot initialization failed: invalid state size"
+            )
+            print(f"[NSGA2] Snapshotting {len(model_vars)} model variables.")
             x_tune = x_test[:tune_n]
             y_tune = y_test[:tune_n]
             a_tune = a_test[:tune_n]
@@ -327,7 +340,12 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                 candidate['fairness_window'] = int(round(candidate['fairness_window']))
                 candidate['cooldown'] = int(round(candidate['cooldown']))
                 candidate['min_samples_per_stream'] = int(round(candidate['min_samples_per_stream']))
-                model.set_weights(base_weights)
+                for var, val in zip(model_vars, base_state):
+                    assert var.shape == val.shape and var.dtype == val.dtype, (
+                        f"NSGA2 restore mismatch for {getattr(var, 'name', 'var')}: "
+                        f"shape {var.shape} vs {val.shape}, dtype {var.dtype} vs {val.dtype}"
+                    )
+                    var.assign(val)
                 run = evaluate_over_timesteps(
                     model, x_tune, y_tune, a_tune, data_dim=data_dim,
                     test_then_train=True,
@@ -365,10 +383,15 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             best_candidate['cooldown'] = int(round(best_candidate['cooldown']))
             best_candidate['min_samples_per_stream'] = int(round(best_candidate['min_samples_per_stream']))
             defaults.update(best_candidate)
-            model.set_weights(base_weights)
+            for var, val in zip(model_vars, base_state):
+                assert var.shape == val.shape and var.dtype == val.dtype, (
+                    f"NSGA2 final restore mismatch for {getattr(var, 'name', 'var')}: "
+                    f"shape {var.shape} vs {val.shape}, dtype {var.dtype} vs {val.dtype}"
+                )
+                var.assign(val)
             print(f"[NSGA2] Tuned params selected: {best_candidate} with objectives {best_objective}")
         else:
-            print("[NSGA2] Model does not expose get_weights/set_weights; skipping tuner.")
+            print("[NSGA2] Model has no variables to snapshot; skipping tuner.")
 
     ADWIN_DELTA_WARN = float(defaults['adwin_delta_warn'])
     ADWIN_DELTA_CONFIRM = float(defaults['adwin_delta_confirm'])
@@ -747,4 +770,3 @@ def evaluate_fair_arf_over_timesteps(x_test, y_test, a_test, target_dp_series,
         'dp_target_errors': dp_target_errors,
         'protected_thresholds': protected_thresholds,
     }
-
