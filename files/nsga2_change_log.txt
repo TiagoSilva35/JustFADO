@@ -1,0 +1,6 @@
+NSGA2 integration log
+- Added src/helpers/nsga2_tuner.py with a compact NSGA-II optimizer (3-objective minimization).
+- Updated evaluate_over_timesteps to support optional static_params overrides and optional NSGA-II tuning.
+- Tuned constants can now include: ADWIN deltas, LR multipliers, LR decay steps, fairness window, cooldown, min samples, and lambda_const.
+- Replaced new prequential flags with file-based config in files/nsga2_prequential_config.yaml.
+- train.py now reads fairness metric + NSGA-II settings from config file when prequential evaluation runs.

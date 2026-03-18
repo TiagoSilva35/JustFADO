@@ -107,6 +107,7 @@ def plot_aranyani_vs_arf(aranyani_results, arf_results, save_path,
         ax.plot(timesteps, aran_vals, color='tab:blue',   linewidth=1.8, label='Aranyani')
         ax.plot(timesteps, arf_vals,  color='tab:orange', linewidth=1.8,
                 linestyle='--', label='ARF')
+        fair_arf_results = None
         if fair_arf_results is not None:
             fair_vals = _smooth(
                 np.array(fair_arf_results[key][plot_start:], dtype=float),

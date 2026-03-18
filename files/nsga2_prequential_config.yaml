@@ -1,0 +1,8 @@
+nsga2_prequential:
+  enabled: false
+  fairness_type: dp
+  population_size: 8
+  generations: 4
+  sample_size: 800
+  seed: 42
+  target_drift_rate: 0.01
