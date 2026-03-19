@@ -1,8 +1,18 @@
 nsga2_prequential:
-  enabled: true
+  enabled: false
   fairness_type: dp
   population_size: 8
   generations: 4
   sample_size: 800
   seed: 42
   target_drift_rate: 0.01
+  static_params:
+    adwin_delta_warn: 0.0040204171446198
+    adwin_delta_confirm: 0.0376260999458769
+    drift_lr_prewarm_mult: 9.145560383337939
+    drift_lr_spike_mult: 12.777904472414681
+    lr_decay_steps: 4268
+    fairness_window: 1
+    cooldown: 424
+    min_samples_per_stream: 37
+    lambda_const: 1.2006311717017573

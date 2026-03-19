@@ -244,21 +244,47 @@ def maximum_mean_discrepancy(x, y, kernel_scale=1.0):
 
 def aggregate_fold_results(fold_results):
     """Aggregate metrics across folds."""
+    train_acc = [f['train_accuracies'][-1] for f in fold_results if f.get('train_accuracies')]
+    valid_folds = [f for f in fold_results if f.get('val_metrics')]
+
+    def _metric_values(metric_name, default=0.0):
+        values = []
+        for fold in valid_folds:
+            metric = fold['val_metrics']
+            if metric_name in metric:
+                values.append(metric[metric_name])
+            else:
+                values.append(metric.get(metric_name, default))
+        return values
+
+    val_acc = _metric_values('accuracy')
+    val_dp = _metric_values('dp')
+    val_sens = _metric_values('sensitivity')
+    val_auc = _metric_values('auc')
+    val_f1 = _metric_values('f1', 0.0)
+    val_eo = _metric_values('eo')
+
+    def _mean_or_nan(values):
+        return float(np.mean(values)) if values else float('nan')
+
+    def _std_or_nan(values):
+        return float(np.std(values)) if values else float('nan')
+
     return {
-        'mean_train_accuracy': np.mean([f['train_accuracies'][-1] for f in fold_results]),
-        'std_train_accuracy': np.std([f['train_accuracies'][-1] for f in fold_results]),
-        'mean_val_accuracy': np.mean([f['val_metrics']['accuracy'] for f in fold_results]),
-        'std_val_accuracy': np.std([f['val_metrics']['accuracy'] for f in fold_results]),
-        'mean_val_dp': np.mean([f['val_metrics']['dp'] for f in fold_results]),
-        'std_val_dp': np.std([f['val_metrics']['dp'] for f in fold_results]),
-        'mean_val_sensitivity': np.mean([f['val_metrics']['sensitivity'] for f in fold_results]),
-        'std_val_sensitivity': np.std([f['val_metrics']['sensitivity'] for f in fold_results]),
-        'mean_val_auc': np.mean([f['val_metrics']['auc'] for f in fold_results]),
-        'std_val_auc': np.std([f['val_metrics']['auc'] for f in fold_results]),
-        'mean_val_f1': np.mean([f['val_metrics'].get('f1', 0) for f in fold_results]),
-        'std_val_f1': np.std([f['val_metrics'].get('f1', 0) for f in fold_results]),
-        'mean_val_eo': np.mean([f['val_metrics']['eo'] for f in fold_results]),
-        'std_val_eo': np.std([f['val_metrics']['eo'] for f in fold_results]),
+        'mean_train_accuracy': _mean_or_nan(train_acc),
+        'std_train_accuracy': _std_or_nan(train_acc),
+        'mean_val_accuracy': _mean_or_nan(val_acc),
+        'std_val_accuracy': _std_or_nan(val_acc),
+        'mean_val_dp': _mean_or_nan(val_dp),
+        'std_val_dp': _std_or_nan(val_dp),
+        'mean_val_sensitivity': _mean_or_nan(val_sens),
+        'std_val_sensitivity': _std_or_nan(val_sens),
+        'mean_val_auc': _mean_or_nan(val_auc),
+        'std_val_auc': _std_or_nan(val_auc),
+        'mean_val_f1': _mean_or_nan(val_f1),
+        'std_val_f1': _std_or_nan(val_f1),
+        'mean_val_eo': _mean_or_nan(val_eo),
+        'std_val_eo': _std_or_nan(val_eo),
     }
 
 def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
@@ -397,13 +423,13 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             for tree in model.layers:
                 if hasattr(tree, 'temperature'):
                     tree.temperature.assign(0.1)
-        w_a_arr = np.array(w_a)
-        if np.sum(w_a_arr == 0) > 0 and np.sum(w_a_arr == 1) > 0:
-            dp_val, _ = get_demographic_parity(w_preds, w_a)
-            eo_val, _ = get_equalized_odds(w_preds, w_a, w_true)
-        else:
-            dp_val = 0.0
-            eo_val = 0.0
+        dp_val, eo_val = _compute_window_fairness(
+            y_preds_all=y_preds_all,
+            y_true_all=y_true_all,
+            a_all=a_all,
+            fairness_start=fairness_start,
+            fairness_window=FAIRNESS_WINDOW,
+        )
 
         dps.append(float(dp_val))
         eos.append(float(eo_val))
@@ -527,17 +553,13 @@ def evaluate_arf_over_timesteps(x_test, y_test, a_test, accuracy_window=200):
         accuracies.append(float(sum(correct_buffer)) / len(correct_buffer))
 
         # Fairness over rolling window
-        w_start = max(0, t + 1 - FAIRNESS_WINDOW)
-        w_preds = y_preds_all[w_start:]
-        w_true  = y_true_all[w_start:]
-        w_a     = a_all[w_start:]
-        w_a_arr = np.array(w_a)
-        if np.sum(w_a_arr == 0) > 0 and np.sum(w_a_arr == 1) > 0:
-            dp_val, _ = get_demographic_parity(w_preds, w_a)
-            eo_val, _ = get_equalized_odds(w_preds, w_a, w_true)
-        else:
-            dp_val = 0.0
-            eo_val = 0.0
+        dp_val, eo_val = _compute_window_fairness(
+            y_preds_all=y_preds_all,
+            y_true_all=y_true_all,
+            a_all=a_all,
+            fairness_start=0,
+            fairness_window=FAIRNESS_WINDOW,
+        )
         dps.append(float(dp_val))
         eos.append(float(eo_val))
 
@@ -560,6 +582,33 @@ def _compute_dp_from_preds(preds, groups):
         return 0.0
     preds_arr = np.array(preds)
     return float(np.abs(np.mean(preds_arr[groups_arr == 1]) - np.mean(preds_arr[groups_arr == 0])))
+
+
+def _compute_window_fairness(y_preds_all, y_true_all, a_all, fairness_start, fairness_window):
+    w_start = max(fairness_start, len(y_preds_all) - fairness_window)
+    w_preds = y_preds_all[w_start:]
+    w_true = y_true_all[w_start:]
+    w_a = a_all[w_start:]
+
+    w_a_arr = np.array(w_a)
+    has_group0 = np.sum(w_a_arr == 0) > 0
+    has_group1 = np.sum(w_a_arr == 1) > 0
+
+    if not (has_group0 and has_group1):
+        # Fallback to all seen samples if the active window is too small.
+        all_a_arr = np.array(a_all)
+        all_has_group0 = np.sum(all_a_arr == 0) > 0
+        all_has_group1 = np.sum(all_a_arr == 1) > 0
+        if all_has_group0 and all_has_group1:
+            w_preds = y_preds_all
+            w_true = y_true_all
+            w_a = a_all
+        else:
+            return 0.0, 0.0
+
+    dp_val, _ = get_demographic_parity(w_preds, w_a)
+    eo_val, _ = get_equalized_odds(w_preds, w_a, w_true)
+    return float(dp_val), float(eo_val)
 
 
 def _choose_group_threshold_for_target_dp(probs_window, groups_window, target_dp,
@@ -654,16 +703,13 @@ def evaluate_fair_arf_over_timesteps(x_test, y_test, a_test, target_dp_series,
             correct_buffer.pop(0)
         accuracies.append(float(sum(correct_buffer)) / len(correct_buffer))
 
-        w_preds = y_preds_all[w_start:]
-        w_true = y_true_all[w_start:]
-        w_a = a_all[w_start:]
-        w_a_arr = np.array(w_a)
-        if np.sum(w_a_arr == 0) > 0 and np.sum(w_a_arr == 1) > 0:
-            dp_val, _ = get_demographic_parity(w_preds, w_a)
-            eo_val, _ = get_equalized_odds(w_preds, w_a, w_true)
-        else:
-            dp_val = 0.0
-            eo_val = 0.0
+        dp_val, eo_val = _compute_window_fairness(
+            y_preds_all=y_preds_all,
+            y_true_all=y_true_all,
+            a_all=a_all,
+            fairness_start=0,
+            fairness_window=fairness_window,
+        )
         dps.append(float(dp_val))
         eos.append(float(eo_val))
         dp_target_errors.append(abs(float(dp_val) - target_dp))

@@ -75,6 +75,7 @@ def _load_prequential_nsga2_config():
       'sample_size': 800,
       'seed': 42,
       'target_drift_rate': 0.01,
+      'static_params': {},
   }
   if not os.path.exists(NSGA2_PREQ_CONFIG_PATH):
     return cfg
@@ -89,12 +90,26 @@ def _load_prequential_nsga2_config():
   cfg['fairness_type'] = str(cfg.get('fairness_type', 'dp')).lower()
   if cfg['fairness_type'] not in ['dp', 'eo']:
     cfg['fairness_type'] = 'dp'
+
+  static_params = cfg.get('static_params', {})
+  if not isinstance(static_params, dict):
+    static_params = {}
+
+  int_keys = ['lr_decay_steps', 'fairness_window', 'cooldown', 'min_samples_per_stream']
+  normalized_static_params = {}
+  for key, value in static_params.items():
+    if key in int_keys:
+      normalized_static_params[key] = int(round(float(value)))
+    else:
+      normalized_static_params[key] = float(value)
+  cfg['static_params'] = normalized_static_params
   return cfg
 
 
 def _tune_prequential_static_params(base_model, x_stream, y_stream, a_stream, data_dim,
                                     compute_fairness, lambda_const, depth, num_trees,
                                     constraint_type, gradient_type, base_gamma, preq_cfg):
+  print("FIRST TUNING ON TRAINING DATA")
   if not bool(preq_cfg['enabled']):
     return None
   if x_stream is None or len(x_stream) == 0:
@@ -271,6 +286,7 @@ def train(
                 compute_fairness, lambda_const, depth, num_trees,
                 constraint_type, gradient_type, base_gamma, preq_cfg,
             )
+            static_params_to_use = tuned_static_params or preq_cfg.get('static_params') or None
             print("\nRunning prequential (test-then-train) evaluation...")
             # Reload a fresh copy so baseline and prequential start from
             # the same weights and we can compare fairly.
@@ -286,7 +302,7 @@ def train(
                 constraint_type=constraint_type,
                 gradient_type=gradient_type,
                 base_gamma=base_gamma,
-                static_params=tuned_static_params,
+                static_params=static_params_to_use,
             )
             plot_metrics_over_timesteps(preq_results,
                                         save_path='files/metrics_prequential.png')
@@ -425,6 +441,9 @@ def train(
     print(f"  Test F1-Score: {test_result['f1']:.4f}")
     print(f"  Test EO: {test_result['eo']:.4f}")
     print(f"{'='*80}\n")
+  elif use_actual_test_set and prequential:
+    # In prequential mode we skip one-shot test metrics and evaluate over timesteps below.
+    print("\nPrequential mode enabled with test set: skipping one-shot test metric aggregation.")
   else:
     avg_metrics = utils.aggregate_fold_results(fold_results)
 
@@ -450,6 +469,7 @@ def train(
           compute_fairness, lambda_const, depth, num_trees,
           constraint_type, gradient_type, base_gamma, preq_cfg,
       )
+      static_params_to_use = tuned_static_params or preq_cfg.get('static_params') or None
       print("\nRunning prequential (test-then-train) evaluation...")
       import copy
       preq_model = copy.deepcopy(fold_results[0]['model'])
@@ -464,7 +484,7 @@ def train(
           constraint_type=constraint_type,
           gradient_type=gradient_type,
           base_gamma=base_gamma,
-          static_params=tuned_static_params,
+            static_params=static_params_to_use,
       )
       plot_metrics_over_timesteps(preq_results,
                                   save_path='files/metrics_prequential.png')
