@@ -18,7 +18,7 @@ if gpus:
 from absl import app
 from src.forest.train import *
 from src.helpers.data import load_drifted_test_set
-from src.drift.scenarios import SCENARIOS, SCENARIO_DESCRIPTIONS
+from src.drift.scenarios import SCENARIOS, SCENARIO_DESCRIPTIONS, SPLITS, PHASE_LABELS
 from src.helpers.utils import (
   evaluate_over_timesteps,
   evaluate_arf_over_timesteps,
@@ -90,11 +90,18 @@ def _evaluate_scenario(model, data_dim, scenario_name):
   os.makedirs(OUTPUT_DIR, exist_ok=True)
   if timestep_results is not None:
     per_path = os.path.join(OUTPUT_DIR, f'timesteps_{scenario_name}.png')
-    plot_metrics_over_timesteps(timestep_results, save_path=per_path)
+    plot_metrics_over_timesteps(
+      timestep_results,
+      save_path=per_path,
+      stage_splits=SPLITS,
+      stage_labels=PHASE_LABELS,
+    )
     cmp_path = os.path.join(OUTPUT_DIR, f'aranyani_vs_arf_{scenario_name}.png')
     plot_aranyani_vs_arf(timestep_results, arf_results, save_path=cmp_path,
                scenario_name=scenario_name,
-               fair_arf_results=fair_arf_results)
+           fair_arf_results=fair_arf_results,
+           stage_splits=SPLITS,
+           stage_labels=PHASE_LABELS)
 
     arf_final_acc = arf_results['accuracy'][-1] if arf_results['accuracy'] else 0.0
     fair_arf_final_acc = fair_arf_results['accuracy'][-1] if fair_arf_results['accuracy'] else 0.0
@@ -248,7 +255,9 @@ def main(_):
       cmp_path = os.path.join(OUTPUT_DIR, f'aranyani_vs_arf_{scenario}.png')
       plot_aranyani_vs_arf(timestep_results, arf_results,
                            save_path=cmp_path, scenario_name=scenario,
-                           fair_arf_results=fair_arf_results)
+                           fair_arf_results=fair_arf_results,
+                           stage_splits=SPLITS,
+                           stage_labels=PHASE_LABELS)
       print(f"Aranyani vs ARF comparison saved to: {cmp_path}")
 
 
