@@ -328,9 +328,9 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     lambda_const = float(defaults['lambda_const'])
     print(f"Evaluating model over {len(x_test)} timesteps with test-then-train={test_then_train}\n\
           Fairness penalty lambda: {lambda_const}, fairness type: {fairness_type}")
-
-
+    lambda_const = 5.0
     USE_ROLLING = bool(accuracy_window)
+    print(f"Parameters:\n  ADWIN_DELTA_WARN: {ADWIN_DELTA_WARN}\n  ADWIN_DELTA_CONFIRM: {ADWIN_DELTA_CONFIRM}\n\  DRIFT_LR_PREWARM: {DRIFT_LR_PREWARM}\n  DRIFT_LR_SPIKE: {DRIFT_LR_SPIKE}\n  LR_DECAY_STEPS: {LR_DECAY_STEPS}\n  FAIRNESS_WINDOW: {FAIRNESS_WINDOW}\n  COOLDOWN: {COOLDOWN}\n  MIN_SAMPLES_PER_STREAM: {MIN_SAMPLES_PER_STREAM}\n  Lambda for fairness penalty: {lambda_const}\n  Accuracy window: {accuracy_window}\n  Use rolling accuracy: {USE_ROLLING}\n  Compute fairness: {compute_fairness}\n  Fairness type: {fairness_type}")
     correct_buffer = []
     warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
     acc_det   = drift.ADWIN(delta=ADWIN_DELTA_CONFIRM)
@@ -521,7 +521,7 @@ def evaluate_arf_over_timesteps(x_test, y_test, a_test, accuracy_window=200):
     dps = []
     eos = []
 
-    FAIRNESS_WINDOW = 500
+    FAIRNESS_WINDOW = 1
     correct_buffer = []
     USE_ROLLING = bool(accuracy_window)
     y_preds_all = []
@@ -585,26 +585,17 @@ def _compute_dp_from_preds(preds, groups):
 
 
 def _compute_window_fairness(y_preds_all, y_true_all, a_all, fairness_start, fairness_window):
-    w_start = max(fairness_start, len(y_preds_all) - fairness_window)
-    w_preds = y_preds_all[w_start:]
-    w_true = y_true_all[w_start:]
-    w_a = a_all[w_start:]
+    # Cumulative fairness: compute on all samples seen so far.
+    del fairness_start, fairness_window
+    w_preds = y_preds_all
+    w_true = y_true_all
+    w_a = a_all
 
     w_a_arr = np.array(w_a)
     has_group0 = np.sum(w_a_arr == 0) > 0
     has_group1 = np.sum(w_a_arr == 1) > 0
-
     if not (has_group0 and has_group1):
-        # Fallback to all seen samples if the active window is too small.
-        all_a_arr = np.array(a_all)
-        all_has_group0 = np.sum(all_a_arr == 0) > 0
-        all_has_group1 = np.sum(all_a_arr == 1) > 0
-        if all_has_group0 and all_has_group1:
-            w_preds = y_preds_all
-            w_true = y_true_all
-            w_a = a_all
-        else:
-            return 0.0, 0.0
+        return 0.0, 0.0
 
     dp_val, _ = get_demographic_parity(w_preds, w_a)
     eo_val, _ = get_equalized_odds(w_preds, w_a, w_true)
@@ -644,7 +635,7 @@ def _choose_group_threshold_for_target_dp(probs_window, groups_window, target_dp
 
 
 def evaluate_fair_arf_over_timesteps(x_test, y_test, a_test, target_dp_series,
-                                     accuracy_window=200, fairness_window=500,
+                                     accuracy_window=200, fairness_window=1,
                                      unprotected_threshold=0.5,
                                      threshold_grid=None):
     arf = AdaptiveRandomForestClassifier(seed=42, n_models=3, max_depth=3)
@@ -679,9 +670,8 @@ def evaluate_fair_arf_over_timesteps(x_test, y_test, a_test, target_dp_series,
 
         target_dp = float(target_dp_series[t]) if t < len(target_dp_series) else float(target_dp_series[-1])
 
-        w_start = max(0, t + 1 - fairness_window)
-        probs_window = p1_all[w_start:]
-        groups_window = a_all[w_start:]
+        probs_window = p1_all
+        groups_window = a_all
 
         protected_threshold = _choose_group_threshold_for_target_dp(
             probs_window=probs_window,
