@@ -97,7 +97,7 @@ def train_online(
       dp, dp_sign = dp_function(
           y_predictions, protected_targets[: len(y_predictions)])
       eo, eo_sign = utils.get_equalized_odds(
-          y_predictions, y_true_all, protected_targets[: len(y_predictions)])
+          y_predictions, protected_targets[: len(y_predictions)], y_true_all)
 
       demographic_parities.append(dp)
       equalized_odds.append(eo)
