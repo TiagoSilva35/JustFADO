@@ -221,7 +221,7 @@ def train(
   all_equalized_odds = []
 
   data_dim, num_class = None, None
-  x_test, y_test, a_test = None, None, None  # For test set evaluation
+  x_test, y_test, a_test, number_of_attributes = None, None, None, None  # For test set evaluation
   
   # Check if we should load an existing model
   if load_model:
@@ -262,7 +262,7 @@ def train(
         x_train, y_train, a_train = data.read_celeba()
         num_class = 2
       elif dataset == 'folktables':
-        x_train, x_test, y_train, y_test, a_train, a_test = data.read_folktables()
+        x_train, x_test, y_train, y_test, a_train, a_test, number_of_attributes = data.read_folktables()
         data_dim = x_train.shape[1]
         num_class = 2
       
@@ -344,7 +344,8 @@ def train(
     x_train, y_train, a_train = data.read_celeba()
     num_class = 2
   elif dataset == 'folktables':
-    x_train, x_test, y_train, y_test, a_train, a_test = data.read_folktables()
+    x_train, x_test, y_train, y_test, a_train, a_test, number_of_attributes = data.read_folktables()
+    assert set(a_train).size() == 9, "Expected 9 unique values in the sensitive attribute for folktables dataset"
     data_dim = x_train.shape[1]
     num_class = 2
   else:

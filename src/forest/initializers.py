@@ -3,13 +3,14 @@ import numpy as np
 import tensorflow as tf
 
 
-def init_fairness_state(num_trees, data_dim, num_internal_nodes):
+def init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_atributes):
+    # number of atributtes is the numner of unique values in the protected attribute
     gradient_w = {(a, y): np.zeros((num_trees, data_dim, num_internal_nodes)) 
-                  for a in [0, 1] for y in [0, 1]}
+                  for a in range(number_of_atributes) for y in [0, 1]}
     gradient_b = {(a, y): np.zeros((num_trees, num_internal_nodes)) 
-                  for a in [0, 1] for y in [0, 1]}
+                  for a in range(number_of_atributes) for y in [0, 1]}
     agg_y = {(a, y): np.zeros((num_trees, num_internal_nodes)) 
-             for a in [0, 1] for y in [0, 1]}
+             for a in range(number_of_atributes) for y in [0, 1]}
     subgroup_count = collections.defaultdict(int)
     protected_class_count = collections.defaultdict(int)
     return gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count
@@ -70,14 +71,14 @@ def compute_fairness_gradients(
     gradient_w, gradient_b, agg_y,
     subgroup_count, protected_class_count,
     fairness_type, lambda_const,
-    num_internal_nodes, data_dim, num_trees,
+    num_internal_nodes, data_dim, number_of_atributes,
     gradient_type='vanilla', base_gamma=0.9,
     huber_loss_delta=0.1, dp_sign=1.0, constraint_type='node',
 ):
     if fairness_type == 'dp':
         can_compute = protected_class_count[0] > 0 and protected_class_count[1] > 0
     else:
-        can_compute = all(subgroup_count[(a, y)] > 0 for a in [0, 1] for y in [0, 1])
+        can_compute = all(subgroup_count[(a, y)] > 0 for a in range(number_of_atributes) for y in [0, 1])
 
     if not can_compute:
         return gradients
@@ -85,13 +86,13 @@ def compute_fairness_gradients(
     if gradient_type == 'ema':
         if fairness_type == 'dp':
             correction_factor = {a: (1 - base_gamma) / (1 - base_gamma ** protected_class_count[a])
-                                 for a in [0, 1]}
+                                 for a in range(number_of_atributes)}
         else:
             correction_factor = {(a, y): (1 - base_gamma) / (1 - base_gamma ** subgroup_count[(a, y)])
-                                 for a in [0, 1] for y in [0, 1]}
+                                 for a in range(number_of_atributes) for y in [0, 1]}
     else:
-        correction_factor = ({a: 1.0 for a in [0, 1]} if fairness_type == 'dp'
-                             else {(a, y): 1.0 for a in [0, 1] for y in [0, 1]})
+        correction_factor = ({a: 1.0 for a in range(number_of_atributes)} if fairness_type == 'dp'
+                             else {(a, y): 1.0 for a in range(number_of_atributes) for y in [0, 1]})
 
     total_gradients = []
     idx_b = idx_w = 0
@@ -109,6 +110,7 @@ def compute_fairness_gradients(
             tree_id = max(idx_w, idx_b) - 1 if max(idx_w, idx_b) > 0 else 0
 
         if fairness_type == 'dp':
+ 
             agg_a1 = agg_y[(1, 0)] + agg_y[(1, 1)]
             agg_a0 = agg_y[(0, 0)] + agg_y[(0, 1)]
             F = tf.convert_to_tensor(
@@ -133,8 +135,6 @@ def compute_fairness_gradients(
                                - tf.convert_to_tensor(gw_a0[idx_w] * cf0), tf.float32)
                 hc = tf.cast(tf.math.abs(F) < huber_loss_delta, tf.float32)
                 penalty = lambda_const * (tf.multiply(tf.multiply(hc, F), diff) + tf.multiply(tf.multiply(1 - hc, signs_y), diff))
-                #if idx_w == 0:
-                #    print(f"[FAIRNESS DEBUG dp] tree=0 F_norm={float(tf.norm(F)):.4e} diff_norm={float(tf.norm(diff)):.4e} penalty_norm={float(tf.norm(penalty)):.4e} lambda={lambda_const}")
                 total_gradients.append(grad + penalty)
                 idx_w += 1
             else:
