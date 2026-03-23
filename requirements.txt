@@ -12,3 +12,4 @@ wandb==0.15.2
 matplotlib
 seaborn
 absl-py
+folktables

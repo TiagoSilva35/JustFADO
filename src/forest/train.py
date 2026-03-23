@@ -261,6 +261,10 @@ def train(
         data_dim = 768
         x_train, y_train, a_train = data.read_celeba()
         num_class = 2
+      elif dataset == 'folktables':
+        x_train, x_test, y_train, y_test, a_train, a_test = data.read_folktables()
+        data_dim = x_train.shape[1]
+        num_class = 2
       
       # Evaluate the loaded model
       if x_test is not None and len(x_test) > 0:
@@ -338,6 +342,10 @@ def train(
   elif dataset == 'celeba':
     data_dim = 768
     x_train, y_train, a_train = data.read_celeba()
+    num_class = 2
+  elif dataset == 'folktables':
+    x_train, x_test, y_train, y_test, a_train, a_test = data.read_folktables()
+    data_dim = x_train.shape[1]
     num_class = 2
   else:
     x_train, y_train, a_train = [], [], []
