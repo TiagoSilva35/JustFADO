@@ -135,7 +135,7 @@ def _tune_prequential_static_params(base_model, x_stream, y_stream, a_stream, da
       'drift_lr_prewarm_mult': (1.0, 12.0),
       'drift_lr_spike_mult': (0.0, 20.0),
       'lr_decay_steps': (1.0, 6000.0),
-      'fairness_window': (1.0, 2000.0),
+      'fairness_window': (100.0, 2000.0),
       'cooldown': (0.0, 800.0),
       'min_samples_per_stream': (1.0, 120.0),
       'lambda_const': (0.0, 10.0),

@@ -328,7 +328,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     lambda_const = float(defaults['lambda_const'])
     print(f"Evaluating model over {len(x_test)} timesteps with test-then-train={test_then_train}\n\
           Fairness penalty lambda: {lambda_const}, fairness type: {fairness_type}")
-    lambda_const = 5.0
     USE_ROLLING = bool(accuracy_window)
     print(f"Parameters:\n  ADWIN_DELTA_WARN: {ADWIN_DELTA_WARN}\n  ADWIN_DELTA_CONFIRM: {ADWIN_DELTA_CONFIRM}\n\  DRIFT_LR_PREWARM: {DRIFT_LR_PREWARM}\n  DRIFT_LR_SPIKE: {DRIFT_LR_SPIKE}\n  LR_DECAY_STEPS: {LR_DECAY_STEPS}\n  FAIRNESS_WINDOW: {FAIRNESS_WINDOW}\n  COOLDOWN: {COOLDOWN}\n  MIN_SAMPLES_PER_STREAM: {MIN_SAMPLES_PER_STREAM}\n  Lambda for fairness penalty: {lambda_const}\n  Accuracy window: {accuracy_window}\n  Use rolling accuracy: {USE_ROLLING}\n  Compute fairness: {compute_fairness}\n  Fairness type: {fairness_type}")
     correct_buffer = []
