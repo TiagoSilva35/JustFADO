@@ -387,7 +387,6 @@ def read_folktables(path='data', train_year=2014, test_years=(2015, 2016, 2017, 
   )
   train_df = train_source.get_data(states=[state], download=False)
   x_train, y_train, a_train = ACSPublicCoverage.df_to_numpy(train_df)
-
   x_tests, y_tests, a_tests = [], [], []
   for year in test_years:
     test_source = ACSDataSource(
@@ -410,4 +409,5 @@ def read_folktables(path='data', train_year=2014, test_years=(2015, 2016, 2017, 
       np.asarray(y_test, dtype=np.int32),
       np.asarray(a_train, dtype=np.int32),
       np.asarray(a_test, dtype=np.int32),
+      set(a_train).size()
   )
