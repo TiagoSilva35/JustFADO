@@ -19,6 +19,7 @@ import os
 import pickle
 import numpy as np
 import pandas as pd
+from folktables import ACSDataSource, ACSPublicCoverage
 
 from sklearn import preprocessing
 from src.drift.create_drifted_ds import generate_drifted_dataset
@@ -375,3 +376,38 @@ def read_celeba(path="../data/celeba/"):
   X, Y, A = load_dump(os.path.join(path, "clip_data.pkl"))
   x_train, y_train, a_train = X, Y[: len(X)], A[: len(X)]
   return x_train, y_train, a_train
+
+
+def read_folktables(path='data', train_year=2014, test_years=(2015, 2016, 2017, 2018),
+                    state='CA', horizon='1-Year'):
+  """Read Folktables ACS Public Coverage data from local cache."""
+
+  train_source = ACSDataSource(
+      survey_year=train_year, horizon=horizon, survey='person', root_dir=path
+  )
+  train_df = train_source.get_data(states=[state], download=False)
+  x_train, y_train, a_train = ACSPublicCoverage.df_to_numpy(train_df)
+
+  x_tests, y_tests, a_tests = [], [], []
+  for year in test_years:
+    test_source = ACSDataSource(
+        survey_year=year, horizon=horizon, survey='person', root_dir=path
+    )
+    test_df = test_source.get_data(states=[state], download=False)
+    x_t, y_t, a_t = ACSPublicCoverage.df_to_numpy(test_df)
+    x_tests.append(x_t)
+    y_tests.append(y_t)
+    a_tests.append(a_t)
+
+  x_test = np.concatenate(x_tests, axis=0) if x_tests else np.array([], dtype=np.float32)
+  y_test = np.concatenate(y_tests, axis=0) if y_tests else np.array([], dtype=np.int32)
+  a_test = np.concatenate(a_tests, axis=0) if a_tests else np.array([], dtype=np.int32)
+
+  return (
+      np.asarray(x_train, dtype=np.float32),
+      np.asarray(x_test, dtype=np.float32),
+      np.asarray(y_train, dtype=np.int32),
+      np.asarray(y_test, dtype=np.int32),
+      np.asarray(a_train, dtype=np.int32),
+      np.asarray(a_test, dtype=np.int32),
+  )
