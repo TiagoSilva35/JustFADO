@@ -51,6 +51,7 @@ def train_online(
 
   # number of internal nodes in a binary tree
   num_internal_nodes = 2**tree_depth - 1
+  number_of_attributes = int(np.unique(np.array(protected_targets)).size)
 
   # choose the optimizer and loss criteria
   optimizer = tf.keras.optimizers.Adam(learning_rate=2e-3)
@@ -60,7 +61,7 @@ def train_online(
   avg_accuracy = tf.keras.metrics.Accuracy()
 
   gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count = \
-      initializers.init_fairness_state(num_trees, data_dim, num_internal_nodes)
+      initializers.init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_attributes)
 
   dp_function = utils.get_demographic_parity
   avg_loss = tf.keras.metrics.Mean()
@@ -149,7 +150,7 @@ def train_online(
             gradient_w, gradient_b, agg_y,
             subgroup_count, protected_class_count,
             fairness_type, lambda_const,
-            num_internal_nodes, data_dim, num_trees,
+            num_internal_nodes, data_dim, number_of_attributes,
             gradient_type, base_gamma, huber_loss_delta, dp_sign=dp_sign, constraint_type=constraint_type
         )
       del tape
