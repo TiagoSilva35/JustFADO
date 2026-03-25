@@ -118,43 +118,62 @@ def get_demographic_parity(y_predictions, y_protected):
   predictions = np.array(y_predictions)
   protected_group = np.array(y_protected)
 
-  protected_positive_rate = np.mean(predictions[protected_group == 1])
-  unprotected_positive_rate = np.mean(predictions[protected_group == 0])
+  if predictions.size == 0 or protected_group.size == 0:
+    return 0.0, 1.0
 
-  raw_diff = protected_positive_rate - unprotected_positive_rate
-  demographic_parity = np.abs(raw_diff)
-  return demographic_parity, np.copysign(1, raw_diff)
+  overall_positive_rate = float(np.mean(predictions))
+  unique_groups = np.unique(protected_group)
+  if unique_groups.size == 0:
+    return 0.0, 1.0
+
+  max_abs_diff = 0.0
+  dominant_raw_diff = 0.0
+  for group_value in unique_groups:
+    group_mask = protected_group == group_value
+    if np.sum(group_mask) == 0:
+      continue
+    group_positive_rate = float(np.mean(predictions[group_mask]))
+    raw_diff = overall_positive_rate - group_positive_rate
+    abs_diff = abs(raw_diff)
+    if abs_diff > max_abs_diff:
+      max_abs_diff = abs_diff
+      dominant_raw_diff = raw_diff
+
+  return float(max_abs_diff), float(np.copysign(1, dominant_raw_diff))
 
 def get_equalized_odds(y_predictions, y_protected, y_true):
   predictions = np.array(y_predictions)
   protected_group = np.array(y_protected)
   true_labels = np.array(y_true)
 
-  mask_p1 = (protected_group == 1) & (true_labels == 1)
-  mask_u1 = (protected_group == 0) & (true_labels == 1)
-  mask_p0 = (protected_group == 1) & (true_labels == 0)
-  mask_u0 = (protected_group == 0) & (true_labels == 0)
+  if predictions.size == 0 or protected_group.size == 0 or true_labels.size == 0:
+    return 0.0, 1.0
 
-  # True Positive Rate (TPR) for protected and unprotected groups
-  protected_tpr = np.mean(predictions[mask_p1]) if np.sum(mask_p1) > 0 else 0.0
-  unprotected_tpr = np.mean(predictions[mask_u1]) if np.sum(mask_u1) > 0 else 0.0
+  unique_groups = np.unique(protected_group)
+  if unique_groups.size == 0:
+    return 0.0, 1.0
 
-  # False Positive Rate (FPR) for protected and unprotected groups
-  protected_fpr = np.mean(predictions[mask_p0]) if np.sum(mask_p0) > 0 else 0.0
-  unprotected_fpr = np.mean(predictions[mask_u0]) if np.sum(mask_u0) > 0 else 0.0
+  max_abs_diff = 0.0
+  dominant_raw_diff = 0.0
 
-  tpr_diff = protected_tpr - unprotected_tpr
-  fpr_diff = protected_fpr - unprotected_fpr
+  for y_cond in [0, 1]:
+    cond_mask = true_labels == y_cond
+    if np.sum(cond_mask) == 0:
+      continue
 
-  # Return the max violation and the sign of the dominant term
-  if np.abs(tpr_diff) >= np.abs(fpr_diff):
-    equalized_odds = np.abs(tpr_diff)
-    sign = np.copysign(1, tpr_diff)
-  else:
-    equalized_odds = np.abs(fpr_diff)
-    sign = np.copysign(1, fpr_diff)
+    overall_rate = float(np.mean(predictions[cond_mask]))
+    for group_value in unique_groups:
+      group_mask = cond_mask & (protected_group == group_value)
+      if np.sum(group_mask) == 0:
+        continue
+      group_rate = float(np.mean(predictions[group_mask]))
+      raw_diff = overall_rate - group_rate
+      abs_diff = abs(raw_diff)
+      if abs_diff > max_abs_diff:
+        max_abs_diff = abs_diff
+        dominant_raw_diff = raw_diff
 
-  return equalized_odds, sign
+  return float(max_abs_diff), float(np.copysign(1, dominant_raw_diff))
 
 
 def get_test_performance(model, x_test, y_test, a_test, data_dim,
@@ -353,8 +372,9 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         all_tree_trainable_vars = []
         for tree in model.layers:
             all_tree_trainable_vars.extend(tree.trainable_variables)
+        number_of_attributes = int(np.unique(np.array(a_test)).size)
         gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count = \
-            init_fairness_state(num_trees, data_dim, num_internal_nodes)
+            init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_attributes)
 
     for t in range(n_samples):
         x_t = tf.convert_to_tensor(
@@ -479,7 +499,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                         grads, gradient_w, gradient_b, agg_y,
                         subgroup_count, protected_class_count,
                         fairness_type, lambda_const,
-                        num_internal_nodes, data_dim, num_trees,
+                        num_internal_nodes, data_dim, number_of_attributes,
                         gradient_type, base_gamma,
                     )
             if compute_fairness:
@@ -577,10 +597,18 @@ def evaluate_arf_over_timesteps(x_test, y_test, a_test, accuracy_window=200):
 
 def _compute_dp_from_preds(preds, groups):
     groups_arr = np.array(groups)
-    if np.sum(groups_arr == 0) == 0 or np.sum(groups_arr == 1) == 0:
+    if groups_arr.size == 0:
         return 0.0
     preds_arr = np.array(preds)
-    return float(np.abs(np.mean(preds_arr[groups_arr == 1]) - np.mean(preds_arr[groups_arr == 0])))
+    overall_rate = float(np.mean(preds_arr))
+    max_abs_diff = 0.0
+    for group_value in np.unique(groups_arr):
+        group_mask = groups_arr == group_value
+        if np.sum(group_mask) == 0:
+            continue
+        group_rate = float(np.mean(preds_arr[group_mask]))
+        max_abs_diff = max(max_abs_diff, abs(overall_rate - group_rate))
+    return float(max_abs_diff)
 
 
 def _compute_window_fairness(y_preds_all, y_true_all, a_all, fairness_start, fairness_window):
@@ -591,9 +619,7 @@ def _compute_window_fairness(y_preds_all, y_true_all, a_all, fairness_start, fai
     w_a = a_all
 
     w_a_arr = np.array(w_a)
-    has_group0 = np.sum(w_a_arr == 0) > 0
-    has_group1 = np.sum(w_a_arr == 1) > 0
-    if not (has_group0 and has_group1):
+    if np.unique(w_a_arr).size < 2:
         return 0.0, 0.0
 
     dp_val, _ = get_demographic_parity(w_preds, w_a)

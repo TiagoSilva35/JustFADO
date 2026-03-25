@@ -5,12 +5,13 @@ import tensorflow as tf
 
 def init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_atributes):
     # number of atributtes is the numner of unique values in the protected attribute
+    group_ids = range(1, number_of_atributes + 1)
     gradient_w = {(a, y): np.zeros((num_trees, data_dim, num_internal_nodes)) 
-                  for a in range(number_of_atributes) for y in [0, 1]}
+                  for a in group_ids for y in [0, 1]}
     gradient_b = {(a, y): np.zeros((num_trees, num_internal_nodes)) 
-                  for a in range(number_of_atributes) for y in [0, 1]}
+                  for a in group_ids for y in [0, 1]}
     agg_y = {(a, y): np.zeros((num_trees, num_internal_nodes)) 
-             for a in range(number_of_atributes) for y in [0, 1]}
+             for a in group_ids for y in [0, 1]}
     subgroup_count = collections.defaultdict(int)
     protected_class_count = collections.defaultdict(int)
     return gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count
@@ -75,10 +76,11 @@ def compute_fairness_gradients(
     gradient_type='vanilla', base_gamma=0.9,
     huber_loss_delta=0.1, dp_sign=1.0, constraint_type='node',
 ):
+    group_ids = range(1, number_of_atributes + 1)
     if fairness_type == 'dp':
-        can_compute = protected_class_count[0] > 0 and protected_class_count[1] > 0
+        can_compute = all(protected_class_count[a] > 0 for a in group_ids)
     else:
-        can_compute = all(subgroup_count[(a, y)] > 0 for a in range(number_of_atributes) for y in [0, 1])
+        can_compute = all(subgroup_count[(a, y)] > 0 for a in group_ids for y in [0, 1])
 
     if not can_compute:
         return gradients
@@ -86,21 +88,18 @@ def compute_fairness_gradients(
     if gradient_type == 'ema':
         if fairness_type == 'dp':
             correction_factor = {a: (1 - base_gamma) / (1 - base_gamma ** protected_class_count[a])
-                                 for a in range(number_of_atributes)}
+                                 for a in group_ids}
         else:
             correction_factor = {(a, y): (1 - base_gamma) / (1 - base_gamma ** subgroup_count[(a, y)])
-                                 for a in range(number_of_atributes) for y in [0, 1]}
+                                 for a in group_ids for y in [0, 1]}
     else:
-        correction_factor = ({a: 1.0 for a in range(number_of_atributes)} if fairness_type == 'dp'
-                             else {(a, y): 1.0 for a in range(number_of_atributes) for y in [0, 1]})
+        correction_factor = ({a: 1.0 for a in group_ids} if fairness_type == 'dp'
+                             else {(a, y): 1.0 for a in group_ids for y in [0, 1]})
 
     total_gradients = []
     idx_b = idx_w = 0
 
     for grad in gradients:
-        # Derive tree_id from how many W/B variables we've seen so far.
-        # Each tree contributes exactly one W and one B, so whichever counter
-        # is about to be incremented gives the current tree index.
         if len(grad.shape) == 2 and grad.shape[0] == data_dim:
             tree_id = idx_w
         elif len(grad.shape) == 1 and grad.shape[0] == num_internal_nodes:
@@ -110,64 +109,130 @@ def compute_fairness_gradients(
             tree_id = max(idx_w, idx_b) - 1 if max(idx_w, idx_b) > 0 else 0
 
         if fairness_type == 'dp':
- 
-            agg_a1 = agg_y[(1, 0)] + agg_y[(1, 1)]
-            agg_a0 = agg_y[(0, 0)] + agg_y[(0, 1)]
-            F = tf.convert_to_tensor(
-                agg_a1[tree_id] / protected_class_count[1]
-                - agg_a0[tree_id] / protected_class_count[0], dtype=tf.float32)
-            signs_y = tf.math.sign(F - huber_loss_delta / 2) if constraint_type == 'node' else dp_sign
-            cf0, cf1 = correction_factor[0], correction_factor[1]
-            gb_a0 = gradient_b[(0, 0)] + gradient_b[(0, 1)]
-            gb_a1 = gradient_b[(1, 0)] + gradient_b[(1, 1)]
-            gw_a0 = gradient_w[(0, 0)] + gradient_w[(0, 1)]
-            gw_a1 = gradient_w[(1, 0)] + gradient_w[(1, 1)]
-
+            agg_a = {
+                a: agg_y[(a, 0)] + agg_y[(a, 1)]
+                for a in group_ids
+            }
+            F_k = {
+                a: tf.convert_to_tensor(
+                    (
+                        sum(
+                            agg_a[g][tree_id] / protected_class_count[g]
+                            for g in group_ids
+                        ) / number_of_atributes
+                    ) - (agg_a[a][tree_id] / protected_class_count[a]),
+                    dtype=tf.float32
+                )
+                for a in group_ids
+            }
             if len(grad.shape) == 1 and grad.shape[0] == num_internal_nodes:
-                diff = tf.cast(tf.convert_to_tensor(gb_a1[idx_b] * cf1)
-                               - tf.convert_to_tensor(gb_a0[idx_b] * cf0), tf.float32)
-                hc = tf.cast(tf.math.abs(F) < huber_loss_delta, tf.float32)
-                penalty = lambda_const * (tf.multiply(hc * F, diff) + tf.multiply(tf.multiply(1 - hc, signs_y), diff))
-                total_gradients.append(grad + penalty)
+                fair_penalty = tf.zeros_like(grad)
+                for k in group_ids:
+                    cf_a = correction_factor[k]
+                    gb_a = gradient_b[(k, 0)] + gradient_b[(k, 1)]
+                    mean_other = tf.convert_to_tensor(
+                        sum(
+                            (gradient_b[(g, 0)] + gradient_b[(g, 1)])[idx_b] * correction_factor[g]
+                            for g in group_ids
+                        ) / number_of_atributes,
+                        dtype=tf.float32,
+                    )
+                    diff = mean_other - tf.cast(tf.convert_to_tensor(gb_a[idx_b] * cf_a), tf.float32)
+                    F = F_k[k]
+                    signs_y = tf.math.sign(F - huber_loss_delta / 2) if constraint_type == 'node' else dp_sign
+                    hc = tf.cast(tf.math.abs(F) < huber_loss_delta, tf.float32)
+                    fair_penalty += tf.multiply(hc * F, diff) + tf.multiply(tf.multiply(1 - hc, signs_y), diff)
+                fair_penalty = fair_penalty / float(number_of_atributes)
+                total_gradients.append(grad + lambda_const * fair_penalty)
                 idx_b += 1
             elif len(grad.shape) == 2 and grad.shape[0] == data_dim:
-                diff = tf.cast(tf.convert_to_tensor(gw_a1[idx_w] * cf1)
-                               - tf.convert_to_tensor(gw_a0[idx_w] * cf0), tf.float32)
-                hc = tf.cast(tf.math.abs(F) < huber_loss_delta, tf.float32)
-                penalty = lambda_const * (tf.multiply(tf.multiply(hc, F), diff) + tf.multiply(tf.multiply(1 - hc, signs_y), diff))
-                total_gradients.append(grad + penalty)
+                fair_penalty = tf.zeros_like(grad)
+                for k in group_ids:
+                    cf_a = correction_factor[k]
+                    gw_a = gradient_w[(k, 0)] + gradient_w[(k, 1)]
+                    mean_other = tf.convert_to_tensor(
+                        sum(
+                            (gradient_w[(g, 0)] + gradient_w[(g, 1)])[idx_w] * correction_factor[g]
+                            for g in group_ids
+                        ) / number_of_atributes,
+                        dtype=tf.float32,
+                    )
+                    diff = mean_other - tf.cast(tf.convert_to_tensor(gw_a[idx_w] * cf_a), tf.float32)
+                    F = F_k[k]
+                    signs_y = tf.math.sign(F - huber_loss_delta / 2) if constraint_type == 'node' else dp_sign
+                    hc = tf.cast(tf.math.abs(F) < huber_loss_delta, tf.float32)
+                    fair_penalty += tf.multiply(tf.multiply(hc, F), diff) + tf.multiply(tf.multiply(1 - hc, signs_y), diff)
+                fair_penalty = fair_penalty / float(number_of_atributes)
+                total_gradients.append(grad + lambda_const * fair_penalty)
                 idx_w += 1
             else:
                 total_gradients.append(grad)
 
         elif fairness_type == 'eo':
-            F_y0 = (agg_y[(1, 0)][tree_id] / subgroup_count[(1, 0)]
-                    - agg_y[(0, 0)][tree_id] / subgroup_count[(0, 0)])
-            F_y1 = (agg_y[(1, 1)][tree_id] / subgroup_count[(1, 1)]
-                    - agg_y[(0, 1)][tree_id] / subgroup_count[(0, 1)])
+            F_y = {
+                y_cond: {
+                    a: tf.convert_to_tensor(
+                        (
+                            sum(
+                                agg_y[(g, y_cond)][tree_id] / subgroup_count[(g, y_cond)]
+                                for g in group_ids
+                            ) / number_of_atributes
+                        ) - (agg_y[(a, y_cond)][tree_id] / subgroup_count[(a, y_cond)]),
+                        dtype=tf.float32
+                    )
+                    for a in group_ids
+                }
+                for y_cond in [0, 1]
+            }
 
             if len(grad.shape) == 1 and grad.shape[0] == num_internal_nodes:
                 fair_penalty = tf.zeros_like(grad)
-                for y_cond, F_yc_np in [(0, F_y0), (1, F_y1)]:
-                    F_yc = tf.convert_to_tensor(F_yc_np, dtype=tf.float32)
-                    diff = tf.cast(
-                        tf.convert_to_tensor(gradient_b[(1, y_cond)][idx_b] * correction_factor[(1, y_cond)])
-                        - tf.convert_to_tensor(gradient_b[(0, y_cond)][idx_b] * correction_factor[(0, y_cond)]),
-                        tf.float32)
-                    hc = tf.cast(tf.math.abs(F_yc) < huber_loss_delta, tf.float32)
-                    fair_penalty += 0.5 * (tf.multiply(hc * F_yc, diff) + tf.multiply(tf.multiply(1 - hc, tf.math.sign(F_yc)), diff))
+                for y_cond in [0, 1]:
+                    mean_grad = tf.convert_to_tensor(
+                        sum(
+                            gradient_b[(g, y_cond)][idx_b] * correction_factor[(g, y_cond)]
+                            for g in group_ids
+                        ) / number_of_atributes,
+                        dtype=tf.float32,
+                    )
+                    for a in group_ids:
+                        F_yc = F_y[y_cond][a]
+                        diff = mean_grad - tf.cast(
+                            tf.convert_to_tensor(
+                                gradient_b[(a, y_cond)][idx_b] * correction_factor[(a, y_cond)]
+                            ),
+                            tf.float32,
+                        )
+                        hc = tf.cast(tf.math.abs(F_yc) < huber_loss_delta, tf.float32)
+                        fair_penalty += tf.multiply(hc * F_yc, diff) + tf.multiply(
+                            tf.multiply(1 - hc, tf.math.sign(F_yc)), diff
+                        )
+                fair_penalty = fair_penalty / float(2 * number_of_atributes)
                 total_gradients.append(grad + lambda_const * fair_penalty)
                 idx_b += 1
             elif len(grad.shape) == 2 and grad.shape[0] == data_dim:
                 fair_penalty = tf.zeros_like(grad)
-                for y_cond, F_yc_np in [(0, F_y0), (1, F_y1)]:
-                    F_yc = tf.convert_to_tensor(F_yc_np, dtype=tf.float32)
-                    diff = tf.cast(
-                        tf.convert_to_tensor(gradient_w[(1, y_cond)][idx_w] * correction_factor[(1, y_cond)])
-                        - tf.convert_to_tensor(gradient_w[(0, y_cond)][idx_w] * correction_factor[(0, y_cond)]),
-                        tf.float32)
-                    hc = tf.cast(tf.math.abs(F_yc) < huber_loss_delta, tf.float32)
-                    fair_penalty += 0.5 * (tf.multiply(tf.multiply(hc, F_yc), diff) + tf.multiply(tf.multiply(1 - hc, tf.math.sign(F_yc)), diff))
+                for y_cond in [0, 1]:
+                    mean_grad = tf.convert_to_tensor(
+                        sum(
+                            gradient_w[(g, y_cond)][idx_w] * correction_factor[(g, y_cond)]
+                            for g in group_ids
+                        ) / number_of_atributes,
+                        dtype=tf.float32,
+                    )
+                    for a in group_ids:
+                        F_yc = F_y[y_cond][a]
+                        diff = mean_grad - tf.cast(
+                            tf.convert_to_tensor(
+                                gradient_w[(a, y_cond)][idx_w] * correction_factor[(a, y_cond)]
+                            ),
+                            tf.float32,
+                        )
+                        hc = tf.cast(tf.math.abs(F_yc) < huber_loss_delta, tf.float32)
+                        fair_penalty += tf.multiply(tf.multiply(hc, F_yc), diff) + tf.multiply(
+                            tf.multiply(1 - hc, tf.math.sign(F_yc)), diff
+                        )
+                fair_penalty = fair_penalty / float(2 * number_of_atributes)
                 total_gradients.append(grad + lambda_const * fair_penalty)
                 idx_w += 1
             else:

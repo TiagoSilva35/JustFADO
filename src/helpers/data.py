@@ -409,5 +409,5 @@ def read_folktables(path='data', train_year=2014, test_years=(2015, 2016, 2017, 
       np.asarray(y_test, dtype=np.int32),
       np.asarray(a_train, dtype=np.int32),
       np.asarray(a_test, dtype=np.int32),
-      set(a_train).size()
+      len(set(a_train))
   )

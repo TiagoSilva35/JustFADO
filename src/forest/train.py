@@ -345,7 +345,7 @@ def train(
     num_class = 2
   elif dataset == 'folktables':
     x_train, x_test, y_train, y_test, a_train, a_test, number_of_attributes = data.read_folktables()
-    assert set(a_train).size() == 9, "Expected 9 unique values in the sensitive attribute for folktables dataset"
+    assert len(set(a_train)) == 9, "Expected 9 unique values in the sensitive attribute for folktables dataset"
     data_dim = x_train.shape[1]
     num_class = 2
   else:
