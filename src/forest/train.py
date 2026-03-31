@@ -29,7 +29,7 @@ flags.DEFINE_integer('num_trees', 3, 'Number of trees.')
 flags.DEFINE_bool(
     'compute_fairness', True, 'Whether to apply fairness constraints.'
 )
-flags.DEFINE_integer('batch_size', 32, 'Samples in an online batch.')
+flags.DEFINE_integer('batch_size', 1, 'Samples in an online batch.')
 flags.DEFINE_string('activation', 'sigmoid', 'Activation function.')
 flags.DEFINE_string('compute_mode', 'default', 'log or default.')
 flags.DEFINE_string('base_gamma', None, 'gamma for the gradients.')
