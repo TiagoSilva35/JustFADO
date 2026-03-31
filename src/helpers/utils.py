@@ -630,11 +630,14 @@ def _compute_dp_from_preds(preds, groups):
 
 
 def _compute_window_fairness(y_preds_all, y_true_all, a_all, fairness_start, fairness_window):
-    # Cumulative fairness: compute on all samples seen so far.
-    del fairness_start, fairness_window
-    w_preds = y_preds_all
-    w_true = y_true_all
-    w_a = a_all
+    # Rolling-window fairness over the latest fairness_window samples.
+    if fairness_window is None:
+        fairness_window = len(y_preds_all)
+    fairness_window = max(1, int(fairness_window))
+    window_start = max(int(fairness_start), len(y_preds_all) - fairness_window)
+    w_preds = y_preds_all[window_start:]
+    w_true = y_true_all[window_start:]
+    w_a = a_all[window_start:]
 
     w_a_arr = np.array(w_a)
     if np.unique(w_a_arr).size < 2:
