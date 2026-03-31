@@ -26,6 +26,7 @@ def train_online(
     gradient_type='vanilla',
     local_run=False,
     fairness_type='dp',
+    fairness_window=1000,
 ):
   if fairness_type not in SUPPORTED_FAIRNESS_TYPES:
     raise ValueError(f"Fairness type {fairness_type} not supported. Choose from {SUPPORTED_FAIRNESS_TYPES}.")
@@ -71,6 +72,12 @@ def train_online(
   demographic_parities = []
   equalized_odds = []
   accuracies = []
+  
+  # Rolling-window buffers (fixed size, no O(n²) recomputation)
+  from collections import deque
+  pred_window = deque(maxlen=fairness_window)
+  true_window = deque(maxlen=fairness_window)
+  protected_window = deque(maxlen=fairness_window)
 
   # hyperparameters
   huber_loss_delta = 0.1
@@ -93,12 +100,24 @@ def train_online(
         class_weights = tf.gather(weight_updater.class_weights, targets_batch)
         target_loss = criteria(y_true=targets_batch, y_pred=predictions, sample_weight=class_weights)
         weight_updater.total_num_samples += 1
-      y_predictions.extend(y_pred.numpy())
-      y_true_all.extend(targets_batch.numpy())  
-      dp, dp_sign = dp_function(
-          y_predictions, protected_targets[: len(y_predictions)])
-      eo, eo_sign = utils.get_equalized_odds(
-          y_predictions, protected_targets[: len(y_predictions)], y_true_all)
+      
+      y_pred_np = y_pred.numpy()
+      targets_np = targets_batch.numpy()
+      protected_np = protected_batch.numpy()
+      
+      # Maintain full history for validation later, rolling window for fairness metrics
+      y_predictions.extend(y_pred_np)
+      y_true_all.extend(targets_np)
+      
+      # Update rolling-window buffers (O(1) operation)
+      for i in range(len(y_pred_np)):
+        pred_window.append(y_pred_np[i])
+        true_window.append(targets_np[i])
+        protected_window.append(protected_np[i])
+      
+      # Compute fairness on rolling window only (no O(n²) recomputation)
+      dp, dp_sign = dp_function(list(pred_window), list(protected_window))
+      eo, eo_sign = utils.get_equalized_odds(list(pred_window), list(protected_window), list(true_window))
 
       demographic_parities.append(dp)
       equalized_odds.append(eo)
