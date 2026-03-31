@@ -121,19 +121,29 @@ def get_demographic_parity(y_predictions, y_protected):
   if predictions.size == 0 or protected_group.size == 0:
     return 0.0, 1.0
 
-  overall_positive_rate = float(np.mean(predictions))
   unique_groups = np.unique(protected_group)
   if unique_groups.size == 0:
     return 0.0, 1.0
 
-  max_abs_diff = 0.0
-  dominant_raw_diff = 0.0
+  # Keep parity reporting aligned with the fairness objective:
+  # compare each group against the unweighted mean of group rates.
+  group_rates = {}
   for group_value in unique_groups:
     group_mask = protected_group == group_value
     if np.sum(group_mask) == 0:
       continue
-    group_positive_rate = float(np.mean(predictions[group_mask]))
-    raw_diff = overall_positive_rate - group_positive_rate
+    group_rates[group_value] = float(np.mean(predictions[group_mask]))
+
+  if not group_rates:
+    return 0.0, 1.0
+
+  mean_group_rate = float(np.mean(list(group_rates.values())))
+  max_abs_diff = 0.0
+  dominant_raw_diff = 0.0
+  for group_value in unique_groups:
+    if group_value not in group_rates:
+      continue
+    raw_diff = mean_group_rate - group_rates[group_value]
     abs_diff = abs(raw_diff)
     if abs_diff > max_abs_diff:
       max_abs_diff = abs_diff
@@ -161,13 +171,21 @@ def get_equalized_odds(y_predictions, y_protected, y_true):
     if np.sum(cond_mask) == 0:
       continue
 
-    overall_rate = float(np.mean(predictions[cond_mask]))
+    group_rates = {}
     for group_value in unique_groups:
       group_mask = cond_mask & (protected_group == group_value)
       if np.sum(group_mask) == 0:
         continue
-      group_rate = float(np.mean(predictions[group_mask]))
-      raw_diff = overall_rate - group_rate
+      group_rates[group_value] = float(np.mean(predictions[group_mask]))
+
+    if not group_rates:
+      continue
+
+    mean_group_rate = float(np.mean(list(group_rates.values())))
+    for group_value in unique_groups:
+      if group_value not in group_rates:
+        continue
+      raw_diff = mean_group_rate - group_rates[group_value]
       abs_diff = abs(raw_diff)
       if abs_diff > max_abs_diff:
         max_abs_diff = abs_diff

@@ -5,7 +5,7 @@ import tensorflow as tf
 
 def init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_atributes):
     # number of atributtes is the numner of unique values in the protected attribute
-    group_ids = range(1, number_of_atributes + 1)
+    group_ids = range(0, number_of_atributes)
     gradient_w = {(a, y): np.zeros((num_trees, data_dim, num_internal_nodes)) 
                   for a in group_ids for y in [0, 1]}
     gradient_b = {(a, y): np.zeros((num_trees, num_internal_nodes)) 
@@ -30,6 +30,7 @@ def accumulate_fairness_stats(
         y_label = int(targets_batch[i])
         protected_class_count[a_label] += 1
         subgroup_count[(a_label, y_label)] += 1
+        # print(f"[DEBUG]: {agg_y}")
         agg_y[(a_label, y_label)] += node_decisions[:, i].numpy()
         
         if constraint_type == 'node':

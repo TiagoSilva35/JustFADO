@@ -12,8 +12,7 @@ import src.helpers.data as data
 import src.forest.forest as forest
 import src.forest.aranyani as aranyani
 
-from sklearn.model_selection import TimeSeriesSplit
-from src.helpers.plots import plot_metric_over_iterations, plot_metrics_over_timesteps
+from src.helpers.plots import plot_metrics_over_timesteps
 
 import src.helpers.utils as utils
 import src.forest.clip_forest as clip_forest
@@ -46,8 +45,6 @@ flags.DEFINE_float('penalty_aggression', 2.0,
                    'How aggressively to penalize correlated features.')
 flags.DEFINE_bool('use_class_weights', False,
                   'Whether to apply inverse-frequency class weights to the loss.')
-flags.DEFINE_bool('use_test_set', False,
-                  'Whether to use actual test set instead of cross-validation (for adult dataset).')
 flags.DEFINE_bool('drift', False, 'Whether to apply drift to the dataset.')
 flags.DEFINE_bool('run_all_scenarios', False,
                   'Run Aranyani on every drift scenario, collect results, and plot comparisons.')
@@ -208,7 +205,6 @@ def train(
     encoder_model='instructor',
     offline_loss_type='mmd',
     local_run=False,
-    use_test_set=True,
     drift=False,
     drift_scenario=None,
     save_model=False,
@@ -233,91 +229,117 @@ def train(
       print(f"Loading existing model from {model_file}...")
       # Determine if it's a CLIP model
       is_clip = dataset in ['celeba']
-      if is_clip:
-        loaded_model = clip_forest.FairCLIPDecisionForest.load(model_path)
-      else:
-        loaded_model = forest.FairDecisionForest.load(model_path)
-      
-      # Still need to load data for evaluation
-      if dataset == 'adult':
-        data_dim = 14
-        num_class = 2
-        x_train, x_test, y_train, y_test, a_train, a_test = data.read_adult(
-            drift, drift_scenario=drift_scenario
-        )
-      elif dataset == 'census':
-        data_dim = 40
-        num_class = 2
-        x_train, x_test, y_train, y_test, a_train, a_test = data.read_census()
-      elif dataset == 'compas':
-        data_dim = 10
-        x_train, y_train, a_train = data.read_compas()
-        num_class = 2
-      elif dataset == 'jigsaw':
-        data_dim = 768
-        x_train, y_train, a_train = data.read_jigsaw()
-        num_class = 2
-      elif dataset == 'celeba':
-        data_dim = 768
-        x_train, y_train, a_train = data.read_celeba()
-        num_class = 2
-      elif dataset == 'folktables':
-        x_train, x_test, y_train, y_test, a_train, a_test, number_of_attributes = data.read_folktables()
-        data_dim = x_train.shape[1]
-        num_class = 2
-      
-      # Evaluate the loaded model
-      if x_test is not None and len(x_test) > 0:
-        test_metrics = None
-        if not prequential:
-          test_metrics = utils.get_test_performance(
-              loaded_model, x_test, y_test, a_test,
-              data_dim=data_dim,
-              show_confusion_matrix=True,
-          )
-          print(f"\n{'='*80}")
-          print("Loaded Model Test Results:")
-          print(f"  Test Accuracy: {test_metrics['accuracy']:.4f}")
-          print(f"  Test DP: {test_metrics['dp']:.4f}")
-          print(f"  Test EO: {test_metrics['eo']:.4f}")
-          print(f"  Test AUC: {test_metrics['auc']:.4f}")
-          print(f"  Test F1-Score: {test_metrics['f1']:.4f}")
-          print(f"{'='*80}\n")
-        if prequential:
-            preq_cfg = _load_prequential_nsga2_config()
-            tuned_static_params = _tune_prequential_static_params(
-                loaded_model, x_train, y_train, a_train, data_dim,
-                compute_fairness, lambda_const, depth, num_trees,
-                constraint_type, gradient_type, base_gamma, preq_cfg,
-            )
-            static_params_to_use = tuned_static_params or preq_cfg.get('static_params') or None
-            print("\nRunning prequential (test-then-train) evaluation...")
-            # Reload a fresh copy so baseline and prequential start from
-            # the same weights and we can compare fairly.
-            preq_model = forest.FairDecisionForest.load(model_path)
-            preq_results = utils.evaluate_over_timesteps(
-                preq_model, x_test, y_test, a_test, data_dim=data_dim,
-                test_then_train=True,
-                compute_fairness=compute_fairness,
-                fairness_type=preq_cfg['fairness_type'],
-                lambda_const=lambda_const,
-                tree_depth=depth,
-                num_trees=num_trees,
-                constraint_type=constraint_type,
-                gradient_type=gradient_type,
-                base_gamma=base_gamma,
-                static_params=static_params_to_use,
-            )
-            plot_metrics_over_timesteps(preq_results,
-                                        save_path='files/metrics_prequential.png')
-            # Return prequential results as the primary timestep_results
-            timestep_results = preq_results
+      try:
+        if is_clip:
+          loaded_model = clip_forest.FairCLIPDecisionForest.load(model_path)
         else:
-            timestep_results = None
+          loaded_model = forest.FairDecisionForest.load(model_path)
+      except (KeyError, TypeError, ValueError) as exc:
+        print(
+            f"Warning: Could not load {model_file} as an Aranyani forest checkpoint "
+            f"({exc}). Proceeding with training instead."
+        )
+        loaded_model = None
+      except AttributeError as exc:
+        print(
+            f"Warning: Incompatible checkpoint format in {model_file} ({exc}). "
+            "Proceeding with training instead."
+        )
+        loaded_model = None
 
-        return [], [], [], timestep_results, test_metrics, loaded_model, data_dim
+      if loaded_model is None:
+        print(
+            "Hint: this file may be a different model type (e.g., sklearn Pipeline). "
+            "Save an Aranyani model with --save_model to enable --load_model."
+        )
       else:
-        return [], [], [], None, None, loaded_model, data_dim
+      
+        # Still need to load data for evaluation
+        if dataset == 'adult':
+          data_dim = 14
+          num_class = 2
+          x_train, x_test, y_train, y_test, a_train, a_test = data.read_adult(
+              drift, drift_scenario=drift_scenario
+          )
+          assert len(set(a_train)) == 2, "Expected binary sensitive attribute for adult dataset"
+          print(f"Sensitive attribute values in training set: {set(a_train)}")
+        elif dataset == 'census':
+          data_dim = 40
+          num_class = 2
+          x_train, x_test, y_train, y_test, a_train, a_test = data.read_census()
+        elif dataset == 'compas':
+          data_dim = 10
+          x_train, y_train, a_train = data.read_compas()
+          num_class = 2
+        elif dataset == 'jigsaw':
+          data_dim = 768
+          x_train, y_train, a_train = data.read_jigsaw()
+          num_class = 2
+        elif dataset == 'celeba':
+          data_dim = 768
+          x_train, y_train, a_train = data.read_celeba()
+          num_class = 2
+        elif dataset == 'folktables':
+          x_train, x_test, y_train, y_test, a_train, a_test, number_of_attributes = data.read_folktables()
+          data_dim = x_train.shape[1]
+          num_class = 2
+          a_test = [a-1 for a in a_test]  
+        
+        # Evaluate the loaded model
+        if x_test is not None and len(x_test) > 0:
+          test_metrics = None
+          if not prequential:
+            test_metrics = utils.get_test_performance(
+                loaded_model, x_test, y_test, a_test,
+                data_dim=data_dim,
+                show_confusion_matrix=True,
+            )
+            print(f"\n{'='*80}")
+            print("Loaded Model Test Results:")
+            print(f"  Test Accuracy: {test_metrics['accuracy']:.4f}")
+            print(f"  Test DP: {test_metrics['dp']:.4f}")
+            print(f"  Test EO: {test_metrics['eo']:.4f}")
+            print(f"  Test AUC: {test_metrics['auc']:.4f}")
+            print(f"  Test F1-Score: {test_metrics['f1']:.4f}")
+            print(f"{'='*80}\n")
+          if prequential:
+              preq_cfg = _load_prequential_nsga2_config()
+              tuned_static_params = _tune_prequential_static_params(
+                  loaded_model, x_train, y_train, a_train, data_dim,
+                  compute_fairness, lambda_const, depth, num_trees,
+                  constraint_type, gradient_type, base_gamma, preq_cfg,
+              )
+              static_params_to_use = tuned_static_params or preq_cfg.get('static_params') or None
+              print("\nRunning prequential (test-then-train) evaluation...")
+              # Reload a fresh copy so baseline and prequential start from
+              # the same weights and we can compare fairly.
+              if is_clip:
+                preq_model = clip_forest.FairCLIPDecisionForest.load(model_path)
+              else:
+                preq_model = forest.FairDecisionForest.load(model_path)
+              preq_results = utils.evaluate_over_timesteps(
+                  preq_model, x_test, y_test, a_test, data_dim=data_dim,
+                  test_then_train=True,
+                  compute_fairness=compute_fairness,
+                  fairness_type=preq_cfg['fairness_type'],
+                  lambda_const=lambda_const,
+                  tree_depth=depth,
+                  num_trees=num_trees,
+                  constraint_type=constraint_type,
+                  gradient_type=gradient_type,
+                  base_gamma=base_gamma,
+                  static_params=static_params_to_use,
+              )
+              plot_metrics_over_timesteps(preq_results,
+                                          save_path='files/metrics_prequential.png')
+              # Return prequential results as the primary timestep_results
+              timestep_results = preq_results
+          else:
+              timestep_results = None
+
+          return [], [], [], timestep_results, test_metrics, loaded_model, data_dim
+        else:
+          return [], [], [], None, None, loaded_model, data_dim
     else:
       print(f"Warning: Model file {model_file} not found. Proceeding with training...")
   
@@ -327,6 +349,8 @@ def train(
     x_train, x_test, y_train, y_test, a_train, a_test = data.read_adult(
         drift, drift_scenario=drift_scenario
     )
+    print(f"Sensitive attribute values in training set: {set(a_train)}")
+    assert len(set(a_train)) == 2, "Expected binary sensitive attribute for adult dataset"
   elif dataset == 'census':
     data_dim = 40
     num_class = 2
@@ -345,9 +369,13 @@ def train(
     num_class = 2
   elif dataset == 'folktables':
     x_train, x_test, y_train, y_test, a_train, a_test, number_of_attributes = data.read_folktables()
-    assert len(set(a_train)) == 9, "Expected 9 unique values in the sensitive attribute for folktables dataset"
+    # for each a in a train subtract 1 to get 0-indexed groups
+    a_train = [a - 1 for a in a_train]
+    a_test = [a - 1 for a in a_test]
     data_dim = x_train.shape[1]
     num_class = 2
+    print(f"Sensitive attribute values in training set: {set(a_train)}")
+    assert len(set(a_train)) == 9, "Expected 9 unique values in the sensitive attribute for folktables dataset"
   else:
     x_train, y_train, a_train = [], [], []
 
@@ -355,34 +383,18 @@ def train(
   print(f'DP in the original dataset: {utils.get_demographic_parity(y_train, a_train)[0]}')
   print(f"EO in the original dataset: {utils.get_equalized_odds(y_train, a_train, y_train)[0]}")
   
-  # Decide whether to use test set or cross-validation
-  use_actual_test_set = use_test_set and dataset == 'adult' and len(x_test) > 0
-  
-  if use_actual_test_set:
-    splits = [(range(len(x_train)), None)] 
-    fold_results = []
-  else:
-    tscv = TimeSeriesSplit(n_splits=5)
-    splits = list(tscv.split(x_train))
-    fold_results = []
-  
-  for fold_idx, (train_idx, val_idx) in enumerate(splits):
-    if use_actual_test_set:
-      x_train_fold = x_train
-      y_train_fold = y_train
-      a_train_fold = a_train
-      x_val_fold = x_test
-      y_val_fold = y_test
-      a_val_fold = a_test
-    else:
-      x_train_fold = x_train[train_idx]
-      y_train_fold = y_train[train_idx]
-      a_train_fold = a_train[train_idx]
-      x_val_fold = x_train[val_idx]
-      y_val_fold = y_train[val_idx]
-      a_val_fold = a_train[val_idx]
-    for _ in range(max_iter):
-      model = forest.FairDecisionForest(
+  trained_model = None
+  for _ in range(max_iter):
+    model = forest.FairDecisionForest(
+        num_trees=num_trees,
+        data_dim=data_dim,
+        tree_depth=depth,
+        num_classes=num_class,
+        activation=activation,
+        compute_mode=compute_mode,
+    )
+    if dataset in ['celeba']:
+      model = clip_forest.FairCLIPDecisionForest(
           num_trees=num_trees,
           data_dim=data_dim,
           tree_depth=depth,
@@ -390,98 +402,63 @@ def train(
           activation=activation,
           compute_mode=compute_mode,
       )
-      if dataset in ['celeba']:
-        model = clip_forest.FairCLIPDecisionForest(
-            num_trees=num_trees,
-            data_dim=data_dim,
-            tree_depth=depth,
-            num_classes=num_class,
-            activation=activation,
-            compute_mode=compute_mode,
-        )
 
-      dp, eo, accuracies, average_w_fair_grad, average_b_fair_grad = aranyani.train_online(
-          model,
-          x_train_fold,
-          y_train_fold,
-          a_train_fold,
-          data_dim=data_dim,
-          batch_size=batch_size,
-          tree_depth=depth,
-          compute_fairness=compute_fairness,
-          lambda_const=lambda_const,
-          num_trees=num_trees,
-          base_gamma=base_gamma,
-          constraint_type=constraint_type,
-          gradient_type=gradient_type,
-          local_run=local_run,
-      )
+    dp, eo, accuracies, average_w_fair_grad, average_b_fair_grad = aranyani.train_online(
+        model,
+        x_train,
+        y_train,
+        a_train,
+        data_dim=data_dim,
+        batch_size=batch_size,
+        tree_depth=depth,
+        compute_fairness=compute_fairness,
+        lambda_const=lambda_const,
+        num_trees=num_trees,
+        base_gamma=base_gamma,
+        constraint_type=constraint_type,
+        gradient_type=gradient_type,
+        local_run=local_run,
+    )
 
-      all_dps.append(dp)
-      all_accuracies.append(accuracies)
-      all_equalized_odds.append(eo)
+    all_dps.append(dp)
+    all_accuracies.append(accuracies)
+    all_equalized_odds.append(eo)
+    trained_model = model
 
-    if use_actual_test_set and prequential:
-      val_metrics = None
-    else:
-      val_metrics = utils.get_test_performance(
-          model, x_val_fold, y_val_fold, a_val_fold,
-          data_dim=data_dim, show_confusion_matrix=True,
-      )
-
-    fold_results.append({
-        'fold': fold_idx + 1,
-        'train_dp': dp,
-        'train_accuracies': accuracies,
-        'train_eo': eo,
-        'val_metrics': val_metrics,
-        'model': model,
-    })
-
-  if use_actual_test_set and not prequential:
-    # For test set evaluation, just report the single result
+  has_test_set = x_test is not None and len(x_test) > 0
+  test_metrics = None
+  if has_test_set and not prequential and trained_model is not None:
+    test_metrics = utils.get_test_performance(
+        trained_model, x_test, y_test, a_test,
+        data_dim=data_dim, show_confusion_matrix=True,
+    )
     print(f"\n{'='*80}")
     print("Test Set Results:")
-    test_result = fold_results[0]['val_metrics']
-    print(f"  Test Accuracy: {test_result['accuracy']:.4f}")
-    print(f"  Test DP: {test_result['dp']:.4f}")
-    print(f"  Test AUC: {test_result['auc']:.4f}")
-    print(f"  Test Sensitivity: {test_result['sensitivity']:.4f}")
-    print(f"  Test F1-Score: {test_result['f1']:.4f}")
-    print(f"  Test EO: {test_result['eo']:.4f}")
+    print(f"  Test Accuracy: {test_metrics['accuracy']:.4f}")
+    print(f"  Test DP: {test_metrics['dp']:.4f}")
+    print(f"  Test AUC: {test_metrics['auc']:.4f}")
+    print(f"  Test Sensitivity: {test_metrics['sensitivity']:.4f}")
+    print(f"  Test F1-Score: {test_metrics['f1']:.4f}")
+    print(f"  Test EO: {test_metrics['eo']:.4f}")
     print(f"{'='*80}\n")
-  elif use_actual_test_set and prequential:
-    # In prequential mode we skip one-shot test metrics and evaluate over timesteps below.
+  elif has_test_set and prequential:
     print("\nPrequential mode enabled with test set: skipping one-shot test metric aggregation.")
-  else:
-    avg_metrics = utils.aggregate_fold_results(fold_results)
-
-    print(f"\n{'='*80}")
-    print("Cross-Validation Results:")
-    print(f"  Mean Val Accuracy: {avg_metrics['mean_val_accuracy']:.4f} +/- {avg_metrics['std_val_accuracy']:.4f}")
-    print(f"  Mean Val DP: {avg_metrics['mean_val_dp']:.4f} +/- {avg_metrics['std_val_dp']:.4f}")
-    print(f"  Mean Val AUC: {avg_metrics['mean_val_auc']:.4f} +/- {avg_metrics['std_val_auc']:.4f}")
-    print(f"  Mean Val Sensitivity: {avg_metrics['mean_val_sensitivity']:.4f} +/- {avg_metrics['std_val_sensitivity']:.4f}")
-    print(f"  Mean Val F1-Score: {avg_metrics['mean_val_f1']:.4f} +/- {avg_metrics['std_val_f1']:.4f}")
-    print(f"  Mean Val EO: {avg_metrics['mean_val_eo']:.4f} +/- {avg_metrics['std_val_eo']:.4f}")
-    print(f"{'='*80}\n")
 
 
   # Evaluate metrics over timesteps on drifted test set (single-scenario mode)
   timestep_results = None
-  test_metrics = None
   if drift and x_test is not None and len(x_test) > 0:
     if prequential:
       preq_cfg = _load_prequential_nsga2_config()
       tuned_static_params = _tune_prequential_static_params(
-          fold_results[0]['model'], x_train, y_train, a_train, data_dim,
+          trained_model, x_train, y_train, a_train, data_dim,
           compute_fairness, lambda_const, depth, num_trees,
           constraint_type, gradient_type, base_gamma, preq_cfg,
       )
       static_params_to_use = tuned_static_params or preq_cfg.get('static_params') or None
       print("\nRunning prequential (test-then-train) evaluation...")
       import copy
-      preq_model = copy.deepcopy(fold_results[0]['model'])
+      preq_model = copy.deepcopy(trained_model)
       preq_results = utils.evaluate_over_timesteps(
           preq_model, x_test, y_test, a_test, data_dim=data_dim,
           test_then_train=True,
@@ -499,12 +476,6 @@ def train(
                                   save_path='files/metrics_prequential.png')
       timestep_results = preq_results
 
-  if fold_results and fold_results[0].get('val_metrics'):
-    test_metrics = fold_results[0]['val_metrics']
-
-  # Return the trained model so callers can reuse it for multiple evaluations
-  trained_model = fold_results[0]['model'] if fold_results else None
-  
   # Save model if requested
   if save_model and trained_model is not None:
     if model_path is None:
