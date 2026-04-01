@@ -19,7 +19,7 @@ import os
 import pickle
 import numpy as np
 import pandas as pd
-from folktables import ACSDataSource, ACSPublicCoverage
+from folktables import ACSDataSource, BasicProblem
 
 from sklearn import preprocessing
 from src.drift.create_drifted_ds import generate_drifted_dataset
@@ -378,25 +378,79 @@ def read_celeba(path="../data/celeba/"):
   return x_train, y_train, a_train
 
 
-def read_folktables(path='data', train_year=2014, test_years=(2015, 2016, 2017, 2018),
-                    state='CA', horizon='1-Year'):
-  """Read Folktables ACS Public Coverage data from local cache."""
+def _adult_income_filter(data):
+  """Mimic Adult dataset filtering for ACS Income."""
+  df = data
+  df = df[df['AGEP'] > 16]
+  df = df[df['PINCP'] > 100]
+  df = df[df['WKHP'] > 0]
+  df = df[df['PWGTP'] >= 1]
+  return df
+
+
+def _acs_income_problem(sensitive_attribute='sex'):
+  sensitive_attribute = str(sensitive_attribute).lower()
+  if sensitive_attribute == 'race':
+    features = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'WKHP', 'SEX']
+    group = 'RAC1P'
+  else:
+    features = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'WKHP', 'RAC1P']
+    group = 'SEX'
+
+  return BasicProblem(
+      features=features,
+      target='PINCP',
+      target_transform=lambda x: x > 50000,
+      group=group,
+      preprocess=_adult_income_filter,
+      postprocess=lambda x: np.nan_to_num(x, -1),
+  )
+
+
+def _normalize_sensitive_attribute(values, sensitive_attribute):
+  values = np.asarray(values)
+  sensitive_attribute = str(sensitive_attribute).lower()
+  if sensitive_attribute == 'race':
+    # Binary race split: white (1) vs non-white (0)
+    return (values == 1).astype(np.int32)
+  # SEX in ACS is {1, 2}; convert to {0, 1}
+  return (values - 1).astype(np.int32)
+
+
+def read_folktables(path='data', train_year=2015, test_years=(2016, 2017, 2018),
+                    state='CA', horizon='1-Year', sensitive_attribute='sex',
+                    download=False):
+  """Read Folktables ACS Income data from local cache."""
+  train_year = int(train_year)
+  test_years = tuple(int(year) for year in test_years)
+  if isinstance(state, (list, tuple)):
+    states = [str(s).strip() for s in state if str(s).strip()]
+  else:
+    states = [str(state).strip()]
+  if not states:
+    states = ['CA']
+
+  income_problem = _acs_income_problem(sensitive_attribute=sensitive_attribute)
 
   train_source = ACSDataSource(
       survey_year=train_year, horizon=horizon, survey='person', root_dir=path
   )
-  train_df = train_source.get_data(states=[state], download=False)
-  x_train, y_train, a_train = ACSPublicCoverage.df_to_numpy(train_df)
+  train_df = train_source.get_data(states=states, download=download)
+  x_train, y_train, a_train = income_problem.df_to_numpy(train_df)
+  a_train = _normalize_sensitive_attribute(a_train, sensitive_attribute)
   x_tests, y_tests, a_tests = [], [], []
   for year in test_years:
     test_source = ACSDataSource(
         survey_year=year, horizon=horizon, survey='person', root_dir=path
     )
-    test_df = test_source.get_data(states=[state], download=False)
-    x_t, y_t, a_t = ACSPublicCoverage.df_to_numpy(test_df)
-    x_tests.append(x_t)
-    y_tests.append(y_t)
-    a_tests.append(a_t)
+    test_df = test_source.get_data(states=states, download=download)
+    x_t, y_t, a_t = income_problem.df_to_numpy(test_df)
+    a_t = _normalize_sensitive_attribute(a_t, sensitive_attribute)
+    # append only a subset of the test data
+    split_size = len(x_train) // max(len(test_years), 1)
+    x_tests.append(x_t[:split_size])
+    y_tests.append(y_t[:split_size])
+    a_tests.append(a_t[:split_size])
 
   x_test = np.concatenate(x_tests, axis=0) if x_tests else np.array([], dtype=np.float32)
   y_test = np.concatenate(y_tests, axis=0) if y_tests else np.array([], dtype=np.int32)

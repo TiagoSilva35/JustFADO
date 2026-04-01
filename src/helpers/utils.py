@@ -360,12 +360,14 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     DRIFT_LR_SPIKE = learning_rate * float(defaults['drift_lr_spike_mult'])
     LR_DECAY_STEPS = max(1, int(defaults['lr_decay_steps']))
     FAIRNESS_WINDOW = max(1, int(defaults['fairness_window']))
+    FAIRNESS_WINDOW = 1000
     COOLDOWN = max(0, int(defaults['cooldown']))
     MIN_SAMPLES_PER_STREAM = max(1, int(defaults['min_samples_per_stream']))
     lambda_const = float(defaults['lambda_const'])
     print(f"Evaluating model over {len(x_test)} timesteps with test-then-train={test_then_train}\n\
           Fairness penalty lambda: {lambda_const}, fairness type: {fairness_type}")
     USE_ROLLING = bool(accuracy_window)
+    USE_ROLLING = False
     print(f"Parameters:\n  ADWIN_DELTA_WARN: {ADWIN_DELTA_WARN}\n  ADWIN_DELTA_CONFIRM: {ADWIN_DELTA_CONFIRM}\n\  DRIFT_LR_PREWARM: {DRIFT_LR_PREWARM}\n  DRIFT_LR_SPIKE: {DRIFT_LR_SPIKE}\n  LR_DECAY_STEPS: {LR_DECAY_STEPS}\n  FAIRNESS_WINDOW: {FAIRNESS_WINDOW}\n  COOLDOWN: {COOLDOWN}\n  MIN_SAMPLES_PER_STREAM: {MIN_SAMPLES_PER_STREAM}\n  Lambda for fairness penalty: {lambda_const}\n  Accuracy window: {accuracy_window}\n  Use rolling accuracy: {USE_ROLLING}\n  Compute fairness: {compute_fairness}\n  Fairness type: {fairness_type}")
     correct_buffer = []
     warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
@@ -384,7 +386,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     steps_since_drift = 0
     decay_from_lr = float(DRIFT_LR_PREWARM)
     fairness_start = 0
-
+    print(f"Fairness window: {FAIRNESS_WINDOW}, starting fairness computations at sample index: {fairness_start}")
     if compute_fairness:
         num_internal_nodes = 2 ** tree_depth - 1
         all_tree_trainable_vars = []
@@ -395,6 +397,8 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_attributes)
 
     for t in range(n_samples):
+        if (t + 1) % 1000 == 0 or t == 0:
+            print(f"[DBG] Processing sample {t + 1}/{n_samples}...")
         x_t = tf.convert_to_tensor(
             np.array(x_test[t], dtype=np.float32).reshape(1, data_dim)
         )
@@ -424,7 +428,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         label_conf  = float(y_probs_np[y_t])      
         is_label_noise = (error == 1) and (model_conf > 0.70)
 
-        
         
         warn_det.update(error) #type: ignore
         acc_det.update(error) #type: ignore
@@ -465,7 +468,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             y_true_all=y_true_all,
             a_all=a_all,
             fairness_start=fairness_start,
-            fairness_window=FAIRNESS_WINDOW,
+            fairness_window=None,
         )
 
         dps.append(float(dp_val))
