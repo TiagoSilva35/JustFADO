@@ -55,6 +55,11 @@ def _common_train_kwargs():
       load_model=FLAGS.load_model,
       model_path=FLAGS.model_path,
       prequential=FLAGS.prequential,
+      folktables_sensitive_attribute=FLAGS.folktables_sensitive_attribute,
+      folktables_states=FLAGS.folktables_states,
+      folktables_train_year=FLAGS.folktables_train_year,
+      folktables_test_years=FLAGS.folktables_test_years,
+      folktables_horizon=FLAGS.folktables_horizon,
   )
 
 

@@ -30,7 +30,6 @@ def accumulate_fairness_stats(
         y_label = int(targets_batch[i])
         protected_class_count[a_label] += 1
         subgroup_count[(a_label, y_label)] += 1
-        # print(f"[DEBUG]: {agg_y}")
         agg_y[(a_label, y_label)] += node_decisions[:, i].numpy()
         
         if constraint_type == 'node':

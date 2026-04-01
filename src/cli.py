@@ -36,6 +36,11 @@ def main(_):
       gradient_type=config.gradient_type,
       encoder_model=config.encoder_model,
       offline_loss_type=config.offline_loss_type,
+      folktables_sensitive_attribute=getattr(config, 'folktables_sensitive_attribute', 'sex'),
+      folktables_states=getattr(config, 'folktables_states', 'CA'),
+      folktables_train_year=getattr(config, 'folktables_train_year', 2015),
+      folktables_test_years=getattr(config, 'folktables_test_years', '2016,2017,2018'),
+      folktables_horizon=getattr(config, 'folktables_horizon', '1-Year'),
   )
   run.finish()
 

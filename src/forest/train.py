@@ -3,6 +3,10 @@
 
 import os
 import yaml
+import copy
+
+import numpy as np
+from sklearn.model_selection import train_test_split
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -57,10 +61,21 @@ flags.DEFINE_string('model_path', None,
 flags.DEFINE_bool('prequential', False,
                   'Use test-then-train (prequential) evaluation with drift reaction '
                   'instead of inference-only evaluation.')
+flags.DEFINE_string('folktables_sensitive_attribute', 'sex',
+                    'Sensitive attribute for folktables: sex or race.')
+flags.DEFINE_string('folktables_states', 'CA',
+                    'Comma-separated state codes for folktables (e.g., CA or CA,TX).')
+flags.DEFINE_integer('folktables_train_year', 2015,
+                     'Training survey year for folktables.')
+flags.DEFINE_string('folktables_test_years', '2016,2017,2018',
+                    'Comma-separated test survey years for folktables.')
+flags.DEFINE_string('folktables_horizon', '1-Year',
+                    'ACS horizon for folktables (e.g., 1-Year).')
 
 
 FLAGS = flags.FLAGS
 NSGA2_PREQ_CONFIG_PATH = 'files/nsga2_prequential_config.yaml'
+NSGA2_TREE_CONFIG_PATH = 'files/nsga2_tree_config.yaml'
 
 
 def _load_prequential_nsga2_config():
@@ -103,6 +118,221 @@ def _load_prequential_nsga2_config():
   return cfg
 
 
+def _load_tree_nsga2_config():
+  cfg = {
+      'enabled': False,
+      'population_size': 8,
+      'generations': 4,
+      'seed': 42,
+      'train_sample_size': 2000,
+      'val_sample_size': 1200,
+      'validation_ratio': 0.2,
+      'depth_bounds': [2, 6],
+      'num_trees_bounds': [1, 7],
+      'lambda_bounds': [0.0, 5.0],
+  }
+  if not os.path.exists(NSGA2_TREE_CONFIG_PATH):
+    return cfg
+  with open(NSGA2_TREE_CONFIG_PATH) as f:
+    loaded = yaml.safe_load(f) or {}
+  if not isinstance(loaded, dict):
+    return cfg
+  section = loaded.get('nsga2_tree', loaded)
+  if not isinstance(section, dict):
+    return cfg
+  cfg.update(section)
+
+  # Normalize numeric fields and bounds.
+  cfg['population_size'] = int(cfg.get('population_size', 8))
+  cfg['generations'] = int(cfg.get('generations', 4))
+  cfg['seed'] = int(cfg.get('seed', 42))
+  cfg['train_sample_size'] = int(cfg.get('train_sample_size', 2000))
+  cfg['val_sample_size'] = int(cfg.get('val_sample_size', 1200))
+  cfg['validation_ratio'] = float(cfg.get('validation_ratio', 0.2))
+
+  depth_bounds = cfg.get('depth_bounds', [2, 6])
+  num_trees_bounds = cfg.get('num_trees_bounds', [1, 7])
+  lambda_bounds = cfg.get('lambda_bounds', [0.0, 5.0])
+  if not isinstance(depth_bounds, list) or len(depth_bounds) != 2:
+    depth_bounds = [2, 6]
+  if not isinstance(num_trees_bounds, list) or len(num_trees_bounds) != 2:
+    num_trees_bounds = [1, 7]
+  if not isinstance(lambda_bounds, list) or len(lambda_bounds) != 2:
+    lambda_bounds = [0.0, 5.0]
+
+  cfg['depth_bounds'] = [int(depth_bounds[0]), int(depth_bounds[1])]
+  cfg['num_trees_bounds'] = [int(num_trees_bounds[0]), int(num_trees_bounds[1])]
+  cfg['lambda_bounds'] = [float(lambda_bounds[0]), float(lambda_bounds[1])]
+  return cfg
+
+
+def _build_forest_model(dataset, data_dim, num_class, depth, num_trees, activation,
+                        compute_mode):
+  if dataset in ['celeba']:
+    return clip_forest.FairCLIPDecisionForest(
+        num_trees=num_trees,
+        data_dim=data_dim,
+        tree_depth=depth,
+        num_classes=num_class,
+        activation=activation,
+        compute_mode=compute_mode,
+    )
+  return forest.FairDecisionForest(
+      num_trees=num_trees,
+      data_dim=data_dim,
+      tree_depth=depth,
+      num_classes=num_class,
+      activation=activation,
+      compute_mode=compute_mode,
+  )
+
+
+def _split_train_validation(x_train, y_train, a_train, validation_ratio, seed):
+  n = len(x_train)
+  if n <= 5:
+    return x_train, y_train, a_train, [], [], []
+  val_n = max(1, int(round(float(validation_ratio) * n)))
+  val_n = min(val_n, n - 1)
+  x_arr = np.asarray(x_train)
+  y_arr = np.asarray(y_train)
+  a_arr = np.asarray(a_train)
+  x_tr, x_val, y_tr, y_val, a_tr, a_val = train_test_split(
+      x_arr, y_arr, a_arr,
+      test_size=val_n,
+      random_state=int(seed),
+      shuffle=True,
+  )
+  return x_tr, y_tr, a_tr, x_val, y_val, a_val
+
+
+def _tune_tree_hyperparameters_nsga2(dataset, x_train, y_train, a_train,
+                                     x_val, y_val, a_val,
+                                     data_dim, num_class,
+                                     base_depth, base_num_trees,
+                                     compute_fairness, base_lambda_const,
+                                     batch_size, activation, compute_mode,
+                                     base_gamma, constraint_type, gradient_type,
+                                     local_run, tree_cfg):
+  if not bool(tree_cfg['enabled']):
+    return None
+  if len(x_train) == 0 or len(x_val) == 0:
+    print('[NSGA2-TREE] Insufficient samples for train/validation split. Skipping.')
+    return None
+
+  print('SECOND TUNING ON VALIDATION SPLIT (TREE HYPERPARAMETERS)')
+  print(
+      f"[NSGA2-TREE] Train size={len(x_train)}, Val size={len(x_val)}, "
+      f"base(depth={base_depth}, num_trees={base_num_trees}, lambda={base_lambda_const})"
+  )
+
+  tune_train_n = min(len(x_train), int(tree_cfg['train_sample_size']))
+  tune_val_n = min(len(x_val), int(tree_cfg['val_sample_size']))
+
+  x_tune_train = np.asarray(x_train)[:tune_train_n]
+  y_tune_train = np.asarray(y_train)[:tune_train_n]
+  a_tune_train = np.asarray(a_train)[:tune_train_n]
+  x_tune_val = np.asarray(x_val)[:tune_val_n]
+  y_tune_val = np.asarray(y_val)[:tune_val_n]
+  a_tune_val = np.asarray(a_val)[:tune_val_n]
+
+  from src.helpers.nsga2_tuner import run_nsga2
+
+  bounds = {
+      'depth': (float(tree_cfg['depth_bounds'][0]), float(tree_cfg['depth_bounds'][1])),
+      'num_trees': (
+          float(tree_cfg['num_trees_bounds'][0]),
+          float(tree_cfg['num_trees_bounds'][1]),
+      ),
+      'lambda_const': (
+          float(tree_cfg['lambda_bounds'][0]),
+          float(tree_cfg['lambda_bounds'][1]),
+      ),
+  }
+
+  def _objective(candidate):
+    depth = int(round(candidate['depth']))
+    depth = max(int(tree_cfg['depth_bounds'][0]), min(int(tree_cfg['depth_bounds'][1]), depth))
+
+    num_trees = int(round(candidate['num_trees']))
+    num_trees = max(
+        int(tree_cfg['num_trees_bounds'][0]),
+        min(int(tree_cfg['num_trees_bounds'][1]), num_trees),
+    )
+
+    lambda_const = float(candidate['lambda_const'])
+    lambda_const = max(
+        float(tree_cfg['lambda_bounds'][0]),
+        min(float(tree_cfg['lambda_bounds'][1]), lambda_const),
+    )
+
+    model = _build_forest_model(
+        dataset=dataset,
+        data_dim=data_dim,
+        num_class=num_class,
+        depth=depth,
+        num_trees=num_trees,
+        activation=activation,
+        compute_mode=compute_mode,
+    )
+
+    aranyani.train_online(
+        model,
+        x_tune_train,
+        y_tune_train,
+        a_tune_train,
+        data_dim=data_dim,
+        batch_size=batch_size,
+        tree_depth=depth,
+        compute_fairness=compute_fairness,
+        lambda_const=lambda_const,
+        num_trees=num_trees,
+        base_gamma=base_gamma,
+        constraint_type=constraint_type,
+        gradient_type=gradient_type,
+        local_run=local_run,
+    )
+
+    val_metrics = utils.get_test_performance(
+        model,
+        x_tune_val,
+        y_tune_val,
+        a_tune_val,
+        data_dim=data_dim,
+        show_confusion_matrix=False,
+    )
+    return (1.0 - float(val_metrics['accuracy']), float(val_metrics['dp']), float(val_metrics['eo']))
+
+  best_candidate, best_objective, _, _ = run_nsga2(
+      objective_fn=_objective,
+      bounds=bounds,
+      population_size=int(tree_cfg['population_size']),
+      generations=int(tree_cfg['generations']),
+      seed=int(tree_cfg['seed']),
+  )
+
+  depth = int(round(best_candidate['depth']))
+  depth = max(int(tree_cfg['depth_bounds'][0]), min(int(tree_cfg['depth_bounds'][1]), depth))
+  num_trees = int(round(best_candidate['num_trees']))
+  num_trees = max(
+      int(tree_cfg['num_trees_bounds'][0]),
+      min(int(tree_cfg['num_trees_bounds'][1]), num_trees),
+  )
+  lambda_const = float(best_candidate['lambda_const'])
+  lambda_const = max(
+      float(tree_cfg['lambda_bounds'][0]),
+      min(float(tree_cfg['lambda_bounds'][1]), lambda_const),
+  )
+
+  selected = {
+      'depth': depth,
+      'num_trees': num_trees,
+      'lambda_const': lambda_const,
+      'objective': best_objective,
+  }
+  print(f"[NSGA2-TREE] Selected hyperparameters: {selected}")
+  return selected
+
+
 def _tune_prequential_static_params(base_model, x_stream, y_stream, a_stream, data_dim,
                                     compute_fairness, lambda_const, depth, num_trees,
                                     constraint_type, gradient_type, base_gamma, preq_cfg):
@@ -113,7 +343,6 @@ def _tune_prequential_static_params(base_model, x_stream, y_stream, a_stream, da
     return None
   print(f"\nRunning NSGA-II tuning on training stream ({len(x_stream)} samples available)...")
   from src.helpers.nsga2_tuner import run_nsga2
-  import copy
   model = copy.deepcopy(base_model)
   tune_n = min(len(x_stream), int(preq_cfg['sample_size']))
   x_tune = x_stream[:tune_n]
@@ -211,13 +440,25 @@ def train(
     load_model=False,
     model_path=None,
     prequential=False,
+    folktables_sensitive_attribute='sex',
+    folktables_states='CA',
+    folktables_train_year=2015,
+    folktables_test_years='2016,2017,2018',
+    folktables_horizon='1-Year',
 ):
   all_dps = []
   all_accuracies = []
   all_equalized_odds = []
+  effective_base_gamma = float(base_gamma) if base_gamma is not None else 0.9
 
   data_dim, num_class = None, None
   x_test, y_test, a_test, number_of_attributes = None, None, None, None  # For test set evaluation
+  folktables_states_list = [
+      state.strip() for state in str(folktables_states).split(',') if state.strip()
+  ] or ['CA']
+  folktables_test_years_tuple = tuple(
+      int(year.strip()) for year in str(folktables_test_years).split(',') if year.strip()
+  )
   
   # Check if we should load an existing model
   if load_model:
@@ -280,10 +521,17 @@ def train(
           x_train, y_train, a_train = data.read_celeba()
           num_class = 2
         elif dataset == 'folktables':
-          x_train, x_test, y_train, y_test, a_train, a_test, number_of_attributes = data.read_folktables()
+          x_train, x_test, y_train, y_test, a_train, a_test, number_of_attributes = data.read_folktables(
+              train_year=folktables_train_year,
+              test_years=folktables_test_years_tuple,
+              state=folktables_states_list,
+              horizon=folktables_horizon,
+              sensitive_attribute=folktables_sensitive_attribute,
+          )
           data_dim = x_train.shape[1]
           num_class = 2
-          a_test = [a-1 for a in a_test]  
+          a_train = [a-1 for a in a_train]
+          a_test = [a-1 for a in a_test]
         
         # Evaluate the loaded model
         if x_test is not None and len(x_test) > 0:
@@ -307,7 +555,7 @@ def train(
               tuned_static_params = _tune_prequential_static_params(
                   loaded_model, x_train, y_train, a_train, data_dim,
                   compute_fairness, lambda_const, depth, num_trees,
-                  constraint_type, gradient_type, base_gamma, preq_cfg,
+                  constraint_type, gradient_type, effective_base_gamma, preq_cfg,
               )
               static_params_to_use = tuned_static_params or preq_cfg.get('static_params') or None
               print("\nRunning prequential (test-then-train) evaluation...")
@@ -327,11 +575,17 @@ def train(
                   num_trees=num_trees,
                   constraint_type=constraint_type,
                   gradient_type=gradient_type,
-                  base_gamma=base_gamma,
+                  base_gamma=effective_base_gamma,
                   static_params=static_params_to_use,
               )
               plot_metrics_over_timesteps(preq_results,
                                           save_path='files/metrics_prequential.png')
+              final_acc = float(preq_results['accuracy'][-1]) if preq_results['accuracy'] else 0.0
+              final_dp = float(preq_results['dp'][-1]) if preq_results['dp'] else 0.0
+              print(
+                  f"[Prequential] Final streamed test accuracy: {100.0 * final_acc:.2f}% | "
+                  f"Final DP: {100.0 * final_dp:.2f}%"
+              )
               # Return prequential results as the primary timestep_results
               timestep_results = preq_results
           else:
@@ -368,16 +622,67 @@ def train(
     x_train, y_train, a_train = data.read_celeba()
     num_class = 2
   elif dataset == 'folktables':
-    x_train, x_test, y_train, y_test, a_train, a_test, number_of_attributes = data.read_folktables()
-    # for each a in a train subtract 1 to get 0-indexed groups
-    a_train = [a - 1 for a in a_train]
-    a_test = [a - 1 for a in a_test]
+    x_train, x_test, y_train, y_test, a_train, a_test, number_of_attributes = data.read_folktables(
+        train_year=folktables_train_year,
+        test_years=folktables_test_years_tuple,
+        state=folktables_states_list,
+        horizon=folktables_horizon,
+        sensitive_attribute=folktables_sensitive_attribute,
+    )
     data_dim = x_train.shape[1]
     num_class = 2
+    sensitive = str(folktables_sensitive_attribute).lower()
     print(f"Sensitive attribute values in training set: {set(a_train)}")
-    assert len(set(a_train)) == 9, "Expected 9 unique values in the sensitive attribute for folktables dataset"
+    if sensitive == 'race':
+      assert len(set(a_train)) == 2, (
+          "Expected binary sensitive attribute for folktables race setup "
+          "(white vs non-white)"
+      )
+    else:
+      assert len(set(a_train)) == 2, "Expected binary sensitive attribute for folktables sex setup"
   else:
     x_train, y_train, a_train = [], [], []
+
+  if data_dim is None or num_class is None:
+    raise ValueError(f'Unsupported or misconfigured dataset: {dataset}')
+
+  tree_cfg = _load_tree_nsga2_config()
+  if bool(tree_cfg['enabled']) and len(x_train) > 1:
+    split_seed = int(tree_cfg['seed'])
+    x_inner_train, y_inner_train, a_inner_train, x_val, y_val, a_val = _split_train_validation(
+        x_train, y_train, a_train, tree_cfg['validation_ratio'], split_seed
+    )
+    tuned_tree = _tune_tree_hyperparameters_nsga2(
+        dataset=dataset,
+        x_train=x_inner_train,
+        y_train=y_inner_train,
+        a_train=a_inner_train,
+        x_val=x_val,
+        y_val=y_val,
+        a_val=a_val,
+        data_dim=data_dim,
+        num_class=num_class,
+        base_depth=depth,
+        base_num_trees=num_trees,
+        compute_fairness=compute_fairness,
+        base_lambda_const=lambda_const,
+        batch_size=batch_size,
+        activation=activation,
+        compute_mode=compute_mode,
+        base_gamma=effective_base_gamma,
+        constraint_type=constraint_type,
+        gradient_type=gradient_type,
+        local_run=local_run,
+        tree_cfg=tree_cfg,
+    )
+    if tuned_tree is not None:
+      depth = int(tuned_tree['depth'])
+      num_trees = int(tuned_tree['num_trees'])
+      lambda_const = float(tuned_tree['lambda_const'])
+      print(
+          f"[NSGA2-TREE] Applying tuned settings for final training: "
+          f"depth={depth}, num_trees={num_trees}, lambda_const={lambda_const:.4f}"
+      )
 
 
   print(f'DP in the original dataset: {utils.get_demographic_parity(y_train, a_train)[0]}')
@@ -385,23 +690,15 @@ def train(
   
   trained_model = None
   for _ in range(max_iter):
-    model = forest.FairDecisionForest(
-        num_trees=num_trees,
-        data_dim=data_dim,
-        tree_depth=depth,
-        num_classes=num_class,
-        activation=activation,
-        compute_mode=compute_mode,
+    model = _build_forest_model(
+      dataset=dataset,
+      data_dim=data_dim,
+      num_class=num_class,
+      depth=depth,
+      num_trees=num_trees,
+      activation=activation,
+      compute_mode=compute_mode,
     )
-    if dataset in ['celeba']:
-      model = clip_forest.FairCLIPDecisionForest(
-          num_trees=num_trees,
-          data_dim=data_dim,
-          tree_depth=depth,
-          num_classes=num_class,
-          activation=activation,
-          compute_mode=compute_mode,
-      )
 
     dp, eo, accuracies, average_w_fair_grad, average_b_fair_grad = aranyani.train_online(
         model,
@@ -414,7 +711,7 @@ def train(
         compute_fairness=compute_fairness,
         lambda_const=lambda_const,
         num_trees=num_trees,
-        base_gamma=base_gamma,
+        base_gamma=effective_base_gamma,
         constraint_type=constraint_type,
         gradient_type=gradient_type,
         local_run=local_run,
@@ -453,11 +750,10 @@ def train(
       tuned_static_params = _tune_prequential_static_params(
           trained_model, x_train, y_train, a_train, data_dim,
           compute_fairness, lambda_const, depth, num_trees,
-          constraint_type, gradient_type, base_gamma, preq_cfg,
+            constraint_type, gradient_type, effective_base_gamma, preq_cfg,
       )
       static_params_to_use = tuned_static_params or preq_cfg.get('static_params') or None
       print("\nRunning prequential (test-then-train) evaluation...")
-      import copy
       preq_model = copy.deepcopy(trained_model)
       preq_results = utils.evaluate_over_timesteps(
           preq_model, x_test, y_test, a_test, data_dim=data_dim,
@@ -469,11 +765,17 @@ def train(
           num_trees=num_trees,
           constraint_type=constraint_type,
           gradient_type=gradient_type,
-          base_gamma=base_gamma,
-            static_params=static_params_to_use,
+          base_gamma=effective_base_gamma,
+          static_params=static_params_to_use,
       )
       plot_metrics_over_timesteps(preq_results,
                                   save_path='files/metrics_prequential.png')
+      final_acc = float(preq_results['accuracy'][-1]) if preq_results['accuracy'] else 0.0
+      final_dp = float(preq_results['dp'][-1]) if preq_results['dp'] else 0.0
+      print(
+          f"[Prequential] Final streamed test accuracy: {100.0 * final_acc:.2f}% | "
+          f"Final DP: {100.0 * final_dp:.2f}%"
+      )
       timestep_results = preq_results
 
   # Save model if requested
