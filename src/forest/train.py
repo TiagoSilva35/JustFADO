@@ -300,7 +300,7 @@ def _tune_tree_hyperparameters_nsga2(dataset, x_train, y_train, a_train,
         data_dim=data_dim,
         show_confusion_matrix=False,
     )
-    return (1.0 - float(val_metrics['accuracy']), float(val_metrics['dp']), float(val_metrics['eo']))
+    return (1.0 - float(val_metrics['accuracy']), float(val_metrics['dp']))
 
   best_candidate, best_objective, _, _ = run_nsga2(
       objective_fn=_objective,

@@ -1,11 +1,11 @@
 nsga2_tree:
   enabled: true
-  population_size: 6
-  generations: 3
+  population_size: 10
+  generations: 5
   seed: 42
   validation_ratio: 0.2
   train_sample_size: 1500
   val_sample_size: 800
-  depth_bounds: [1, 10]
-  num_trees_bounds: [1, 10]
-  lambda_bounds: [0.0, 20.0]
+  depth_bounds: [2, 10]
+  num_trees_bounds: [2, 10]
+  lambda_bounds: [0.0, 10.0]
