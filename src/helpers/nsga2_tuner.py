@@ -9,7 +9,7 @@ import numpy as np
 
 
 Candidate = Dict[str, float]
-Objectives = Tuple[float, float, float]
+Objectives = Tuple[float, ...]
 
 
 def _dominates(a: Objectives, b: Objectives) -> bool:
