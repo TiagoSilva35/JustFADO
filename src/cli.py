@@ -3,7 +3,7 @@ import wandb
 from absl import app
 
 
-from src.forest.train import *
+from src.models.forest.train import *
 
 def main(_):
   """Main function."""

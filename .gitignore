@@ -11,3 +11,4 @@ venv/
 .venv/
 .venv39/
 *.csv
+*.pyc
