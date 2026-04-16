@@ -86,9 +86,9 @@ def _evaluate_selected_model(model_name, x_test, y_test, a_test, model=None, dat
     if model_name == 'arf':
         stream = evaluate_arf_over_timesteps(x_test, y_test, a_test)
         test_metrics = {
-            'accuracy': float(stream.get('accuracy'), last=True),
-            'dp': float(stream.get('dp'), last=True),
-            'eo': float(stream.get('eo'), last=True),
+            'accuracy': float(stream.get('accuracy')[-1]) if stream.get('accuracy') else None,
+            'dp': float(stream.get('dp')[-1]) if stream.get('dp') else None,
+            'eo': float(stream.get('eo')[-1]) if stream.get('eo') else None,
             'f1': None,
         }
         return stream, test_metrics
@@ -111,9 +111,9 @@ def _evaluate_selected_model(model_name, x_test, y_test, a_test, model=None, dat
             adv_hidden_dim=RFR_CONFIG['adv_hidden_dim'],
         )
         test_metrics = {
-            'accuracy': float(stream.get('accuracy'), last=True),
-            'dp': float(stream.get('dp'), last=True),
-            'eo': float(stream.get('eo'), last=True),
+            'accuracy': float(stream.get('accuracy')[-1]) if stream.get('accuracy') else None,
+            'dp': float(stream.get('dp')[-1]) if stream.get('dp') else None,
+            'eo': float(stream.get('eo')[-1]) if stream.get('eo') else None,
             'f1': None,
         }
         return stream, test_metrics
