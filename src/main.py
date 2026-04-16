@@ -139,13 +139,13 @@ def _single_scenario(model_name, scenario_name, output_dir, model=None, data_dim
     )
 
     os.makedirs(output_dir, exist_ok=True)
-    plot_path = os.path.join(output_dir, f'timesteps_{model_name}_{scenario_name}.png')
-    plot_metrics_over_timesteps(
-        stream,
-        save_path=plot_path,
-        stage_splits=SPLITS,
-        stage_labels=PHASE_LABELS,
-    )
+    # plot_path = os.path.join(output_dir, f'timesteps_{model_name}_{scenario_name}.png')
+    # plot_metrics_over_timesteps(
+    #     stream,
+    #     save_path=plot_path,
+    #     stage_splits=SPLITS,
+    #     stage_labels=PHASE_LABELS,
+    # )
 
     return {
         'model': model_name,
