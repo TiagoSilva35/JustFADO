@@ -70,7 +70,10 @@ def plot_metric_over_iterations(metric_values, metric_name, fairness_type):
     ax.set_ylabel(metric_name)
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
-    plt.show()
+    save_path = f"files/{fairness_type}_{metric_name.lower().replace(' ', '_')}_over_iterations.png"
+    plt.savefig(save_path, dpi=300, bbox_inches='tight')
+    print(f"Iteration plot saved to: {save_path}")
+    plt.close(fig)
 
 
 def _smooth(values, window=50):
@@ -136,7 +139,7 @@ def plot_metrics_over_timesteps(timestep_results, save_path='files/metrics_over_
     plt.tight_layout()
     plt.savefig(save_path, dpi=300, bbox_inches='tight')
     print(f"Timestep metrics plot saved to: {save_path}")
-    plt.show()
+    plt.close(fig)
 
 
 def plot_aranyani_vs_arf(aranyani_results, arf_results, save_path,
