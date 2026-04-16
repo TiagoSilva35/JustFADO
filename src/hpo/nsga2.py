@@ -5,7 +5,6 @@ from __future__ import annotations
 import random
 
 from typing import Callable, Dict, List, Tuple
-from src.hpo.nsga2 import run_nsga2
 import copy
 from src.helpers import utils
 import numpy as np

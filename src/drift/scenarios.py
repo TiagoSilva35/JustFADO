@@ -277,80 +277,6 @@ def label_flip(df):
     return pd.DataFrame(warmup + phase1 + recovery1 + phase2 + recovery2, columns=columns)
 
 
-# ---------------------------------------------------------------------------
-# Scenario: feature noise drift
-# ---------------------------------------------------------------------------
-def feature_noise(df):
-    """Add Gaussian noise to numerical features during drift phases.
-
-    Affected columns: age (0), fnlwgt (2), education-num (4),
-    capital gain (10), capital loss (11), hours per week (12).
-    """
-    random.seed(SEED)
-    np.random.seed(SEED)
-    columns = df.columns
-    X = df.values.tolist()
-    warmup, phase1, recovery1, phase2, recovery2 = _split_phases(X)
-
-    numeric_idxs = [0, 2, 4, 10, 11, 12]
-
-    def _add_noise(samples, scale):
-        for sample in samples:
-            for idx in numeric_idxs:
-                try:
-                    val = float(sample[idx])
-                    sample[idx] = val + np.random.normal(0, scale * abs(val) + 1e-6)
-                except (ValueError, TypeError):
-                    pass
-
-    # Phase 1 – strong noise
-    _add_noise(phase1, scale=0.5)
-    # Phase 2 – moderate noise
-    _add_noise(phase2, scale=0.25)
-
-    return pd.DataFrame(warmup + phase1 + recovery1 + phase2 + recovery2, columns=columns)
-
-
-# ---------------------------------------------------------------------------
-# Scenario: compound drift (gender + label noise)
-# ---------------------------------------------------------------------------
-def compound(df):
-    """Combine abrupt gender drift with moderate label flipping."""
-    random.seed(SEED)
-    columns = df.columns
-    X = df.values.tolist()
-    warmup, phase1, recovery1, phase2, recovery2 = _split_phases(X)
-
-    def _flip_income(sample):
-        income = str(sample[-1]).strip().rstrip('.')
-        if income == '>50K':
-            sample[-1] = ' <=50K.'
-        else:
-            sample[-1] = ' >50K.'
-
-    # Phase 1 – abrupt gender swap + 20% label flip
-    for sample in phase1:
-        income = str(sample[-1]).strip().rstrip('.')
-        gender = str(sample[9]).strip()
-        if income == '>50K' and gender == 'Male':
-            sample[9] = ' Female'
-        if random.random() < 0.20:
-            _flip_income(sample)
-
-    # Phase 2 – slow gender swap + 10% label flip
-    temperature = 0.999
-    for sample in phase2:
-        income = str(sample[-1]).strip().rstrip('.')
-        gender = str(sample[9]).strip()
-        if income == '>50K' and gender == 'Male':
-            if random.random() < temperature:
-                sample[9] = ' Female'
-            temperature *= 0.999
-        if random.random() < 0.10:
-            _flip_income(sample)
-
-    return pd.DataFrame(warmup + phase1 + recovery1 + phase2 + recovery2, columns=columns)
-
 
 # ---------------------------------------------------------------------------
 # Registry
@@ -360,8 +286,6 @@ SCENARIOS = {
     'abrupt_gender': abrupt_gender,
     'gradual_gender': gradual_gender,
     'label_flip': label_flip,
-    'feature_noise': feature_noise,
-    'compound': compound,
     'gender_relationship_decouple': gender_relationship_decouple,
     'female_income_parity': female_income_parity,
     'occupation_gender_reversal': occupation_gender_reversal,
