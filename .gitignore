@@ -1,6 +1,5 @@
 fair_dt/
 torch_fair_dt/
-models/
 adhoc/
 plots/
 results/
