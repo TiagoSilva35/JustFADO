@@ -2,20 +2,38 @@ import numpy as np
 from src.helpers.utils import _compute_window_fairness
 from river.ensemble import AdaptiveRandomForestClassifier
 
-def evaluate_arf_over_timesteps(x_test, y_test, a_test, accuracy_window=200):
+def evaluate_arf_over_timesteps(
+    x_test,
+    y_test,
+    a_test,
+    x_train=None,
+    y_train=None,
+    accuracy_window=200,
+):
     arf = AdaptiveRandomForestClassifier(seed=42, n_models=3, max_depth=3)
 
     accuracies = []
     dps = []
     eos = []
 
-    FAIRNESS_WINDOW = 1
+    # Keep fairness on a non-trivial rolling window; a window of 1 collapses DP/EO to ~0.
+    FAIRNESS_WINDOW = int(accuracy_window) if accuracy_window else None
     correct_buffer = []
     USE_ROLLING = bool(accuracy_window)
     y_preds_all = []
     y_true_all = []
     a_all = []
     n_samples = len(x_test)
+
+    if x_train is not None and y_train is not None:
+        n_train = len(x_train)
+        print(f"Warm-starting ARF on clean train split ({n_train} samples)...")
+        for t in range(n_train):
+            x_tr = np.array(x_train[t], dtype=np.float32)
+            y_tr = int(y_train[t])
+            x_tr_dict = {i: float(v) for i, v in enumerate(x_tr)}
+            arf.learn_one(x_tr_dict, y_tr)
+        print("ARF warm-start complete.")
 
     print(f"Running ARF baseline prequentially on {n_samples} samples...")
 
@@ -24,10 +42,8 @@ def evaluate_arf_over_timesteps(x_test, y_test, a_test, accuracy_window=200):
         y_t = int(y_test[t])
         a_t = int(a_test[t])
 
-        # River expects features as a plain dict keyed by feature index
         x_dict = {i: float(v) for i, v in enumerate(x_t)}
 
-        # ── STEP 1: TEST ──────────────────────────────────────────────────
         y_pred = arf.predict_one(x_dict)
         y_pred = int(y_pred) if y_pred is not None else 0
 
