@@ -8,15 +8,15 @@ def evaluate_arf_over_timesteps(
     a_test,
     x_train=None,
     y_train=None,
+    seed=42,
     accuracy_window=200,
 ):
-    arf = AdaptiveRandomForestClassifier(seed=42, n_models=3, max_depth=3)
+    arf = AdaptiveRandomForestClassifier(seed=int(seed), n_models=3, max_depth=3)
 
     accuracies = []
     dps = []
     eos = []
 
-    # Keep fairness on a non-trivial rolling window; a window of 1 collapses DP/EO to ~0.
     FAIRNESS_WINDOW = int(accuracy_window) if accuracy_window else None
     correct_buffer = []
     USE_ROLLING = bool(accuracy_window)

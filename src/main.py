@@ -86,6 +86,7 @@ def _evaluate_selected_model(
     data_dim=None,
     x_train=None,
     y_train=None,
+    seed=None,
 ):
     if model_name == 'aranyani':
         stream = evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim=data_dim)
@@ -99,6 +100,7 @@ def _evaluate_selected_model(
             a_test,
             x_train=x_train,
             y_train=y_train,
+            seed=int(seed) if seed is not None else 42,
         )
         test_metrics = {
             'accuracy': float(stream.get('accuracy')[-1]) if stream.get('accuracy') else None,
@@ -142,6 +144,7 @@ def _single_scenario(
     data_dim=None,
     x_train=None,
     y_train=None,
+    seed=None,
 ):
     print(f"\n{'#' * 80}")
     print(f"# Evaluating scenario ({model_name}): {scenario_name}")
@@ -159,6 +162,7 @@ def _single_scenario(
         data_dim=data_dim,
         x_train=x_train,
         y_train=y_train,
+        seed=seed,
     )
 
     os.makedirs(output_dir, exist_ok=True)
@@ -226,6 +230,7 @@ def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scena
             data_dim=data_dim,
             x_train=arf_x_train,
             y_train=arf_y_train,
+            seed=kwargs.get('seed'),
         )
         results.append(result)
         tm = result['test_metrics']
