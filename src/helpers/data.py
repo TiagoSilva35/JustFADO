@@ -170,7 +170,7 @@ def read_adult(drift, path='data/adult', drift_scenario=None):
   else:
     x_test, y_test, a_test = [], [], []
 
-  return x_train, x_test, y_train, y_test, a_train, a_test
+  return x_train[:50], x_test[:50], y_train[:50], y_test[:50], a_train[:50], a_test[:50]
 
 
 # %%
@@ -210,7 +210,7 @@ def load_drifted_test_set(scenario_name, path='data/adult'):
     print("No drift applied (baseline)")
 
   x_test, y_test, a_test = preprocess_adult(df)
-  return x_test, y_test, a_test
+  return x_test[:50], y_test[:50], a_test[:50]
 
 
 # %%

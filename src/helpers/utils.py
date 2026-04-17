@@ -7,7 +7,7 @@ import tensorflow as tf
 from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+import os
 
 def construct_penalty_mask(tree_depth=4):
   num_internal_nodes = 2 ** tree_depth - 1
@@ -24,6 +24,8 @@ def display_confusion_matrix(y_true, y_pred, save_path='files/confusion_matrix.p
                              log_to_wandb=False, wandb_module=None):
   if class_names is None:
     class_names = [f'Class {i}' for i in range(len(np.unique(y_true)))]
+
+  os.makedirs(os.path.dirname(save_path), exist_ok=True)
   
   # Compute confusion matrix
   cm = confusion_matrix(y_true, y_pred)
