@@ -9,7 +9,7 @@ import numpy as np
 from absl import app, flags
 
 from src.drift.scenarios import SCENARIO_DESCRIPTIONS, SCENARIOS, SPLITS, PHASE_LABELS
-from src.helpers.data import load_drifted_test_set
+from src.helpers.data import load_drifted_test_set, read_adult
 from src.helpers.plots import plot_metrics_over_timesteps
 from src.helpers.utils import get_test_performance
 from src.models.arf.arf import evaluate_arf_over_timesteps
@@ -77,19 +77,33 @@ def _fmt_stats(stats):
     return f"{stats['mean']:.4f} +/- {stats['std']:.4f} (n={stats['n']})"
 
 
-def _evaluate_selected_model(model_name, x_test, y_test, a_test, model=None, data_dim=None):
+def _evaluate_selected_model(
+    model_name,
+    x_test,
+    y_test,
+    a_test,
+    model=None,
+    data_dim=None,
+    x_train=None,
+    y_train=None,
+):
     if model_name == 'aranyani':
         stream = evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim=data_dim)
         test_metrics = get_test_performance(model, x_test, y_test, a_test, data_dim=data_dim)
         return stream, test_metrics
 
     if model_name == 'arf':
-        stream = evaluate_arf_over_timesteps(x_test, y_test, a_test)
+        stream = evaluate_arf_over_timesteps(
+            x_test,
+            y_test,
+            a_test,
+            x_train=x_train,
+            y_train=y_train,
+        )
         test_metrics = {
             'accuracy': float(stream.get('accuracy')[-1]) if stream.get('accuracy') else None,
             'dp': float(stream.get('dp')[-1]) if stream.get('dp') else None,
             'eo': float(stream.get('eo')[-1]) if stream.get('eo') else None,
-            'f1': None,
         }
         return stream, test_metrics
 
@@ -114,14 +128,21 @@ def _evaluate_selected_model(model_name, x_test, y_test, a_test, model=None, dat
             'accuracy': float(stream.get('accuracy')[-1]) if stream.get('accuracy') else None,
             'dp': float(stream.get('dp')[-1]) if stream.get('dp') else None,
             'eo': float(stream.get('eo')[-1]) if stream.get('eo') else None,
-            'f1': None,
         }
         return stream, test_metrics
 
     raise ValueError(f'Unsupported model: {model_name}')
 
 
-def _single_scenario(model_name, scenario_name, output_dir, model=None, data_dim=None):
+def _single_scenario(
+    model_name,
+    scenario_name,
+    output_dir,
+    model=None,
+    data_dim=None,
+    x_train=None,
+    y_train=None,
+):
     print(f"\n{'#' * 80}")
     print(f"# Evaluating scenario ({model_name}): {scenario_name}")
     print(f"# {SCENARIO_DESCRIPTIONS.get(scenario_name, '')}")
@@ -136,6 +157,8 @@ def _single_scenario(model_name, scenario_name, output_dir, model=None, data_dim
         a_test=a_test,
         model=model,
         data_dim=data_dim,
+        x_train=x_train,
+        y_train=y_train,
     )
 
     os.makedirs(output_dir, exist_ok=True)
@@ -172,6 +195,8 @@ def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scena
 
     trained_model = None
     data_dim = None
+    arf_x_train = None
+    arf_y_train = None
     if model_name == 'aranyani':
         train_start = time.time()
         print('>>> Training model on clean data (no drift)...')
@@ -182,6 +207,11 @@ def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scena
         print(f">>> Training completed in {round(time.time() - train_start, 1)}s")
         if trained_model is None:
             raise RuntimeError('Training returned no model - cannot evaluate scenarios.')
+    elif model_name == 'arf':
+        train_start = time.time()
+        print('>>> Loading clean train split for ARF warm-start...')
+        arf_x_train, _, arf_y_train, _, _, _ = read_adult(drift=False, drift_scenario=None)
+        print(f">>> Loaded {len(arf_x_train)} clean train samples in {round(time.time() - train_start, 1)}s")
 
     results = []
     for idx, scenario_name in enumerate(scenarios, 1):
@@ -194,6 +224,8 @@ def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scena
             output_dir=output_dir,
             model=trained_model,
             data_dim=data_dim,
+            x_train=arf_x_train,
+            y_train=arf_y_train,
         )
         results.append(result)
         tm = result['test_metrics']
@@ -215,7 +247,6 @@ def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scena
             'accuracy': float(tm.get('accuracy')),
             'dp': float(tm.get('dp')),
             'eo': float(tm.get('eo')),
-            'f1': float(tm.get('f1')),
             'stream_final_accuracy': ts.get('accuracy'),
             'stream_final_dp': ts.get('dp'),
             'stream_final_eo': ts.get('eo'),
@@ -310,7 +341,7 @@ def main(_):
 
     if FLAGS.run_all_scenarios:
         metric_names = [
-            'accuracy', 'dp', 'eo', 'f1',
+            'accuracy', 'dp', 'eo',
             'stream_final_accuracy', 'stream_final_dp', 'stream_final_eo',
         ]
         grouped = {}
@@ -327,7 +358,7 @@ def main(_):
         summary = {'mode': 'all_scenarios', 'rows': summary_rows}
     else:
         metric_names = [
-            'accuracy', 'dp', 'eo', 'f1',
+            'accuracy', 'dp', 'eo',
             'stream_final_accuracy', 'stream_final_dp', 'stream_final_eo',
         ]
         rows = [
