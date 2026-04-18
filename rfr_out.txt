@@ -1,0 +1,395 @@
+
+================================================================================
+ Multi-seed pipeline: 5 runs
+ Model: rfr
+ Dataset: adult
+ Seeds: ['5', '1', '4', '3', '2']
+ Base output: /home/tiago/Documents/Bolsa/Aranyani2.0/files/experiments/
+================================================================================
+
+
+--------------------------------------------------------------------------------
+ Seed run [1/5]: 5
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running all 7 drift scenarios
+ Model: rfr
+ Dataset: adult
+ Output: /home/tiago/Documents/Bolsa/Aranyani2.0/files/experiments/model_rfr/dataset_adult/seed_5/
+================================================================================
+
+
+>>> [1/7] no_drift
+
+################################################################################
+# Evaluating scenario (rfr): no_drift
+# Baseline (no drift)
+################################################################################
+
+No drift applied (baseline)
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.8, 'dp': 0.0, 'eo': 0.0}
+Done in 42.9s | Acc=0.8 DP=0.0 EO=0.0
+
+>>> [2/7] abrupt_gender
+
+################################################################################
+# Evaluating scenario (rfr): abrupt_gender
+# Abrupt + slow gender swap for high-income males
+################################################################################
+
+Applying drift scenario: abrupt_gender
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.825, 'dp': 0.0, 'eo': 0.0}
+Done in 40.7s | Acc=0.825 DP=0.0 EO=0.0
+
+>>> [3/7] gradual_gender
+
+################################################################################
+# Evaluating scenario (rfr): gradual_gender
+# Gradually increasing gender swap
+################################################################################
+
+Applying drift scenario: gradual_gender
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.795, 'dp': 0.0, 'eo': 0.0}
+Done in 40.6s | Acc=0.795 DP=0.0 EO=0.0
+
+>>> [4/7] label_flip
+
+################################################################################
+# Evaluating scenario (rfr): label_flip
+# Label flip in drift phases (40% abrupt, 30%→5% gradual)
+################################################################################
+
+Applying drift scenario: label_flip
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.79, 'dp': 0.0, 'eo': 0.0}
+Done in 40.6s | Acc=0.79 DP=0.0 EO=0.0
+
+>>> [5/7] gender_relationship_decouple
+
+################################################################################
+# Evaluating scenario (rfr): gender_relationship_decouple
+# Break Husband/Wife ↔ Male/Female co-occurrence
+################################################################################
+
+Applying drift scenario: gender_relationship_decouple
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.8, 'dp': 0.0, 'eo': 0.0}
+Done in 40.6s | Acc=0.8 DP=0.0 EO=0.0
+
+>>> [6/7] female_income_parity
+
+################################################################################
+# Evaluating scenario (rfr): female_income_parity
+# Abrupt female income promotion (P(Y|Female) equalised)
+################################################################################
+
+Applying drift scenario: female_income_parity
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.805, 'dp': 0.0, 'eo': 0.0}
+Done in 40.7s | Acc=0.805 DP=0.0 EO=0.0
+
+>>> [7/7] occupation_gender_reversal
+
+################################################################################
+# Evaluating scenario (rfr): occupation_gender_reversal
+# Swap gender in strongly stereotyped occupations
+################################################################################
+
+Applying drift scenario: occupation_gender_reversal
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.78, 'dp': 0.0, 'eo': 0.0}
+Done in 41.0s | Acc=0.78 DP=0.0 EO=0.0
+Results saved to: files/experiments/model_rfr/dataset_adult/seed_5/results.json
+
+================================================================================
+ SUMMARY
+================================================================================
+Scenario                      Acc         DP         EO
+--------------------------------------------------------------------------------
+no_drift                   0.8000     0.0000     0.0000
+abrupt_gender              0.8250     0.0000     0.0000
+gradual_gender             0.7950     0.0000     0.0000
+label_flip                 0.7900     0.0000     0.0000
+gender_relationship_decouple     0.8000     0.0000     0.0000
+female_income_parity       0.8050     0.0000     0.0000
+occupation_gender_reversal     0.7800     0.0000     0.0000
+
+--------------------------------------------------------------------------------
+ Seed run [2/5]: 1
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running all 7 drift scenarios
+ Model: rfr
+ Dataset: adult
+ Output: /home/tiago/Documents/Bolsa/Aranyani2.0/files/experiments/model_rfr/dataset_adult/seed_1/
+================================================================================
+
+
+>>> [1/7] no_drift
+
+################################################################################
+# Evaluating scenario (rfr): no_drift
+# Baseline (no drift)
+################################################################################
+
+No drift applied (baseline)
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.79, 'dp': 0.0, 'eo': 0.0}
+Done in 42.4s | Acc=0.79 DP=0.0 EO=0.0
+
+>>> [2/7] abrupt_gender
+
+################################################################################
+# Evaluating scenario (rfr): abrupt_gender
+# Abrupt + slow gender swap for high-income males
+################################################################################
+
+Applying drift scenario: abrupt_gender
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.775, 'dp': 0.0, 'eo': 0.0}
+Done in 40.6s | Acc=0.775 DP=0.0 EO=0.0
+
+>>> [3/7] gradual_gender
+
+################################################################################
+# Evaluating scenario (rfr): gradual_gender
+# Gradually increasing gender swap
+################################################################################
+
+Applying drift scenario: gradual_gender
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.8, 'dp': 0.0, 'eo': 0.0}
+Done in 40.9s | Acc=0.8 DP=0.0 EO=0.0
+
+>>> [4/7] label_flip
+
+################################################################################
+# Evaluating scenario (rfr): label_flip
+# Label flip in drift phases (40% abrupt, 30%→5% gradual)
+################################################################################
+
+Applying drift scenario: label_flip
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.795, 'dp': 0.0, 'eo': 0.0}
+Done in 41.3s | Acc=0.795 DP=0.0 EO=0.0
+
+>>> [5/7] gender_relationship_decouple
+
+################################################################################
+# Evaluating scenario (rfr): gender_relationship_decouple
+# Break Husband/Wife ↔ Male/Female co-occurrence
+################################################################################
+
+Applying drift scenario: gender_relationship_decouple
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.81, 'dp': 0.0, 'eo': 0.0}
+Done in 41.4s | Acc=0.81 DP=0.0 EO=0.0
+
+>>> [6/7] female_income_parity
+
+################################################################################
+# Evaluating scenario (rfr): female_income_parity
+# Abrupt female income promotion (P(Y|Female) equalised)
+################################################################################
+
+Applying drift scenario: female_income_parity
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.79, 'dp': 0.0, 'eo': 0.0}
+Done in 41.5s | Acc=0.79 DP=0.0 EO=0.0
+
+>>> [7/7] occupation_gender_reversal
+
+################################################################################
+# Evaluating scenario (rfr): occupation_gender_reversal
+# Swap gender in strongly stereotyped occupations
+################################################################################
+
+Applying drift scenario: occupation_gender_reversal
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.8, 'dp': 0.0, 'eo': 0.0}
+Done in 41.4s | Acc=0.8 DP=0.0 EO=0.0
+Results saved to: files/experiments/model_rfr/dataset_adult/seed_1/results.json
+
+================================================================================
+ SUMMARY
+================================================================================
+Scenario                      Acc         DP         EO
+--------------------------------------------------------------------------------
+no_drift                   0.7900     0.0000     0.0000
+abrupt_gender              0.7750     0.0000     0.0000
+gradual_gender             0.8000     0.0000     0.0000
+label_flip                 0.7950     0.0000     0.0000
+gender_relationship_decouple     0.8100     0.0000     0.0000
+female_income_parity       0.7900     0.0000     0.0000
+occupation_gender_reversal     0.8000     0.0000     0.0000
+
+--------------------------------------------------------------------------------
+ Seed run [3/5]: 4
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running all 7 drift scenarios
+ Model: rfr
+ Dataset: adult
+ Output: /home/tiago/Documents/Bolsa/Aranyani2.0/files/experiments/model_rfr/dataset_adult/seed_4/
+================================================================================
+
+
+>>> [1/7] no_drift
+
+################################################################################
+# Evaluating scenario (rfr): no_drift
+# Baseline (no drift)
+################################################################################
+
+No drift applied (baseline)
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.81, 'dp': 0.0, 'eo': 0.0}
+Done in 41.4s | Acc=0.81 DP=0.0 EO=0.0
+
+>>> [2/7] abrupt_gender
+
+################################################################################
+# Evaluating scenario (rfr): abrupt_gender
+# Abrupt + slow gender swap for high-income males
+################################################################################
+
+Applying drift scenario: abrupt_gender
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.795, 'dp': 0.0, 'eo': 0.0}
+Done in 41.6s | Acc=0.795 DP=0.0 EO=0.0
+
+>>> [3/7] gradual_gender
+
+################################################################################
+# Evaluating scenario (rfr): gradual_gender
+# Gradually increasing gender swap
+################################################################################
+
+Applying drift scenario: gradual_gender
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.81, 'dp': 0.0, 'eo': 0.0}
+Done in 41.8s | Acc=0.81 DP=0.0 EO=0.0
+
+>>> [4/7] label_flip
+
+################################################################################
+# Evaluating scenario (rfr): label_flip
+# Label flip in drift phases (40% abrupt, 30%→5% gradual)
+################################################################################
+
+Applying drift scenario: label_flip
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.805, 'dp': 0.0, 'eo': 0.0}
+Done in 41.6s | Acc=0.805 DP=0.0 EO=0.0
+
+>>> [5/7] gender_relationship_decouple
+
+################################################################################
+# Evaluating scenario (rfr): gender_relationship_decouple
+# Break Husband/Wife ↔ Male/Female co-occurrence
+################################################################################
+
+Applying drift scenario: gender_relationship_decouple
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.79, 'dp': 0.0, 'eo': 0.0}
+Done in 41.7s | Acc=0.79 DP=0.0 EO=0.0
+
+>>> [6/7] female_income_parity
+
+################################################################################
+# Evaluating scenario (rfr): female_income_parity
+# Abrupt female income promotion (P(Y|Female) equalised)
+################################################################################
+
+Applying drift scenario: female_income_parity
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.815, 'dp': 0.0, 'eo': 0.0}
+Done in 41.7s | Acc=0.815 DP=0.0 EO=0.0
+
+>>> [7/7] occupation_gender_reversal
+
+################################################################################
+# Evaluating scenario (rfr): occupation_gender_reversal
+# Swap gender in strongly stereotyped occupations
+################################################################################
+
+Applying drift scenario: occupation_gender_reversal
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.795, 'dp': 0.0, 'eo': 0.0}
+Done in 42.0s | Acc=0.795 DP=0.0 EO=0.0
+Results saved to: files/experiments/model_rfr/dataset_adult/seed_4/results.json
+
+================================================================================
+ SUMMARY
+================================================================================
+Scenario                      Acc         DP         EO
+--------------------------------------------------------------------------------
+no_drift                   0.8100     0.0000     0.0000
+abrupt_gender              0.7950     0.0000     0.0000
+gradual_gender             0.8100     0.0000     0.0000
+label_flip                 0.8050     0.0000     0.0000
+gender_relationship_decouple     0.7900     0.0000     0.0000
+female_income_parity       0.8150     0.0000     0.0000
+occupation_gender_reversal     0.7950     0.0000     0.0000
+
+--------------------------------------------------------------------------------
+ Seed run [4/5]: 3
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running all 7 drift scenarios
+ Model: rfr
+ Dataset: adult
+ Output: /home/tiago/Documents/Bolsa/Aranyani2.0/files/experiments/model_rfr/dataset_adult/seed_3/
+================================================================================
+
+
+>>> [1/7] no_drift
+
+################################################################################
+# Evaluating scenario (rfr): no_drift
+# Baseline (no drift)
+################################################################################
+
+No drift applied (baseline)
+Running RFR (rfr) prequentially on 16281 samples...
+RFR (rfr) evaluation complete.
+{'accuracy': 0.8, 'dp': 0.0, 'eo': 0.0}
+Done in 4026.9s | Acc=0.8 DP=0.0 EO=0.0
+
+>>> [2/7] abrupt_gender
+
+################################################################################
+# Evaluating scenario (rfr): abrupt_gender
+# Abrupt + slow gender swap for high-income males
+################################################################################
+
+Applying drift scenario: abrupt_gender
+Running RFR (rfr) prequentially on 16281 samples...
