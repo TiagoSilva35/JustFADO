@@ -541,10 +541,8 @@ def train(
       )
       timestep_results = preq_results
 
-  # Save model if requested
-  if save_model and trained_model is not None:
-    if model_path is None:
-      model_path = f'models/{dataset}_model'
-    trained_model.save(model_path)
+  if model_path is None:
+    model_path = f'models/{dataset}_model'
+  trained_model.save(model_path)
 
   return all_dps, all_accuracies, all_equalized_odds, timestep_results, test_metrics, trained_model, data_dim
