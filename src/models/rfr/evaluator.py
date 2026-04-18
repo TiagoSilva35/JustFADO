@@ -298,7 +298,7 @@ def evaluate_rfr_over_timesteps(
             y_true_all=y_true_all,
             a_all=a_all,
             fairness_start=0,
-            fairness_window=1,
+            fairness_window=200,
         )
         dps.append(float(dp_val))
         eos.append(float(eo_val))
