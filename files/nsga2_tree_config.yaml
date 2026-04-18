@@ -8,5 +8,5 @@ nsga2_tree:
   val_sample_size: 800
   depth_bounds: [2, 10]
   num_trees_bounds: [2, 10]
-  lambda_bounds: [0.0, 10.0]
+  lambda_bounds: [0.0, 20.0]
   

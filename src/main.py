@@ -9,7 +9,7 @@ import numpy as np
 from absl import app, flags
 
 from src.drift.scenarios import SCENARIO_DESCRIPTIONS, SCENARIOS, SPLITS, PHASE_LABELS
-from src.helpers.data import load_drifted_test_set, read_adult
+from src.helpers.data import load_drifted_test_set, read_adult, read_folktables
 from src.helpers.plots import plot_metrics_over_timesteps
 from src.helpers.utils import get_test_performance
 from src.models.arf.arf import evaluate_arf_over_timesteps
@@ -50,7 +50,7 @@ def _train_kwargs(seed, dataset_name):
         'model_path': FLAGS.model_path,
         'prequential': FLAGS.prequential,
         'drift_scenario': FLAGS.drift_scenario ,
-        'seed': int(seed),
+        'seed': FLAGS.seed,
     }
 
 
@@ -144,6 +144,9 @@ def _single_scenario(
     data_dim=None,
     x_train=None,
     y_train=None,
+    x_test=None,
+    y_test=None,
+    a_test=None,
     seed=None,
 ):
     print(f"\n{'#' * 80}")
@@ -151,8 +154,10 @@ def _single_scenario(
     print(f"# {SCENARIO_DESCRIPTIONS.get(scenario_name, '')}")
     print(f"{'#' * 80}\n")
     start = time.time()
-    
-    x_test, y_test, a_test = load_drifted_test_set(scenario_name)
+
+    if x_test is None or y_test is None or a_test is None:
+        x_test, y_test, a_test = load_drifted_test_set(scenario_name)
+
     stream, test_metrics = _evaluate_selected_model(
         model_name=model_name,
         x_test=x_test,
@@ -184,14 +189,18 @@ def _single_scenario(
 
 
 def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_name=None):
-    if str(dataset_name).lower() != 'adult':
-        raise ValueError(
-            f"Drift scenario evaluation currently supports dataset='adult' only; got '{dataset_name}'."
-        )
-
-    scenarios = list(SCENARIOS.keys())
+    dataset_key = str(dataset_name).lower()
     print(f"\n{'=' * 80}")
-    print(f" Running all {len(scenarios)} drift scenarios")
+    if dataset_key == 'adult':
+        scenarios = list(SCENARIOS.keys())
+        print(f" Running all {len(scenarios)} drift scenarios")
+    elif dataset_key == 'folktables':
+        scenarios = ['folktables']
+        print(" Running single Folktables evaluation")
+    else:
+        raise ValueError(
+            f"Unsupported dataset for pipeline evaluation: '{dataset_name}'."
+        )
     print(f" Model: {model_name}")
     print(f" Dataset: {dataset_name}")
     print(f" Output: {os.path.abspath(output_dir)}/")
@@ -214,22 +223,74 @@ def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scena
     elif model_name == 'arf':
         train_start = time.time()
         print('>>> Loading clean train split for ARF warm-start...')
-        arf_x_train, _, arf_y_train, _, _, _ = read_adult(drift=False, drift_scenario=None)
+        if dataset_key == 'adult':
+            arf_x_train, _, arf_y_train, _, _, _ = read_adult(drift=False, drift_scenario=None)
+        elif dataset_key == 'folktables':
+            folktables_states = [
+                state.strip() for state in str(FLAGS.folktables_states).split(',') if state.strip()
+            ]
+            folktables_test_years = tuple(
+                int(year.strip()) for year in str(FLAGS.folktables_test_years).split(',') if year.strip()
+            )
+            arf_x_train, _, arf_y_train, _, _, _, _ = read_folktables(
+                train_year=FLAGS.folktables_train_year,
+                test_years=folktables_test_years,
+                state=folktables_states,
+                horizon=FLAGS.folktables_horizon,
+                sensitive_attribute=FLAGS.folktables_sensitive_attribute,
+            )
         print(f">>> Loaded {len(arf_x_train)} clean train samples in {round(time.time() - train_start, 1)}s")
 
     results = []
-    for idx, scenario_name in enumerate(scenarios, 1):
-        if scenario_name != scenario_name and scenario_name is not None:
-            continue
-        print(f"\n>>> [{idx}/{len(scenarios)}] {scenario_name}")
+    if dataset_key == 'adult':
+        for idx, scenario_name in enumerate(scenarios, 1):
+            if scenario_name != scenario_name and scenario_name is not None:
+                continue
+            print(f"\n>>> [{idx}/{len(scenarios)}] {scenario_name}")
+            result = _single_scenario(
+                model_name=model_name,
+                scenario_name=scenario_name,
+                output_dir=output_dir,
+                model=trained_model,
+                data_dim=data_dim,
+                x_train=arf_x_train,
+                y_train=arf_y_train,
+                seed=kwargs.get('seed'),
+            )
+            results.append(result)
+            tm = result['test_metrics']
+            print(tm)
+            print(
+                f"Done in {result['elapsed_seconds']}s | "
+                f"Acc={float(tm.get('accuracy'))} "
+                f"DP={float(tm.get('dp'))} "
+                f"EO={float(tm.get('eo'))}"
+            )
+    else:
+        x_train, x_test, y_train, y_test, a_train, a_test, _ = read_folktables(
+            train_year=FLAGS.folktables_train_year,
+            test_years=tuple(
+                int(year.strip()) for year in str(FLAGS.folktables_test_years).split(',') if year.strip()
+            ),
+            state=[state.strip() for state in str(FLAGS.folktables_states).split(',') if state.strip()],
+            horizon=FLAGS.folktables_horizon,
+            sensitive_attribute=FLAGS.folktables_sensitive_attribute,
+        )
+        if model_name == 'aranyani':
+            result_model = trained_model
+        else:
+            result_model = None
         result = _single_scenario(
             model_name=model_name,
-            scenario_name=scenario_name,
+            scenario_name='folktables',
             output_dir=output_dir,
-            model=trained_model,
+            model=result_model,
             data_dim=data_dim,
-            x_train=arf_x_train,
-            y_train=arf_y_train,
+            x_train=x_train if model_name == 'arf' else None,
+            y_train=y_train if model_name == 'arf' else None,
+            x_test=x_test,
+            y_test=y_test,
+            a_test=a_test,
             seed=kwargs.get('seed'),
         )
         results.append(result)

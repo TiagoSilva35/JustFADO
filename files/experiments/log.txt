@@ -1,0 +1,228 @@
+(.venv39) PS C:\Users\tjcsi\Documents\Aranyani2.0> python -m src.main --dataset folktables --pipeline_model aranyani --seeds 1,2,3,4,5
+2026-04-17 10:26:22.515860: W tensorflow/stream_executor/platform/default/dso_loader.cc:64] Could not load dynamic library 'cudnn64_8.dll'; dlerror: cudnn64_8.dll not found
+2026-04-17 10:26:22.515996: W tensorflow/core/common_runtime/gpu/gpu_device.cc:1850] Cannot dlopen some GPU libraries. Please make sure the missing libraries mentioned above are installed properly if you would like to use GPU. Follow the guide at https://www.tensorflow.org/install/gpu for how to download and setup the required libraries for your platform.
+Skipping registering GPU devices...
+
+================================================================================
+ Multi-seed pipeline: 5 runs
+ Model: aranyani
+ Dataset: folktables
+ Seeds: ['4', '2', '3', '5', '1']
+ Base output: C:\Users\tjcsi\Documents\Aranyani2.0\files\experiments/
+================================================================================
+
+
+--------------------------------------------------------------------------------
+ Seed run [1/5]: 4
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running single Folktables evaluation
+ Model: aranyani
+ Dataset: folktables
+ Output: C:\Users\tjcsi\Documents\Aranyani2.0\files\experiments\model_aranyani\dataset_folktables\seed_4/
+================================================================================
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):     932
+  False Positives (FP):     30
+  False Negatives (FN):    464
+  True Positives (TP):      74
+  Sensitivity/Recall:   0.1375
+  Specificity:          0.9688
+  Precision:            0.7115
+  F1-Score:             0.2305
+  Accuracy:             0.6707
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.705
+Test Sensitivity: 0.204
+Test DP: 0.017
+Test EO: 0.056
+Test AUC: 0.723
+Test F1-Score: 0.322
+[NSGA2-TREE] Selected hyperparameters: {'depth': 4, 'num_trees': 6, 'lambda_const': 2.766826434414502, 'objective': (0.3050000071525574, 0.0019791269330098338)}
+[NSGA2-TREE] Applying tuned settings for final training: depth=4, num_trees=6, lambda_const=2.7668
+DP in the original dataset: 0.054089836218504384
+EO in the original dataset: 0.0
+Fairness type: dp
+lambda for fairness penalty: 2.766826434414502
+weight updater enabled: False
+ CE Loss: 0.600, Accuracy: 69.985%, AUC: 68.304%, DP: 0.00568, EO: 0.00422,: 100%|█| 187475/187475 [2:21:40<00:00, 22.0
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):  106852
+  False Positives (FP):  11914
+  False Negatives (FN):  44357
+  True Positives (TP):   24352
+  Sensitivity/Recall:   0.3544
+  Specificity:          0.8997
+  Precision:            0.6715
+  F1-Score:             0.4640
+  Accuracy:             0.6998
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.650
+Test Sensitivity: 0.159
+Test DP: 0.014
+Test EO: 0.012
+Test AUC: 0.563
+Test F1-Score: 0.263
+
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):  110168
+  False Positives (FP):   3632
+  False Negatives (FN):  61980
+  True Positives (TP):   11693
+  Sensitivity/Recall:   0.1587
+  Specificity:          0.9681
+  Precision:            0.7630
+  F1-Score:             0.2628
+  Accuracy:             0.6500
+
+Confusion matrix saved to: files/test_confusion_matrix.png
+================================================================================
+
+
+================================================================================
+Test Set Results:
+  Test Accuracy: 0.6500
+  Test DP: 0.0136
+  Test AUC: 0.5633
+  Test Sensitivity: 0.1587
+  Test F1-Score: 0.2628
+  Test EO: 0.0118
+================================================================================
+
+>>> Training completed in 13458.6s
+
+>>> [1/1] folktables
+
+################################################################################
+# Evaluating scenario (aranyani): folktables
+#
+################################################################################
+
+Evaluating model over 187473 timesteps with test-then-train=True
+          Fairness penalty lambda: 0.1, fairness type: dp
+Parameters:
+  ADWIN_DELTA_WARN: 1e-05
+  ADWIN_DELTA_CONFIRM: 0.02
+\  DRIFT_LR_PREWARM: 0.01
+  DRIFT_LR_SPIKE: 0.02
+  LR_DECAY_STEPS: 3000
+  FAIRNESS_WINDOW: 1000
+  COOLDOWN: 200
+  MIN_SAMPLES_PER_STREAM: 30
+  Lambda for fairness penalty: 0.1
+  Accuracy window: 200
+  Use rolling accuracy: False
+  Compute fairness: True
+  Fairness type: dp
+Fairness window: 1000, starting fairness computations at sample index: 0
+
+Accuracy drift detected at samples: [6239, 8767, 13119, 14751, 83327, 83615, 89759, 97215, 111551, 112799, 118943, 125279, 130367]
+Test Accuracy: 0.607
+Test Sensitivity: 0.000
+Test DP: 0.000
+Test EO: 0.000
+Test AUC: 0.500
+Test F1-Score: 0.000
+
+
+Classification Report:
+C:\Users\tjcsi\Documents\Aranyani2.0\.venv39\lib\site-packages\sklearn\metrics\_classification.py:1334: UndefinedMetricWarning: Precision and F-score are ill-defined and being set to 0.0 in labels with no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+C:\Users\tjcsi\Documents\Aranyani2.0\.venv39\lib\site-packages\sklearn\metrics\_classification.py:1334: UndefinedMetricWarning: Precision and F-score are ill-defined and being set to 0.0 in labels with no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+C:\Users\tjcsi\Documents\Aranyani2.0\.venv39\lib\site-packages\sklearn\metrics\_classification.py:1334: UndefinedMetricWarning: Precision and F-score are ill-defined and being set to 0.0 in labels with no predicted samples. Use `zero_division` parameter to control this behavior.
+  _warn_prf(average, modifier, msg_start, len(result))
+              precision    recall  f1-score   support
+
+     Class 0     0.6070    1.0000    0.7555    113800
+     Class 1     0.0000    0.0000    0.0000     73673
+
+    accuracy                         0.6070    187473
+   macro avg     0.3035    0.5000    0.3777    187473
+weighted avg     0.3685    0.6070    0.4586    187473
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):  113800
+  False Positives (FP):      0
+  False Negatives (FN):  73673
+  True Positives (TP):       0
+  Sensitivity/Recall:   0.0000
+  Specificity:          1.0000
+  Accuracy:             0.6070
+
+Confusion matrix saved to: files/test_confusion_matrix.png
+================================================================================
+
+{'accuracy': 0.6070207357406616, 'dp': 0.0, 'eo': 0.0, 'sensitivity': 0.0, 'auc': 0.5, 'f1': 0.0}
+Done in 18413.9s | Acc=0.6070207357406616 DP=0.0 EO=0.0
+Results saved to: files/experiments\model_aranyani\dataset_folktables\seed_4\results.json
+
+================================================================================
+ SUMMARY
+================================================================================
+Scenario                      Acc         DP         EO
+--------------------------------------------------------------------------------
+folktables                 0.6070     0.0000     0.0000
+
+--------------------------------------------------------------------------------
+ Seed run [2/5]: 2
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running single Folktables evaluation
+ Model: aranyani
+ Dataset: folktables
+ Output: C:\Users\tjcsi\Documents\Aranyani2.0\files\experiments\model_aranyani\dataset_folktables\seed_2/
+================================================================================
+
+>>> Training model on clean data (no drift)...
+Using random seed: 2
+Sensitive attribute values in training set: {0, 1}
+SECOND TUNING ON VALIDATION SPLIT (TREE HYPERPARAMETERS)
+[NSGA2-TREE] Train size=149980, Val size=37495, base(depth=4, num_trees=3, lambda=1)
+Fairness type: dp
+lambda for fairness penalty: 0.5655136772680869
+
+Test Accuracy: 0.676
+Test Sensitivity: 0.083
+Test DP: 0.020
+Test EO: 0.039
+Test AUC: 0.650
+Test F1-Score: 0.151
+[NSGA2-TREE] Selected hyperparameters: {'depth': 8, 'num_trees': 8, 'lambda_const': 0.8759172790932113, 'objective': (0.29250001907348633, 0.014789258559310875)}
+[NSGA2-TREE] Applying tuned settings for final training: depth=8, num_trees=8, lambda_const=0.8759
+DP in the original dataset: 0.054089836218504384
+EO in the original dataset: 0.0
+Fairness type: dp
+lambda for fairness penalty: 0.8759172790932113
+weight updater enabled: False
+ CE Loss: 0.589, Accuracy: 70.600%, AUC: 70.812%, DP: 0.00691, EO: 0.01278,: 100%|█| 187475/187475 [3:57:43<00:00, 13.1
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):  104796
+  False Positives (FP):  13970
+  False Negatives (FN):  41147
+  True Positives (TP):   27562
+  Sensitivity/Recall:   0.4011
+  Specificity:          0.8824
+  Precision:            0.6636
+  F1-Score:             0.5000
+  Accuracy:             0.7060
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================

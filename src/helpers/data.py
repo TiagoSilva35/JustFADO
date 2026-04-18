@@ -417,7 +417,7 @@ def _normalize_sensitive_attribute(values, sensitive_attribute):
   return (values - 1).astype(np.int32)
 
 
-def read_folktables(path='data', train_year=2015, test_years=(2016, 2017, 2018),
+def read_folktables(path='data/acs-folktables', train_year=2015, test_years=(2016, 2017, 2018),
                     state='CA', horizon='1-Year', sensitive_attribute='sex',
                     download=False):
   """Read Folktables ACS Income data from local cache."""

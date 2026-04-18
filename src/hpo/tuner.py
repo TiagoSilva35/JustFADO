@@ -48,7 +48,7 @@ def _load_tree_nsga2_config():
   if not isinstance(num_trees_bounds, list) or len(num_trees_bounds) != 2:
     num_trees_bounds = [1, 7]
   if not isinstance(lambda_bounds, list) or len(lambda_bounds) != 2:
-    lambda_bounds = [0.0, 5.0]
+    lambda_bounds = [0.0, 20.0]
 
   cfg['depth_bounds'] = [int(depth_bounds[0]), int(depth_bounds[1])]
   cfg['num_trees_bounds'] = [int(num_trees_bounds[0]), int(num_trees_bounds[1])]
@@ -75,8 +75,8 @@ def _tune_tree_hyperparameters_nsga2(dataset, x_train, y_train, a_train,
       f"base(depth={base_depth}, num_trees={base_num_trees}, lambda={base_lambda_const})"
   )
 
-  tune_train_n = min(len(x_train), int(tree_cfg['train_sample_size']))
-  tune_val_n = min(len(x_val), int(tree_cfg['val_sample_size']))
+  tune_train_n = len(x_train)
+  tune_val_n = len(x_val)
 
   x_tune_train = np.asarray(x_train)[:tune_train_n]
   y_tune_train = np.asarray(y_train)[:tune_train_n]
