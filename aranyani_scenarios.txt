@@ -1,0 +1,522 @@
+================================================================================
+ Multi-seed pipeline: 5 runs
+ Model: aranyani
+ Dataset: adult
+ Seeds: ['4', '5', '2', '3', '1']
+ Base output: C:\Users\tjcsi\Documents\Aranyani2.0\files\experiments/
+================================================================================
+
+
+--------------------------------------------------------------------------------
+ Seed run [1/5]: 4
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running all 7 drift scenarios
+ Model: aranyani
+ Dataset: adult
+ Output: C:\Users\tjcsi\Documents\Aranyani2.0\files\experiments\model_aranyani\dataset_adult\seed_4/
+================================================================================
+
+>>> Training model on clean data (no drift)...
+Using random seed: 42
+Loading existing model from models/adult_model.pkl...
+2026-04-20 11:57:33.636714: I tensorflow/core/platform/cpu_feature_guard.cc:151] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX AVX2
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Model loaded from models/adult_model.pkl
+This set contains, 5421 female samples
+Income column unique values: [' <=50K.' ' >50K.']
+Samples with income >50K: 0
+Samples with income >50K.: 3846
+Male samples with >50K income: 0
+Male samples with >50K. income: 3256
+Sensitive attribute values in training set: {0, 1}
+Test Accuracy: 0.848
+Test Sensitivity: 0.580
+Test DP: 0.090
+Test EO: 0.060
+Test AUC: 0.901
+Test F1-Score: 0.643
+
+================================================================================
+TEST SET CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[11574   861]
+ [ 1616  2230]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.8775    0.9308    0.9033     12435
+     Class 1     0.7214    0.5798    0.6429      3846
+
+    accuracy                         0.8479     16281
+   macro avg     0.7995    0.7553    0.7731     16281
+weighted avg     0.8406    0.8479    0.8418     16281
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   11574
+  False Positives (FP):    861
+  False Negatives (FN):   1616
+  True Positives (TP):    2230
+  Sensitivity/Recall:   0.5798
+  Specificity:          0.9308
+  Precision:            0.7214
+  F1-Score:             0.6429
+  Accuracy:             0.8479
+
+Confusion matrix saved to: files/test_confusion_matrix.png
+================================================================================
+
+
+================================================================================
+Loaded Model Test Results:
+  Test Accuracy: 0.8479
+  Test DP: 0.0902
+  Test EO: 0.0602
+  Test AUC: 0.9011
+  Test F1-Score: 0.6429
+================================================================================
+
+>>> Training completed in 124.4s
+
+>>> [1/7] no_drift
+
+################################################################################
+# Evaluating scenario (aranyani): no_drift
+# Baseline (no drift)
+################################################################################
+
+No drift applied (baseline)
+Evaluating model over 16281 timesteps with test-then-train=True
+          Fairness penalty lambda: 0.1, fairness type: dp
+Parameters:
+  ADWIN_DELTA_WARN: 1e-05
+  ADWIN_DELTA_CONFIRM: 0.02
+\  DRIFT_LR_PREWARM: 0.01
+  DRIFT_LR_SPIKE: 0.02
+  LR_DECAY_STEPS: 3000
+  FAIRNESS_WINDOW: 1000
+  COOLDOWN: 200
+  MIN_SAMPLES_PER_STREAM: 30
+  Lambda for fairness penalty: 0.1
+  Accuracy window: 200
+  Use rolling accuracy: False
+  Compute fairness: True
+  Fairness type: dp
+Fairness window: 1000, starting fairness computations at sample index: 0
+2026-04-20 11:59:38.130841: W tensorflow/python/util/util.cc:368] Sets are not currently considered sequences, but this may change in the future, so consider avoiding using them.
+[DBG] Processing sample 1/16281...
+WARNING:tensorflow:Calling GradientTape.gradient on a persistent tape inside its context is significantly less efficient than calling it outside the context (it causes the gradient ops to be recorded on the tape, leading to increased CPU and memory usage). Only call GradientTape.gradient inside the context if you actually want to trace the gradient in order to compute higher order derivatives.
+W0420 11:59:38.193623  8724 backprop.py:1035] Calling GradientTape.gradient on a persistent tape inside its context is significantly less efficient than calling it outside the context (it causes the gradient ops to be recorded on the tape, leading to increased CPU and memory usage). Only call GradientTape.gradient inside the context if you actually want to trace the gradient in order to compute higher order derivatives.
+WARNING:tensorflow:Calling GradientTape.gradient on a persistent tape inside its context is significantly less efficient than calling it outside the context (it causes the gradient ops to be recorded on the tape, leading to increased CPU and memory usage). Only call GradientTape.gradient inside the context if you actually want to trace the gradient in order to compute higher order derivatives.
+W0420 11:59:38.193623  8724 backprop.py:1035] Calling GradientTape.gradient on a persistent tape inside its context is significantly less efficient than calling it outside the context (it causes the gradient ops to be recorded on the tape, leading to increased CPU and memory usage). Only call GradientTape.gradient inside the context if you actually want to trace the gradient in order to compute higher order derivatives.
+[DBG] Processing sample 1000/16281...
+[DBG] Processing sample 2000/16281...
+[DBG] Processing sample 3000/16281...
+[DBG] Processing sample 4000/16281...
+[DBG] Processing sample 5000/16281...
+[DBG] Processing sample 6000/16281...
+[DBG] Processing sample 7000/16281...
+[DBG] Processing sample 8000/16281...
+[DBG] Processing sample 9000/16281...
+[DBG] Processing sample 10000/16281...
+[DBG] Processing sample 11000/16281...
+[DBG] Processing sample 12000/16281...
+[DBG] Processing sample 13000/16281...
+[DBG] Processing sample 14000/16281...
+[DBG] Processing sample 15000/16281...
+[DBG] Processing sample 16000/16281...
+No accuracy drift detected over the test set.
+{'accuracy': 0.8487193661323015, 'dp': 0.087234266985052, 'eo': 0.053695914712863835}
+Done in 1946.0s | Acc=0.8487193661323015 DP=0.087234266985052 EO=0.053695914712863835
+
+>>> [2/7] abrupt_gender
+
+################################################################################
+# Evaluating scenario (aranyani): abrupt_gender
+# Abrupt + slow gender swap for high-income males
+################################################################################
+
+Applying drift scenario: abrupt_gender
+Evaluating model over 16281 timesteps with test-then-train=True
+          Fairness penalty lambda: 0.1, fairness type: dp
+Parameters:
+  ADWIN_DELTA_WARN: 1e-05
+  ADWIN_DELTA_CONFIRM: 0.02
+\  DRIFT_LR_PREWARM: 0.01
+  DRIFT_LR_SPIKE: 0.02
+  LR_DECAY_STEPS: 3000
+  FAIRNESS_WINDOW: 1000
+  COOLDOWN: 200
+  MIN_SAMPLES_PER_STREAM: 30
+  Lambda for fairness penalty: 0.1
+  Accuracy window: 200
+  Use rolling accuracy: False
+  Compute fairness: True
+  Fairness type: dp
+Fairness window: 1000, starting fairness computations at sample index: 0
+[DBG] Processing sample 1/16281...
+[DBG] Processing sample 1000/16281...
+[DBG] Processing sample 2000/16281...
+[DBG] Processing sample 3000/16281...
+[DBG] Processing sample 4000/16281...
+[DRIFT] Concept drift confirmed at sample 4095 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 4095. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 5000/16281...
+[DBG] Processing sample 6000/16281...
+[DBG] Processing sample 7000/16281...
+[DBG] Processing sample 8000/16281...
+[DRIFT] Concept drift confirmed at sample 8319 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 8319. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 9000/16281...
+[DBG] Processing sample 10000/16281...
+[DRIFT] Concept drift confirmed at sample 10143 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 10303. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 11000/16281...
+[DBG] Processing sample 12000/16281...
+[DRIFT] Concept drift confirmed at sample 12447 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 13000/16281...
+[DBG] Processing sample 14000/16281...
+[DBG] Processing sample 15000/16281...
+[DBG] Processing sample 16000/16281...
+Accuracy drift detected at samples: [4095, 8319, 10143, 12447]
+{'accuracy': 0.8812726491001781, 'dp': 0.049445803673731914, 'eo': 0.10779120898220251}
+Done in 1955.7s | Acc=0.8812726491001781 DP=0.049445803673731914 EO=0.10779120898220251
+
+>>> [3/7] gradual_gender
+
+################################################################################
+# Evaluating scenario (aranyani): gradual_gender
+# Gradually increasing gender swap
+################################################################################
+
+Applying drift scenario: gradual_gender
+Evaluating model over 16281 timesteps with test-then-train=True
+          Fairness penalty lambda: 0.1, fairness type: dp
+Parameters:
+  ADWIN_DELTA_WARN: 1e-05
+  ADWIN_DELTA_CONFIRM: 0.02
+\  DRIFT_LR_PREWARM: 0.01
+  DRIFT_LR_SPIKE: 0.02
+  LR_DECAY_STEPS: 3000
+  FAIRNESS_WINDOW: 1000
+  COOLDOWN: 200
+  MIN_SAMPLES_PER_STREAM: 30
+  Lambda for fairness penalty: 0.1
+  Accuracy window: 200
+  Use rolling accuracy: False
+  Compute fairness: True
+  Fairness type: dp
+Fairness window: 1000, starting fairness computations at sample index: 0
+[DBG] Processing sample 1/16281...
+[DBG] Processing sample 1000/16281...
+[DBG] Processing sample 2000/16281...
+[DBG] Processing sample 3000/16281...
+[DBG] Processing sample 4000/16281...
+[DRIFT] Concept drift confirmed at sample 4351 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 4351. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 5000/16281...
+[DBG] Processing sample 6000/16281...
+[DBG] Processing sample 7000/16281...
+[DBG] Processing sample 8000/16281...
+[DBG] Processing sample 9000/16281...
+[DBG] Processing sample 10000/16281...
+[DBG] Processing sample 11000/16281...
+[DBG] Processing sample 12000/16281...
+[DBG] Processing sample 13000/16281...
+[DBG] Processing sample 14000/16281...
+[DBG] Processing sample 15000/16281...
+[DBG] Processing sample 16000/16281...
+Accuracy drift detected at samples: [4351]
+{'accuracy': 0.8563970272096308, 'dp': 0.016221494731710168, 'eo': 0.08254809088451187}
+Done in 1953.9s | Acc=0.8563970272096308 DP=0.016221494731710168 EO=0.08254809088451187
+
+>>> [4/7] label_flip
+
+################################################################################
+# Evaluating scenario (aranyani): label_flip
+# Label flip in drift phases (40% abrupt, 30%→5% gradual)
+################################################################################
+
+Applying drift scenario: label_flip
+Evaluating model over 16281 timesteps with test-then-train=True
+          Fairness penalty lambda: 0.1, fairness type: dp
+Parameters:
+  ADWIN_DELTA_WARN: 1e-05
+  ADWIN_DELTA_CONFIRM: 0.02
+\  DRIFT_LR_PREWARM: 0.01
+  DRIFT_LR_SPIKE: 0.02
+  LR_DECAY_STEPS: 3000
+  FAIRNESS_WINDOW: 1000
+  COOLDOWN: 200
+  MIN_SAMPLES_PER_STREAM: 30
+  Lambda for fairness penalty: 0.1
+  Accuracy window: 200
+  Use rolling accuracy: False
+  Compute fairness: True
+  Fairness type: dp
+Fairness window: 1000, starting fairness computations at sample index: 0
+[DBG] Processing sample 1/16281...
+[DBG] Processing sample 1000/16281...
+[DBG] Processing sample 2000/16281...
+[DRIFT] Concept drift confirmed at sample 2719 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 3000/16281...
+[DBG] Processing sample 4000/16281...
+[DBG] Processing sample 5000/16281...
+[DRIFT] Concept drift confirmed at sample 5151 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 6000/16281...
+[DBG] Processing sample 7000/16281...
+[DBG] Processing sample 8000/16281...
+[DRIFT] Concept drift confirmed at sample 8479 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 8479. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 9000/16281...
+[DBG] Processing sample 10000/16281...
+[DRIFT] Concept drift confirmed at sample 10111 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 10111. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 11000/16281...
+[DBG] Processing sample 12000/16281...
+[DRIFT] Concept drift confirmed at sample 12159 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 12159. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 13000/16281...
+[DBG] Processing sample 14000/16281...
+[DBG] Processing sample 15000/16281...
+[DBG] Processing sample 16000/16281...
+Accuracy drift detected at samples: [2719, 5151, 8479, 10111, 12159]
+{'accuracy': 0.7071432958663473, 'dp': 0.06865045999749286, 'eo': 0.07319158330173714}
+Done in 1958.1s | Acc=0.7071432958663473 DP=0.06865045999749286 EO=0.07319158330173714
+
+>>> [5/7] gender_relationship_decouple
+
+################################################################################
+# Evaluating scenario (aranyani): gender_relationship_decouple
+# Break Husband/Wife ↔ Male/Female co-occurrence
+################################################################################
+
+Applying drift scenario: gender_relationship_decouple
+Evaluating model over 16281 timesteps with test-then-train=True
+          Fairness penalty lambda: 0.1, fairness type: dp
+Parameters:
+  ADWIN_DELTA_WARN: 1e-05
+  ADWIN_DELTA_CONFIRM: 0.02
+\  DRIFT_LR_PREWARM: 0.01
+  DRIFT_LR_SPIKE: 0.02
+  LR_DECAY_STEPS: 3000
+  FAIRNESS_WINDOW: 1000
+  COOLDOWN: 200
+  MIN_SAMPLES_PER_STREAM: 30
+  Lambda for fairness penalty: 0.1
+  Accuracy window: 200
+  Use rolling accuracy: False
+  Compute fairness: True
+  Fairness type: dp
+Fairness window: 1000, starting fairness computations at sample index: 0
+[DBG] Processing sample 1/16281...
+[DBG] Processing sample 1000/16281...
+[DBG] Processing sample 2000/16281...
+[DBG] Processing sample 3000/16281...
+[DBG] Processing sample 4000/16281...
+[DBG] Processing sample 5000/16281...
+[DBG] Processing sample 6000/16281...
+[DBG] Processing sample 7000/16281...
+[DBG] Processing sample 8000/16281...
+[DBG] Processing sample 9000/16281...
+[DBG] Processing sample 10000/16281...
+[DBG] Processing sample 11000/16281...
+[DBG] Processing sample 12000/16281...
+[DBG] Processing sample 13000/16281...
+[DBG] Processing sample 14000/16281...
+[DBG] Processing sample 15000/16281...
+[DBG] Processing sample 16000/16281...
+No accuracy drift detected over the test set.
+{'accuracy': 0.8473066764940729, 'dp': 0.0800052945319053, 'eo': 0.03505996092437812}
+Done in 1954.3s | Acc=0.8473066764940729 DP=0.0800052945319053 EO=0.03505996092437812
+
+>>> [6/7] female_income_parity
+
+################################################################################
+# Evaluating scenario (aranyani): female_income_parity
+# Abrupt female income promotion (P(Y|Female) equalised)
+################################################################################
+
+Applying drift scenario: female_income_parity
+Evaluating model over 16281 timesteps with test-then-train=True
+          Fairness penalty lambda: 0.1, fairness type: dp
+Parameters:
+  ADWIN_DELTA_WARN: 1e-05
+  ADWIN_DELTA_CONFIRM: 0.02
+\  DRIFT_LR_PREWARM: 0.01
+  DRIFT_LR_SPIKE: 0.02
+  LR_DECAY_STEPS: 3000
+  FAIRNESS_WINDOW: 1000
+  COOLDOWN: 200
+  MIN_SAMPLES_PER_STREAM: 30
+  Lambda for fairness penalty: 0.1
+  Accuracy window: 200
+  Use rolling accuracy: False
+  Compute fairness: True
+  Fairness type: dp
+Fairness window: 1000, starting fairness computations at sample index: 0
+[DBG] Processing sample 1/16281...
+[DBG] Processing sample 1000/16281...
+[DBG] Processing sample 2000/16281...
+[DRIFT] Concept drift confirmed at sample 2751 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 3000/16281...
+[DRIFT] Concept drift confirmed at sample 3711 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 3711. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 4000/16281...
+[DBG] Processing sample 5000/16281...
+[DBG] Processing sample 6000/16281...
+[DBG] Processing sample 7000/16281...
+[DBG] Processing sample 8000/16281...
+[DRIFT] Concept drift confirmed at sample 8543 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 9000/16281...
+[DRIFT] Concept drift confirmed at sample 9343 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 10000/16281...
+[RECOVERY] Performance restored at sample 10676. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 11000/16281...
+[DBG] Processing sample 12000/16281...
+[DBG] Processing sample 13000/16281...
+[DBG] Processing sample 14000/16281...
+[DBG] Processing sample 15000/16281...
+[DBG] Processing sample 16000/16281...
+Accuracy drift detected at samples: [2751, 3711, 8543, 9343]
+{'accuracy': 0.8234137952214238, 'dp': 0.06737452367048141, 'eo': 0.11155457177186767}
+Done in 1962.7s | Acc=0.8234137952214238 DP=0.06737452367048141 EO=0.11155457177186767
+
+>>> [7/7] occupation_gender_reversal
+
+################################################################################
+# Evaluating scenario (aranyani): occupation_gender_reversal
+# Swap gender in strongly stereotyped occupations
+################################################################################
+
+Applying drift scenario: occupation_gender_reversal
+Evaluating model over 16281 timesteps with test-then-train=True
+          Fairness penalty lambda: 0.1, fairness type: dp
+Parameters:
+  ADWIN_DELTA_WARN: 1e-05
+  ADWIN_DELTA_CONFIRM: 0.02
+\  DRIFT_LR_PREWARM: 0.01
+  DRIFT_LR_SPIKE: 0.02
+  LR_DECAY_STEPS: 3000
+  FAIRNESS_WINDOW: 1000
+  COOLDOWN: 200
+  MIN_SAMPLES_PER_STREAM: 30
+  Lambda for fairness penalty: 0.1
+  Accuracy window: 200
+  Use rolling accuracy: False
+  Compute fairness: True
+  Fairness type: dp
+Fairness window: 1000, starting fairness computations at sample index: 0
+[DBG] Processing sample 1/16281...
+[DBG] Processing sample 1000/16281...
+[DBG] Processing sample 2000/16281...
+[DBG] Processing sample 3000/16281...
+[DBG] Processing sample 4000/16281...
+[DBG] Processing sample 5000/16281...
+[DBG] Processing sample 6000/16281...
+[DBG] Processing sample 7000/16281...
+[DBG] Processing sample 8000/16281...
+[DBG] Processing sample 9000/16281...
+[DBG] Processing sample 10000/16281...
+[DBG] Processing sample 11000/16281...
+[DBG] Processing sample 12000/16281...
+[DBG] Processing sample 13000/16281...
+[DBG] Processing sample 14000/16281...
+[DBG] Processing sample 15000/16281...
+[DRIFT] Concept drift confirmed at sample 15487 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 15487. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 16000/16281...
+Accuracy drift detected at samples: [15487]
+{'accuracy': 0.8439899269086666, 'dp': 0.05129826863265055, 'eo': 0.042830808735188186}
+Done in 1954.3s | Acc=0.8439899269086666 DP=0.05129826863265055 EO=0.042830808735188186
+Results saved to: files/experiments\model_aranyani\dataset_adult\seed_4\results.json
+
+================================================================================
+ SUMMARY
+================================================================================
+Scenario                      Acc         DP         EO
+--------------------------------------------------------------------------------
+no_drift                   0.8487     0.0872     0.0537
+abrupt_gender              0.8813     0.0494     0.1078
+gradual_gender             0.8564     0.0162     0.0825
+label_flip                 0.7071     0.0687     0.0732
+gender_relationship_decouple     0.8473     0.0800     0.0351
+female_income_parity       0.8234     0.0674     0.1116
+occupation_gender_reversal     0.8440     0.0513     0.0428
+
+--------------------------------------------------------------------------------
+ Seed run [2/5]: 5
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running all 7 drift scenarios
+ Model: aranyani
+ Dataset: adult
+ Output: C:\Users\tjcsi\Documents\Aranyani2.0\files\experiments\model_aranyani\dataset_adult\seed_5/
+================================================================================
+
+>>> Training model on clean data (no drift)...
+Using random seed: 42
+Loading existing model from models/adult_model.pkl...
+Model loaded from models/adult_model.pkl
+This set contains, 5421 female samples
+Income column unique values: [' <=50K.' ' >50K.']
+Samples with income >50K: 0
+Samples with income >50K.: 3846
+Male samples with >50K income: 0
+Male samples with >50K. income: 3256
+Sensitive attribute values in training set: {0, 1}
+Test Accuracy: 0.848
+Test Sensitivity: 0.580
+Test DP: 0.090
+Test EO: 0.060
+Test AUC: 0.901
+Test F1-Score: 0.643
+
+================================================================================
+TEST SET CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[11574   861]
+ [ 1616  2230]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.8775    0.9308    0.9033     12435
+     Class 1     0.7214    0.5798    0.6429      3846
+
+    accuracy                         0.8479     16281
+   macro avg     0.7995    0.7553    0.7731     16281
+weighted avg     0.8406    0.8479    0.8418     16281
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   11574
+  False Positives (FP):    861
+  False Negatives (FN):   1616
+  True Positives (TP):    2230
+  Sensitivity/Recall:   0.5798
+  Specificity:          0.9308
+  Precision:            0.7214
+  F1-Score:             0.6429
+  Accuracy:             0.8479
+
+Confusion matrix saved to: files/test_confusion_matrix.png
+================================================================================
+
+
+================================================================================
+Loaded Model Test Results:
+  Test Accuracy: 0.8479
+  Test DP: 0.0902
+  Test EO: 0.0602
+  Test AUC: 0.9011
+  Test F1-Score: 0.6429
+================================================================================

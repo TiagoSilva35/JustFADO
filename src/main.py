@@ -11,7 +11,6 @@ from absl import app, flags
 from src.drift.scenarios import SCENARIO_DESCRIPTIONS, SCENARIOS, SPLITS, PHASE_LABELS
 from src.helpers.data import load_drifted_test_set, read_adult, read_folktables
 from src.helpers.plots import plot_metrics_over_timesteps
-from src.helpers.utils import get_test_performance
 from src.models.arf.arf import evaluate_arf_over_timesteps
 from src.models.forest.evaluator import evaluate_over_timesteps
 from src.models.rfr.evaluator import evaluate_rfr_over_timesteps
@@ -90,7 +89,11 @@ def _evaluate_selected_model(
 ):
     if model_name == 'aranyani':
         stream = evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim=data_dim)
-        test_metrics = get_test_performance(model, x_test, y_test, a_test, data_dim=data_dim)
+        test_metrics = {
+            'accuracy': float(stream.get('accuracy')[-1]) if stream.get('accuracy') else None,
+            'dp': float(stream.get('dp')[-1]) if stream.get('dp') else None,
+            'eo': float(stream.get('eo')[-1]) if stream.get('eo') else None,
+        }
         return stream, test_metrics
 
     if model_name == 'arf':

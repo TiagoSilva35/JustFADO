@@ -192,33 +192,52 @@ def get_equalized_odds(y_predictions, y_protected, y_true):
 
 
 def get_test_performance(model, x_test, y_test, a_test, data_dim,
-                        show_confusion_matrix=True):
+                        show_confusion_matrix=True, eval_batch_size=64):
   accuracy = tf.keras.metrics.Accuracy()
   auc = tf.keras.metrics.AUC()
 
-  y_true = tf.convert_to_tensor(np.array(y_test))
-  
-  # Get probabilities from model
-  y_probs = model(
-      tf.convert_to_tensor(
-          np.array(x_test, dtype=np.float32).reshape(-1, data_dim)
-      ),
-      training=False  
-  )
-  
-  y_pred = tf.math.argmax(y_probs, axis=-1)
+  x_test_np = np.asarray(x_test, dtype=np.float32).reshape(-1, data_dim)
+  y_true_np = np.asarray(y_test)
+  a_test_np = np.asarray(a_test)
 
-  accuracy.update_state(y_true, y_pred)
+  if x_test_np.shape[0] == 0:
+    return {
+        'accuracy': 0.0,
+        'dp': 0.0,
+        'eo': 0.0,
+        'sensitivity': 0.0,
+        'auc': 0.0,
+        'f1': 0.0,
+    }
+
+  eval_batch_size = int(eval_batch_size) if eval_batch_size is not None else x_test_np.shape[0]
+  eval_batch_size = max(1, min(eval_batch_size, x_test_np.shape[0]))
+
+  y_pred_chunks = []
+  auc_updated = False
+  for start in range(0, x_test_np.shape[0], eval_batch_size):
+    end = min(start + eval_batch_size, x_test_np.shape[0])
+    x_batch = tf.convert_to_tensor(x_test_np[start:end])
+    y_true_batch = tf.convert_to_tensor(y_true_np[start:end])
+
+    y_probs_batch = model(x_batch, training=False)
+    y_pred_batch = tf.math.argmax(y_probs_batch, axis=-1, output_type=tf.int32)
+
+    accuracy.update_state(tf.cast(y_true_batch, tf.int32), y_pred_batch)
+
+    if y_probs_batch.shape.rank == 2 and y_probs_batch.shape[-1] is not None and y_probs_batch.shape[-1] > 1:
+      auc.update_state(tf.cast(y_true_batch, tf.float32), y_probs_batch[:, 1])
+      auc_updated = True
+
+    y_pred_chunks.append(y_pred_batch.numpy())
+
+  y_pred_np = np.concatenate(y_pred_chunks, axis=0)
   acc = accuracy.result().numpy()
-  
-  auc.update_state(y_true, y_probs[:, 1])
-  auc_value = auc.result().numpy()
-  
-  dp, _ = get_demographic_parity(y_pred, a_test)
-  eo, _ = get_equalized_odds(y_pred, a_test, y_true.numpy())
-  
-  y_true_np = y_true.numpy()
-  y_pred_np = y_pred.numpy()
+  auc_value = auc.result().numpy() if auc_updated else 0.0
+
+  dp, _ = get_demographic_parity(y_pred_np, a_test_np)
+  eo, _ = get_equalized_odds(y_pred_np, a_test_np, y_true_np)
+
   actual_positives = (y_true_np == 1)
   
   if np.sum(actual_positives) > 0:
@@ -246,8 +265,8 @@ def get_test_performance(model, x_test, y_test, a_test, data_dim,
 
   if show_confusion_matrix:
     display_confusion_matrix(
-        y_true.numpy(), 
-        y_pred.numpy(), 
+        y_true_np,
+        y_pred_np,
         save_path='files/test_confusion_matrix.png',
         title='Test Set Confusion Matrix'
     )

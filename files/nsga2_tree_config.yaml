@@ -3,9 +3,9 @@ nsga2_tree:
   population_size: 10
   generations: 5
   seed: 42
+  tuning_subset_ratio: 0.25
   validation_ratio: 0.2
-  train_sample_size: 1500
-  val_sample_size: 800
+  eval_batch_size: 64
   depth_bounds: [2, 10]
   num_trees_bounds: [2, 10]
   lambda_bounds: [0.0, 20.0]

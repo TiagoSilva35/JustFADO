@@ -14,8 +14,8 @@ def _load_tree_nsga2_config():
       'population_size': 8,
       'generations': 4,
       'seed': 42,
-      'train_sample_size': 2000,
-      'val_sample_size': 1200,
+      'tuning_subset_ratio': 0.25,
+      'eval_batch_size': 64,
       'validation_ratio': 0.2,
       'depth_bounds': [2, 6],
       'num_trees_bounds': [1, 7],
@@ -36,8 +36,9 @@ def _load_tree_nsga2_config():
   cfg['population_size'] = int(cfg.get('population_size', 8))
   cfg['generations'] = int(cfg.get('generations', 4))
   cfg['seed'] = int(cfg.get('seed', 42))
-  cfg['train_sample_size'] = int(cfg.get('train_sample_size', 2000))
-  cfg['val_sample_size'] = int(cfg.get('val_sample_size', 1200))
+  cfg['tuning_subset_ratio'] = float(cfg.get('tuning_subset_ratio', 0.25))
+  cfg['tuning_subset_ratio'] = max(0.01, min(1.0, cfg['tuning_subset_ratio']))
+  cfg['eval_batch_size'] = int(cfg.get('eval_batch_size', 64))
   cfg['validation_ratio'] = float(cfg.get('validation_ratio', 0.2))
 
   depth_bounds = cfg.get('depth_bounds', [2, 6])
@@ -75,15 +76,37 @@ def _tune_tree_hyperparameters_nsga2(dataset, x_train, y_train, a_train,
       f"base(depth={base_depth}, num_trees={base_num_trees}, lambda={base_lambda_const})"
   )
 
-  tune_train_n = len(x_train)
-  tune_val_n = len(x_val)
+  x_train_arr = np.asarray(x_train)
+  y_train_arr = np.asarray(y_train)
+  a_train_arr = np.asarray(a_train)
+  x_val_arr = np.asarray(x_val)
+  y_val_arr = np.asarray(y_val)
+  a_val_arr = np.asarray(a_val)
 
-  x_tune_train = np.asarray(x_train)[:tune_train_n]
-  y_tune_train = np.asarray(y_train)[:tune_train_n]
-  a_tune_train = np.asarray(a_train)[:tune_train_n]
-  x_tune_val = np.asarray(x_val)[:tune_val_n]
-  y_tune_val = np.asarray(y_val)[:tune_val_n]
-  a_tune_val = np.asarray(a_val)[:tune_val_n]
+  subset_ratio = float(tree_cfg.get('tuning_subset_ratio', 0.25))
+  subset_ratio = max(0.01, min(1.0, subset_ratio))
+  tune_train_n = max(1, int(round(len(x_train_arr) * subset_ratio)))
+  tune_val_n = max(1, int(round(len(x_val_arr) * subset_ratio)))
+
+  rng = np.random.default_rng(int(tree_cfg.get('seed', 42)))
+  train_indices = np.arange(len(x_train_arr))
+  if tune_train_n < len(x_train_arr):
+    train_indices = rng.choice(len(x_train_arr), size=tune_train_n, replace=False)
+  val_indices = np.arange(len(x_val_arr))
+  if tune_val_n < len(x_val_arr):
+    val_indices = rng.choice(len(x_val_arr), size=tune_val_n, replace=False)
+
+  x_tune_train = x_train_arr[train_indices]
+  y_tune_train = y_train_arr[train_indices]
+  a_tune_train = a_train_arr[train_indices]
+  x_tune_val = x_val_arr[val_indices]
+  y_tune_val = y_val_arr[val_indices]
+  a_tune_val = a_val_arr[val_indices]
+
+  print(
+      f"[NSGA2-TREE] Using {subset_ratio * 100:.1f}% subset: "
+      f"tune_train={len(x_tune_train)}, tune_val={len(x_tune_val)}"
+  )
 
   bounds = {
       'depth': (float(tree_cfg['depth_bounds'][0]), float(tree_cfg['depth_bounds'][1])),
@@ -147,6 +170,7 @@ def _tune_tree_hyperparameters_nsga2(dataset, x_train, y_train, a_train,
         a_tune_val,
         data_dim=data_dim,
         show_confusion_matrix=False,
+        eval_batch_size=int(tree_cfg.get('eval_batch_size', 64)),
     )
     return (1.0 - float(val_metrics['accuracy']), float(val_metrics['dp']))
 
