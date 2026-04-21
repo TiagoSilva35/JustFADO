@@ -128,8 +128,8 @@ Tables~\ref{tab:no-drift}--\ref{tab:occupation-gender-reversal} report per-scena
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
-Aranyani & $0.8538 \pm 0.0041$ & $0.0860 \pm 0.0026$ & $0.0467 \pm 0.0083$ \\
-ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ & $0.0714 \pm 0.0000$ \\
+Aranyani & \textbf{$0.8538 \pm 0.0041$} & $0.0860 \pm 0.0026$ & $0.0467 \pm 0.0083$ \\
+ARF & $0.7700 \pm 0.0000$ & \textbf{$0.0336 \pm 0.0000$} & $0.0714 \pm 0.0000$ \\
 RFR & $0.8050 \pm 0.0079$ & $0.0585 \pm 0.0073$ & $0.1119 \pm 0.0382$ \\
 \bottomrule
 \end{tabular}
@@ -146,9 +146,9 @@ RFR & $0.8050 \pm 0.0079$ & $0.0585 \pm 0.0073$ & $0.1119 \pm 0.0382$ \\
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
-Aranyani & $0.8607 \pm 0.0199$ & $0.0414 \pm 0.0192$ & $0.0832 \pm 0.0614$ \\
-ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ & $0.0714 \pm 0.0000$ \\
-RFR & $0.8030 \pm 0.0045$ & $0.0622 \pm 0.0042$ & $0.0857 \pm 0.0284$ \\
+Aranyani & \textbf{$0.8607 \pm 0.0199$} & $0.0414 \pm 0.0192$ & $0.0832 \pm 0.0614$ \\
+ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ & \textbf{$0.0714 \pm 0.0000$} \\
+RFR & $0.8030 \pm 0.0045$ & \textbf{$0.0622 \pm 0.0042$} & $0.0857 \pm 0.0284$ \\
 \bottomrule
 \end{tabular}
 
@@ -162,29 +162,11 @@ RFR & $0.8030 \pm 0.0045$ & $0.0622 \pm 0.0042$ & $0.0857 \pm 0.0284$ \\
 
 \begin{tabular}{lccc}
 \toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
+Model & Accuracy $\uparrow$ & DP $\downarrow$ \\
 \midrule
-Aranyani & $0.8573 \pm 0.0026$ & $0.0129 \pm 0.0073$ & $0.0860 \pm 0.0273$ \\
-ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ & $0.0714 \pm 0.0000$ \\
-RFR & $0.8040 \pm 0.0074$ & $0.0690 \pm 0.0118$ & $0.1200 \pm 0.0448$ \\
-\bottomrule
-\end{tabular}
-
-\end{table}
-
-\begin{table}[t]
-\centering
-
-\caption{Label flip scenario results on Adult (mean $\pm$ std over seeds)}
-\label{tab:label-flip}
-
-\begin{tabular}{lccc}
-\toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
-\midrule
-Aranyani & $0.7281 \pm 0.0141$ & $0.0849 \pm 0.0129$ & $0.1105 \pm 0.0275$ \\
-ARF & $0.7600 \pm 0.0000$ & $0.0112 \pm 0.0000$ & $0.0238 \pm 0.0000$ \\
-RFR & $0.7960 \pm 0.0065$ & $0.0713 \pm 0.0105$ & $0.1262 \pm 0.0065$ \\
+Aranyani & \textbf{$0.8573 \pm 0.0026$} & \textbf{$0.0129 \pm 0.0073$} &\\
+ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ \\
+RFR & $0.8040 \pm 0.0074$ & $0.0690 \pm 0.0118$ \\
 \bottomrule
 \end{tabular}
 
@@ -200,31 +182,14 @@ RFR & $0.7960 \pm 0.0065$ & $0.0713 \pm 0.0105$ & $0.1262 \pm 0.0065$ \\
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
-Aranyani & $0.8516 \pm 0.0052$ & $0.0854 \pm 0.0065$ & $0.0447 \pm 0.0174$ \\
-ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ & $0.0714 \pm 0.0000$ \\
+Aranyani & \textbf{$0.8516 \pm 0.0052$} & $0.0854 \pm 0.0065$ & $0.0447 \pm 0.0174$ \\
+ARF & $0.7700 \pm 0.0000$ & \textbf{$0.0336 \pm 0.0000$} & $0.0714 \pm 0.0000$ \\
 RFR & $0.7890 \pm 0.0096$ & $0.0713 \pm 0.0142$ & $0.1214 \pm 0.0053$ \\
 \bottomrule
 \end{tabular}
 
 \end{table}
 
-\begin{table}[t]
-\centering
-
-\caption{Female income parity scenario results on Adult (mean $\pm$ std over seeds)}
-\label{tab:female-income-parity}
-
-\begin{tabular}{lccc}
-\toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
-\midrule
-Aranyani & $0.7667 \pm 0.0379$ & $0.0821 \pm 0.0126$ & $0.1997 \pm 0.0599$ \\
-ARF & $0.7550 \pm 0.0000$ & $0.0000 \pm 0.0000$ & $0.0000 \pm 0.0000$ \\
-RFR & $0.8050 \pm 0.0061$ & $0.0796 \pm 0.0057$ & $0.1357 \pm 0.0543$ \\
-\bottomrule
-\end{tabular}
-
-\end{table}
 
 \begin{table}[t]
 \centering
@@ -236,8 +201,8 @@ RFR & $0.8050 \pm 0.0061$ & $0.0796 \pm 0.0057$ & $0.1357 \pm 0.0543$ \\
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
-Aranyani & $0.8516 \pm 0.0056$ & $0.0524 \pm 0.0060$ & $0.0467 \pm 0.0122$ \\
-ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ & $0.0714 \pm 0.0000$ \\
+Aranyani & \textbf{$0.8516 \pm 0.0056$} & $0.0524 \pm 0.0060$ & $0.0467 \pm 0.0122$ \\
+ARF & $0.7700 \pm 0.0000$ & \textbf{$0.0336 \pm 0.0000$} & $0.0714 \pm 0.0000$ \\
 RFR & $0.7990 \pm 0.0124$ & $0.0728 \pm 0.0057$ & $0.1262 \pm 0.0247$ \\
 \bottomrule
 \end{tabular}

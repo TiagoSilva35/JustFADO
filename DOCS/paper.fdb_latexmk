@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1776776374.58771 "/Users/tiagosilva/Documents/Aranyani2.0.worktrees/copilot-worktree-2026-04-21T12-37-25/DOCS/paper.tex" "paper.pdf" "paper" 1776776374.95014 0
-  "/Users/tiagosilva/Documents/Aranyani2.0.worktrees/copilot-worktree-2026-04-21T12-37-25/DOCS/paper.tex" 1776776374.33774 36868 9e43c8eb5b331a10db4ae92775af9a3e ""
+["pdflatex"] 1776781826.83886 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" "paper.pdf" "paper" 1776781827.19967 0
+  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" 1776781826.69184 35867 6fe2a35503e4a1a63a7a5e79c5d24fd6 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/base/8r.enc" 1772380719 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1772380719 2971 def0b6c1f0b107b3b936def894055589 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/fontname/texfonts.map" 1772380719 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -94,10 +94,10 @@
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/xcolor/xcolor.sty" 1772380719 55384 b454dec21c2d9f45ec0b793f0995b992 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/web2c/texmf.cnf" 1772380719 43633 14bbc273cebd985e64ab1a698333eaf9 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-var/web2c/pdftex/pdflatex.fmt" 1772380719 3636956 5168b884cb430e6a6336cfea08fa659a ""
-  "neurips_2025.sty" 1776775045.58395 13023 2817c1b954c70ec3156371423da6545c ""
-  "paper.aux" 1776776374.92264 2845 66068afcd42be383d53eb548f74b485d "pdflatex"
-  "paper.out" 1776776374.92303 492 dc698564577734b823e8395d5f1b0ef1 "pdflatex"
-  "paper.tex" 1776776374.33774 36868 9e43c8eb5b331a10db4ae92775af9a3e ""
+  "neurips_2025.sty" 1776429036.53314 13023 2817c1b954c70ec3156371423da6545c ""
+  "paper.aux" 1776781827.17155 2223 224d65e00ef5950586804759dd9dfbdc "pdflatex"
+  "paper.out" 1776781827.17191 492 dc698564577734b823e8395d5f1b0ef1 "pdflatex"
+  "paper.tex" 1776781826.69184 35867 6fe2a35503e4a1a63a7a5e79c5d24fd6 ""
   (generated)
   "paper.aux"
   "paper.log"

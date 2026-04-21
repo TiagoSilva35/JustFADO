@@ -1,7 +1,7 @@
-PWD /Users/tiagosilva/Documents/Aranyani2.0.worktrees/copilot-worktree-2026-04-21T12-37-25/DOCS
+PWD /Users/tiagosilva/Documents/Aranyani2.0/DOCS
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/web2c/texmf.cnf
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-var/web2c/pdftex/pdflatex.fmt
-INPUT /Users/tiagosilva/Documents/Aranyani2.0.worktrees/copilot-worktree-2026-04-21T12-37-25/DOCS/paper.tex
+INPUT /Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex
 OUTPUT paper.log
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/base/article.cls
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/base/article.cls
