@@ -50,6 +50,7 @@
 \usepackage{hyperref}       % hyperlinks
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
+\usepackage{float}          % fixed-position tables
 \usepackage{amsfonts}       % blackboard math symbols
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
@@ -118,7 +119,7 @@ can be used to preserve fairness guarantees over time.
 \section{Experiments}
 Tables~\ref{tab:no-drift}--\ref{tab:occupation-gender-reversal} report per-scenario results on Adult with mean $\pm$ standard deviation across seeds from \texttt{files/experiments}. Aranyani results use 4 available seeds; ARF and RFR use 5 seeds.
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 
 \caption{No drift scenario results on Adult (mean $\pm$ std over seeds)}
@@ -128,15 +129,15 @@ Tables~\ref{tab:no-drift}--\ref{tab:occupation-gender-reversal} report per-scena
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
-Aranyani & $0.8538 \pm 0.0041$ & $0.0860 \pm 0.0026$ & $0.0467 \pm 0.0083$ \\
-ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ & $0.0714 \pm 0.0000$ \\
-RFR & $0.8050 \pm 0.0079$ & $0.0585 \pm 0.0073$ & $0.1119 \pm 0.0382$ \\
+Aranyani & \textbf{$0.8538 \pm 0.0041$} & \textbf{$0.0860 \pm 0.0026$} & \textbf{$0.0467 \pm 0.0083$} \\
+ARF & \textbf{$0.7700 \pm 0.0000$} & \textbf{$0.0336 \pm 0.0000$} & \textbf{$0.0714 \pm 0.0000$} \\
+RFR & \textbf{$0.8050 \pm 0.0079$} & \textbf{$0.0585 \pm 0.0073$} & \textbf{$0.1119 \pm 0.0382$} \\
 \bottomrule
 \end{tabular}
 
 \end{table}
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 
 \caption{Abrupt gender scenario results on Adult (mean $\pm$ std over seeds)}
@@ -146,15 +147,15 @@ RFR & $0.8050 \pm 0.0079$ & $0.0585 \pm 0.0073$ & $0.1119 \pm 0.0382$ \\
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
-Aranyani & $0.8607 \pm 0.0199$ & $0.0414 \pm 0.0192$ & $0.0832 \pm 0.0614$ \\
-ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ & $0.0714 \pm 0.0000$ \\
-RFR & $0.8030 \pm 0.0045$ & $0.0622 \pm 0.0042$ & $0.0857 \pm 0.0284$ \\
+Aranyani & \textbf{$0.8607 \pm 0.0199$} & \textbf{$0.0414 \pm 0.0192$} & \textbf{$0.0832 \pm 0.0614$} \\
+ARF & \textbf{$0.7700 \pm 0.0000$} & \textbf{$0.0336 \pm 0.0000$} & \textbf{$0.0714 \pm 0.0000$} \\
+RFR & \textbf{$0.8030 \pm 0.0045$} & \textbf{$0.0622 \pm 0.0042$} & \textbf{$0.0857 \pm 0.0284$} \\
 \bottomrule
 \end{tabular}
 
 \end{table}
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 
 \caption{Gradual gender scenario results on Adult (mean $\pm$ std over seeds)}
@@ -164,15 +165,15 @@ RFR & $0.8030 \pm 0.0045$ & $0.0622 \pm 0.0042$ & $0.0857 \pm 0.0284$ \\
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
-Aranyani & $0.8573 \pm 0.0026$ & $0.0129 \pm 0.0073$ & $0.0860 \pm 0.0273$ \\
-ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ & $0.0714 \pm 0.0000$ \\
-RFR & $0.8040 \pm 0.0074$ & $0.0690 \pm 0.0118$ & $0.1200 \pm 0.0448$ \\
+Aranyani & \textbf{$0.8573 \pm 0.0026$} & \textbf{$0.0129 \pm 0.0073$} & \textbf{$0.0860 \pm 0.0273$} \\
+ARF & \textbf{$0.7700 \pm 0.0000$} & \textbf{$0.0336 \pm 0.0000$} & \textbf{$0.0714 \pm 0.0000$} \\
+RFR & \textbf{$0.8040 \pm 0.0074$} & \textbf{$0.0690 \pm 0.0118$} & \textbf{$0.1200 \pm 0.0448$} \\
 \bottomrule
 \end{tabular}
 
 \end{table}
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 
 \caption{Label flip scenario results on Adult (mean $\pm$ std over seeds)}
@@ -182,15 +183,15 @@ RFR & $0.8040 \pm 0.0074$ & $0.0690 \pm 0.0118$ & $0.1200 \pm 0.0448$ \\
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
-Aranyani & $0.7281 \pm 0.0141$ & $0.0849 \pm 0.0129$ & $0.1105 \pm 0.0275$ \\
-ARF & $0.7600 \pm 0.0000$ & $0.0112 \pm 0.0000$ & $0.0238 \pm 0.0000$ \\
-RFR & $0.7960 \pm 0.0065$ & $0.0713 \pm 0.0105$ & $0.1262 \pm 0.0065$ \\
+Aranyani & \textbf{$0.7281 \pm 0.0141$} & \textbf{$0.0849 \pm 0.0129$} & \textbf{$0.1105 \pm 0.0275$} \\
+ARF & \textbf{$0.7600 \pm 0.0000$} & \textbf{$0.0112 \pm 0.0000$} & \textbf{$0.0238 \pm 0.0000$} \\
+RFR & \textbf{$0.7960 \pm 0.0065$} & \textbf{$0.0713 \pm 0.0105$} & \textbf{$0.1262 \pm 0.0065$} \\
 \bottomrule
 \end{tabular}
 
 \end{table}
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 
 \caption{Gender-relationship decouple scenario results on Adult (mean $\pm$ std over seeds)}
@@ -200,15 +201,15 @@ RFR & $0.7960 \pm 0.0065$ & $0.0713 \pm 0.0105$ & $0.1262 \pm 0.0065$ \\
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
-Aranyani & $0.8516 \pm 0.0052$ & $0.0854 \pm 0.0065$ & $0.0447 \pm 0.0174$ \\
-ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ & $0.0714 \pm 0.0000$ \\
-RFR & $0.7890 \pm 0.0096$ & $0.0713 \pm 0.0142$ & $0.1214 \pm 0.0053$ \\
+Aranyani & \textbf{$0.8516 \pm 0.0052$} & \textbf{$0.0854 \pm 0.0065$} & \textbf{$0.0447 \pm 0.0174$} \\
+ARF & \textbf{$0.7700 \pm 0.0000$} & \textbf{$0.0336 \pm 0.0000$} & \textbf{$0.0714 \pm 0.0000$} \\
+RFR & \textbf{$0.7890 \pm 0.0096$} & \textbf{$0.0713 \pm 0.0142$} & \textbf{$0.1214 \pm 0.0053$} \\
 \bottomrule
 \end{tabular}
 
 \end{table}
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 
 \caption{Female income parity scenario results on Adult (mean $\pm$ std over seeds)}
@@ -218,15 +219,15 @@ RFR & $0.7890 \pm 0.0096$ & $0.0713 \pm 0.0142$ & $0.1214 \pm 0.0053$ \\
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
-Aranyani & $0.7667 \pm 0.0379$ & $0.0821 \pm 0.0126$ & $0.1997 \pm 0.0599$ \\
-ARF & $0.7550 \pm 0.0000$ & $0.0000 \pm 0.0000$ & $0.0000 \pm 0.0000$ \\
-RFR & $0.8050 \pm 0.0061$ & $0.0796 \pm 0.0057$ & $0.1357 \pm 0.0543$ \\
+Aranyani & \textbf{$0.7667 \pm 0.0379$} & \textbf{$0.0821 \pm 0.0126$} & \textbf{$0.1997 \pm 0.0599$} \\
+ARF & \textbf{$0.7550 \pm 0.0000$} & \textbf{$0.0000 \pm 0.0000$} & \textbf{$0.0000 \pm 0.0000$} \\
+RFR & \textbf{$0.8050 \pm 0.0061$} & \textbf{$0.0796 \pm 0.0057$} & \textbf{$0.1357 \pm 0.0543$} \\
 \bottomrule
 \end{tabular}
 
 \end{table}
 
-\begin{table}[t]
+\begin{table}[H]
 \centering
 
 \caption{Occupation gender reversal scenario results on Adult (mean $\pm$ std over seeds)}
@@ -236,9 +237,9 @@ RFR & $0.8050 \pm 0.0061$ & $0.0796 \pm 0.0057$ & $0.1357 \pm 0.0543$ \\
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
-Aranyani & $0.8516 \pm 0.0056$ & $0.0524 \pm 0.0060$ & $0.0467 \pm 0.0122$ \\
-ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ & $0.0714 \pm 0.0000$ \\
-RFR & $0.7990 \pm 0.0124$ & $0.0728 \pm 0.0057$ & $0.1262 \pm 0.0247$ \\
+Aranyani & \textbf{$0.8516 \pm 0.0056$} & \textbf{$0.0524 \pm 0.0060$} & \textbf{$0.0467 \pm 0.0122$} \\
+ARF & \textbf{$0.7700 \pm 0.0000$} & \textbf{$0.0336 \pm 0.0000$} & \textbf{$0.0714 \pm 0.0000$} \\
+RFR & \textbf{$0.7990 \pm 0.0124$} & \textbf{$0.0728 \pm 0.0057$} & \textbf{$0.1262 \pm 0.0247$} \\
 \bottomrule
 \end{tabular}
 
