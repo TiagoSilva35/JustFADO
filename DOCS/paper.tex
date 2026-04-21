@@ -118,7 +118,7 @@ can be used to preserve fairness guarantees over time.
 \section{Experiments}
 Tables~\ref{tab:no-drift}--\ref{tab:occupation-gender-reversal} report per-scenario results on Adult with mean $\pm$ standard deviation across seeds from \texttt{files/experiments}. Aranyani results use 4 available seeds; ARF and RFR use 5 seeds.
 
-\begin{table}[t]
+\begin{table}[htbp]
 \centering
 
 \caption{No drift scenario results on Adult (mean $\pm$ std over seeds)}
@@ -126,45 +126,45 @@ Tables~\ref{tab:no-drift}--\ref{tab:occupation-gender-reversal} report per-scena
 
 \begin{tabular}{lccc}
 \toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
+Model & Accuracy $\uparrow$ & DP $\downarrow$\\
 \midrule
-Aranyani & \textbf{$0.8538 \pm 0.0041$} & $0.0860 \pm 0.0026$ & $0.0467 \pm 0.0083$ \\
-ARF & $0.7700 \pm 0.0000$ & \textbf{$0.0336 \pm 0.0000$} & $0.0714 \pm 0.0000$ \\
-RFR & $0.8050 \pm 0.0079$ & $0.0585 \pm 0.0073$ & $0.1119 \pm 0.0382$ \\
+Aranyani & $\mathbf{0.8538 \pm 0.0041}$ & $0.0860 \pm 0.0026$ \\
+ARF & $0.7700 \pm 0.0000$ & $\mathbf{0.0336 \pm 0.0000}$ \\
+RFR & $0.8050 \pm 0.0079$ & $0.0585 \pm 0.0073$ \\
 \bottomrule
 \end{tabular}
 
 \end{table}
 
-\begin{table}[t]
+\begin{table}[htbp]
 \centering
 
 \caption{Abrupt gender scenario results on Adult (mean $\pm$ std over seeds)}
 \label{tab:abrupt-gender}
 
-\begin{tabular}{lccc}
+\begin{tabular}{lcc}
 \toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
+Model & Accuracy $\uparrow$ & DP $\downarrow$ \\
 \midrule
-Aranyani & \textbf{$0.8607 \pm 0.0199$} & $0.0414 \pm 0.0192$ & $0.0832 \pm 0.0614$ \\
-ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ & \textbf{$0.0714 \pm 0.0000$} \\
-RFR & $0.8030 \pm 0.0045$ & \textbf{$0.0622 \pm 0.0042$} & $0.0857 \pm 0.0284$ \\
+Aranyani & $\mathbf{0.8607 \pm 0.0199}$ & $0.0414 \pm 0.0192$\\
+ARF & $0.7700 \pm 0.0000$ & $\mathbf{0.0336 \pm 0.0000}$\\
+RFR & $0.8030 \pm 0.0045$ & $0.0622 \pm 0.0042$\\
 \bottomrule
 \end{tabular}
 
 \end{table}
 
-\begin{table}[t]
+\begin{table}[htbp]
 \centering
 
 \caption{Gradual gender scenario results on Adult (mean $\pm$ std over seeds)}
 \label{tab:gradual-gender}
 
-\begin{tabular}{lccc}
+\begin{tabular}{lcc}
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ \\
 \midrule
-Aranyani & \textbf{$0.8573 \pm 0.0026$} & \textbf{$0.0129 \pm 0.0073$} &\\
+Aranyani & $\mathbf{0.8573 \pm 0.0026}$ & $\mathbf{0.0129 \pm 0.0073}$ \\
 ARF & $0.7700 \pm 0.0000$ & $0.0336 \pm 0.0000$ \\
 RFR & $0.8040 \pm 0.0074$ & $0.0690 \pm 0.0118$ \\
 \bottomrule
@@ -172,38 +172,38 @@ RFR & $0.8040 \pm 0.0074$ & $0.0690 \pm 0.0118$ \\
 
 \end{table}
 
-\begin{table}[t]
+\begin{table}[htbp]
 \centering
 
 \caption{Gender-relationship decouple scenario results on Adult (mean $\pm$ std over seeds)}
 \label{tab:gender-relationship-decouple}
 
-\begin{tabular}{lccc}
+\begin{tabular}{lcc}
 \toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
+Model & Accuracy $\uparrow$ & DP $\downarrow$\\
 \midrule
-Aranyani & \textbf{$0.8516 \pm 0.0052$} & $0.0854 \pm 0.0065$ & $0.0447 \pm 0.0174$ \\
-ARF & $0.7700 \pm 0.0000$ & \textbf{$0.0336 \pm 0.0000$} & $0.0714 \pm 0.0000$ \\
-RFR & $0.7890 \pm 0.0096$ & $0.0713 \pm 0.0142$ & $0.1214 \pm 0.0053$ \\
+Aranyani & $\mathbf{0.8516 \pm 0.0052}$ & $0.0854 \pm 0.0065$ \\
+ARF & $0.7700 \pm 0.0000$ & $\mathbf{0.0336 \pm 0.0000}$ \\
+RFR & $0.7890 \pm 0.0096$ & $0.0713 \pm 0.0142$ \\
 \bottomrule
 \end{tabular}
 
 \end{table}
 
 
-\begin{table}[t]
+\begin{table}[htbp]
 \centering
 
 \caption{Occupation gender reversal scenario results on Adult (mean $\pm$ std over seeds)}
 \label{tab:occupation-gender-reversal}
 
-\begin{tabular}{lccc}
+\begin{tabular}{lcc}
 \toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
+Model & Accuracy $\uparrow$ & DP $\downarrow$\\
 \midrule
-Aranyani & \textbf{$0.8516 \pm 0.0056$} & $0.0524 \pm 0.0060$ & $0.0467 \pm 0.0122$ \\
-ARF & $0.7700 \pm 0.0000$ & \textbf{$0.0336 \pm 0.0000$} & $0.0714 \pm 0.0000$ \\
-RFR & $0.7990 \pm 0.0124$ & $0.0728 \pm 0.0057$ & $0.1262 \pm 0.0247$ \\
+Aranyani & $\mathbf{0.8516 \pm 0.0056}$ & $0.0524 \pm 0.0060$ \\
+ARF & $0.7700 \pm 0.0000$ & $\mathbf{0.0336 \pm 0.0000}$ \\
+RFR & $0.7990 \pm 0.0124$ & $0.0728 \pm 0.0057$ \\
 \bottomrule
 \end{tabular}
 
