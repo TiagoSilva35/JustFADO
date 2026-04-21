@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1776695867.92735 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" "paper.pdf" "paper" 1776695868.39702 0
-  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" 1776695867.5474 33005 1a0f6aee3385660791fdb8c541cb3baa ""
+["pdflatex"] 1776776374.58771 "/Users/tiagosilva/Documents/Aranyani2.0.worktrees/copilot-worktree-2026-04-21T12-37-25/DOCS/paper.tex" "paper.pdf" "paper" 1776776374.95014 0
+  "/Users/tiagosilva/Documents/Aranyani2.0.worktrees/copilot-worktree-2026-04-21T12-37-25/DOCS/paper.tex" 1776776374.33774 36868 9e43c8eb5b331a10db4ae92775af9a3e ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/base/8r.enc" 1772380719 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1772380719 2971 def0b6c1f0b107b3b936def894055589 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/fontname/texfonts.map" 1772380719 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -22,6 +22,9 @@
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm" 1772380719 908 2921f8a10601f252058503cc6570e581 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm5.tfm" 1772380719 940 75ac932a52f80982a9f8ea75d03a34cf ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm7.tfm" 1772380719 940 228d6584342e91276bf566bcf9716b83 ""
+  "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb" 1772380719 36299 5f9df58c2139e7edcf37c8fca4bd384d ""
+  "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb" 1772380719 35752 024fb6c41858982481f6968b5fc26508 ""
+  "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb" 1772380719 32569 5e5ddc8df908dea60932f3c484a54c0d ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/cm-super/sftt1000.pfb" 1772380719 169201 9ebf99020dde51a5086e186761a34e8f ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/helvetic/uhvr8a.pfb" 1772380719 44648 23115b2a545ebfe2c526c3ca99db8b95 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/utmb8a.pfb" 1772380719 44729 811d6c62865936705a31c797a1d5dada ""
@@ -91,10 +94,10 @@
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/xcolor/xcolor.sty" 1772380719 55384 b454dec21c2d9f45ec0b793f0995b992 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/web2c/texmf.cnf" 1772380719 43633 14bbc273cebd985e64ab1a698333eaf9 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-var/web2c/pdftex/pdflatex.fmt" 1772380719 3636956 5168b884cb430e6a6336cfea08fa659a ""
-  "neurips_2025.sty" 1776429036.53314 13023 2817c1b954c70ec3156371423da6545c ""
-  "paper.aux" 1776695868.36573 568 74dadafcad8df1158ef8b21f30bd93aa "pdflatex"
-  "paper.out" 1776695868.36607 394 6073c278352569bf2e396e80f7fd44fd "pdflatex"
-  "paper.tex" 1776695867.5474 33005 1a0f6aee3385660791fdb8c541cb3baa ""
+  "neurips_2025.sty" 1776775045.58395 13023 2817c1b954c70ec3156371423da6545c ""
+  "paper.aux" 1776776374.92264 2845 66068afcd42be383d53eb548f74b485d "pdflatex"
+  "paper.out" 1776776374.92303 492 dc698564577734b823e8395d5f1b0ef1 "pdflatex"
+  "paper.tex" 1776776374.33774 36868 9e43c8eb5b331a10db4ae92775af9a3e ""
   (generated)
   "paper.aux"
   "paper.log"
