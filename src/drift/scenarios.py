@@ -148,50 +148,6 @@ def gender_relationship_decouple(df):
     return pd.DataFrame(warmup + phase1 + recovery1 + phase2 + recovery2, columns=columns)
 
 
-# ---------------------------------------------------------------------------
-# Scenario: female income parity shift
-# ---------------------------------------------------------------------------
-def female_income_parity(df):
-    """Abruptly equalise the income distribution between genders.
-
-    In the original data, ~30% of Males earn >50K vs ~11% of Females.
-    This drift promotes Female samples: during phase 1 all Female <=50K
-    samples are flipped to >50K (simulating a policy change / pay-gap
-    closure).  This creates a real shift in P(Y|A=Female) that the model
-    was never trained on, directly stressing the fairness-accuracy trade-off.
-
-    Phase 1 (abrupt): all Female <=50K → >50K.
-    Phase 2 (gradual): reversion — flip probability decays 70% → 0%.
-    """
-    random.seed(SEED)
-    columns = df.columns
-    X = df.values.tolist()
-    warmup, phase1, recovery1, phase2, recovery2 = _split_phases(X)
-
-    GENDER_IDX = 9
-    INCOME_IDX = -1
-
-    def _promote(sample):
-        income = str(sample[INCOME_IDX]).strip().rstrip('.')
-        if income == '<=50K':
-            sample[INCOME_IDX] = ' >50K.'
-
-    def _demote(sample):
-        income = str(sample[INCOME_IDX]).strip().rstrip('.')
-        if income == '>50K':
-            sample[INCOME_IDX] = ' <=50K.'
-
-    for sample in phase1:
-        if str(sample[GENDER_IDX]).strip() == 'Female':
-            _promote(sample)
-
-    for i, sample in enumerate(phase2):
-        prob = 0.70 * (1.0 - i / max(len(phase2) - 1, 1))
-        if str(sample[GENDER_IDX]).strip() == 'Female' and random.random() < prob:
-            _demote(sample)
-
-    return pd.DataFrame(warmup + phase1 + recovery1 + phase2 + recovery2, columns=columns)
-
 
 # ---------------------------------------------------------------------------
 # Scenario: occupation gender reversal
@@ -245,37 +201,6 @@ def occupation_gender_reversal(df):
             _swap_gender(sample)
 
     return pd.DataFrame(warmup + phase1 + recovery1 + phase2 + recovery2, columns=columns)
-def label_flip(df):
-    """Flip income labels for a subset of samples in drift phases.
-
-    In phase 1 (abrupt), 40% of labels are flipped.
-    In phase 2 (gradual), flip probability decays from 30% to 5%.
-    """
-    random.seed(SEED)
-    columns = df.columns
-    X = df.values.tolist()
-    warmup, phase1, recovery1, phase2, recovery2 = _split_phases(X)
-
-    def _flip_income(sample):
-        income = str(sample[-1]).strip().rstrip('.')
-        if income == '>50K':
-            sample[-1] = ' <=50K.'
-        else:
-            sample[-1] = ' >50K.'
-
-    # Phase 1 – abrupt label flip (40%)
-    for sample in phase1:
-        if random.random() < 0.40:
-            _flip_income(sample)
-
-    # Phase 2 – gradual label flip (30% → 5%)
-    for i, sample in enumerate(phase2):
-        prob = 0.30 - 0.25 * (i / max(len(phase2) - 1, 1))
-        if random.random() < prob:
-            _flip_income(sample)
-
-    return pd.DataFrame(warmup + phase1 + recovery1 + phase2 + recovery2, columns=columns)
-
 
 
 # ---------------------------------------------------------------------------
@@ -285,9 +210,7 @@ SCENARIOS = {
     'no_drift': no_drift,
     'abrupt_gender': abrupt_gender,
     'gradual_gender': gradual_gender,
-    'label_flip': label_flip,
     'gender_relationship_decouple': gender_relationship_decouple,
-    'female_income_parity': female_income_parity,
     'occupation_gender_reversal': occupation_gender_reversal,
 }
 
@@ -295,11 +218,7 @@ SCENARIO_DESCRIPTIONS = {
     'no_drift': 'Baseline (no drift)',
     'abrupt_gender': 'Abrupt + slow gender swap for high-income males',
     'gradual_gender': 'Gradually increasing gender swap',
-    'label_flip': 'Label flip in drift phases (40% abrupt, 30%→5% gradual)',
-    'feature_noise': 'Gaussian noise on numerical features',
-    'compound': 'Gender swap + label flip combined',
     'gender_relationship_decouple': 'Break Husband/Wife ↔ Male/Female co-occurrence',
-    'female_income_parity': 'Abrupt female income promotion (P(Y|Female) equalised)',
     'occupation_gender_reversal': 'Swap gender in strongly stereotyped occupations',
 }
 
