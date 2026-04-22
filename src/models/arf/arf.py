@@ -11,7 +11,7 @@ def evaluate_arf_over_timesteps(
     y_train=None,
     accuracy_window=200,
 ):
-    arf = AdaptiveRandomForestClassifier(seed=seed, n_models=3, max_depth=3)
+    arf = AdaptiveRandomForestClassifier(seed=seed)
 
     accuracies = []
     dps = []

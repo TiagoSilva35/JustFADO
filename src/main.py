@@ -103,7 +103,7 @@ def _evaluate_selected_model(
             a_test,
             x_train=x_train,
             y_train=y_train,
-            seed=int(seed) if seed is not None else 42,
+            seed=seed,
         )
         test_metrics = {
             'accuracy': float(stream.get('accuracy')[-1]) if stream.get('accuracy') else None,
