@@ -419,7 +419,7 @@ def _normalize_sensitive_attribute(values, sensitive_attribute):
 
 def read_folktables(path='data/acs-folktables', train_year=2015, test_years=(2016, 2017, 2018),
                     state='CA', horizon='1-Year', sensitive_attribute='sex',
-                    download=False):
+                    download=True):
   """Read Folktables ACS Income data from local cache."""
   train_year = int(train_year)
   test_years = tuple(int(year) for year in test_years)

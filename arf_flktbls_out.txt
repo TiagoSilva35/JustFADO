@@ -1,0 +1,195 @@
+
+================================================================================
+ Multi-seed pipeline: 5 runs
+ Model: arf
+ Dataset: folktables
+ Seeds: ['1', '5', '3', '2', '4']
+ Base output: /home/tiago/Documents/Bolsa/Aranyani2.0/files/experiments/
+================================================================================
+
+
+--------------------------------------------------------------------------------
+ Seed run [1/5]: 1
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running single Folktables evaluation
+ Model: arf
+ Dataset: folktables
+ Output: /home/tiago/Documents/Bolsa/Aranyani2.0/files/experiments/model_arf/dataset_folktables/seed_1/
+================================================================================
+
+>>> Loading clean train split for ARF warm-start...
+Downloading data for 2015 1-Year person survey for CA...
+Downloading data for 2016 1-Year person survey for CA...
+Downloading data for 2017 1-Year person survey for CA...
+Downloading data for 2018 1-Year person survey for CA...
+>>> Loaded 187475 clean train samples in 40.4s
+
+################################################################################
+# Evaluating scenario (arf): folktables
+# 
+################################################################################
+
+Warm-starting ARF on clean train split (187475 samples)...
+ARF warm-start complete.
+Running ARF baseline prequentially on 187473 samples...
+ARF baseline evaluation complete.
+{'accuracy': 0.735, 'dp': 0.0750175157641878, 'eo': 0.05614973262032086}
+Done in 1941.8s | Acc=0.735 DP=0.0750175157641878 EO=0.05614973262032086
+Results saved to: files/experiments/model_arf/dataset_folktables/seed_1/results.json
+
+================================================================================
+ SUMMARY
+================================================================================
+Scenario                      Acc         DP         EO
+--------------------------------------------------------------------------------
+folktables                 0.7350     0.0750     0.0561
+
+--------------------------------------------------------------------------------
+ Seed run [2/5]: 5
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running single Folktables evaluation
+ Model: arf
+ Dataset: folktables
+ Output: /home/tiago/Documents/Bolsa/Aranyani2.0/files/experiments/model_arf/dataset_folktables/seed_5/
+================================================================================
+
+>>> Loading clean train split for ARF warm-start...
+>>> Loaded 187475 clean train samples in 21.5s
+
+################################################################################
+# Evaluating scenario (arf): folktables
+# 
+################################################################################
+
+Warm-starting ARF on clean train split (187475 samples)...
+ARF warm-start complete.
+Running ARF baseline prequentially on 187473 samples...
+ARF baseline evaluation complete.
+{'accuracy': 0.735, 'dp': 0.0750175157641878, 'eo': 0.05614973262032086}
+Done in 1971.3s | Acc=0.735 DP=0.0750175157641878 EO=0.05614973262032086
+Results saved to: files/experiments/model_arf/dataset_folktables/seed_5/results.json
+
+================================================================================
+ SUMMARY
+================================================================================
+Scenario                      Acc         DP         EO
+--------------------------------------------------------------------------------
+folktables                 0.7350     0.0750     0.0561
+
+--------------------------------------------------------------------------------
+ Seed run [3/5]: 3
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running single Folktables evaluation
+ Model: arf
+ Dataset: folktables
+ Output: /home/tiago/Documents/Bolsa/Aranyani2.0/files/experiments/model_arf/dataset_folktables/seed_3/
+================================================================================
+
+>>> Loading clean train split for ARF warm-start...
+>>> Loaded 187475 clean train samples in 21.6s
+
+################################################################################
+# Evaluating scenario (arf): folktables
+# 
+################################################################################
+
+Warm-starting ARF on clean train split (187475 samples)...
+ARF warm-start complete.
+Running ARF baseline prequentially on 187473 samples...
+ARF baseline evaluation complete.
+{'accuracy': 0.735, 'dp': 0.0750175157641878, 'eo': 0.05614973262032086}
+Done in 1973.5s | Acc=0.735 DP=0.0750175157641878 EO=0.05614973262032086
+Results saved to: files/experiments/model_arf/dataset_folktables/seed_3/results.json
+
+================================================================================
+ SUMMARY
+================================================================================
+Scenario                      Acc         DP         EO
+--------------------------------------------------------------------------------
+folktables                 0.7350     0.0750     0.0561
+
+--------------------------------------------------------------------------------
+ Seed run [4/5]: 2
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running single Folktables evaluation
+ Model: arf
+ Dataset: folktables
+ Output: /home/tiago/Documents/Bolsa/Aranyani2.0/files/experiments/model_arf/dataset_folktables/seed_2/
+================================================================================
+
+>>> Loading clean train split for ARF warm-start...
+>>> Loaded 187475 clean train samples in 21.4s
+
+################################################################################
+# Evaluating scenario (arf): folktables
+# 
+################################################################################
+
+Warm-starting ARF on clean train split (187475 samples)...
+ARF warm-start complete.
+Running ARF baseline prequentially on 187473 samples...
+ARF baseline evaluation complete.
+{'accuracy': 0.735, 'dp': 0.0750175157641878, 'eo': 0.05614973262032086}
+Done in 1975.6s | Acc=0.735 DP=0.0750175157641878 EO=0.05614973262032086
+Results saved to: files/experiments/model_arf/dataset_folktables/seed_2/results.json
+
+================================================================================
+ SUMMARY
+================================================================================
+Scenario                      Acc         DP         EO
+--------------------------------------------------------------------------------
+folktables                 0.7350     0.0750     0.0561
+
+--------------------------------------------------------------------------------
+ Seed run [5/5]: 4
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running single Folktables evaluation
+ Model: arf
+ Dataset: folktables
+ Output: /home/tiago/Documents/Bolsa/Aranyani2.0/files/experiments/model_arf/dataset_folktables/seed_4/
+================================================================================
+
+>>> Loading clean train split for ARF warm-start...
+>>> Loaded 187475 clean train samples in 21.3s
+
+################################################################################
+# Evaluating scenario (arf): folktables
+# 
+################################################################################
+
+Warm-starting ARF on clean train split (187475 samples)...
+ARF warm-start complete.
+Running ARF baseline prequentially on 187473 samples...
+ARF baseline evaluation complete.
+{'accuracy': 0.735, 'dp': 0.0750175157641878, 'eo': 0.05614973262032086}
+Done in 1975.4s | Acc=0.735 DP=0.0750175157641878 EO=0.05614973262032086
+Results saved to: files/experiments/model_arf/dataset_folktables/seed_4/results.json
+
+================================================================================
+ SUMMARY
+================================================================================
+Scenario                      Acc         DP         EO
+--------------------------------------------------------------------------------
+folktables                 0.7350     0.0750     0.0561
+
+Seed pipeline results saved to: files/experiments/model_arf/dataset_folktables/seed_pipeline_results.json
+
+================================================================================
+ Seed Pipeline Summary
+================================================================================
+accuracy                 0.7350 +/- 0.0000 (n=5)
+dp                       0.0750 +/- 0.0000 (n=5)
+eo                       0.0561 +/- 0.0000 (n=5)
+stream_final_accuracy    0.7998 +/- 0.0408 (n=937365)
+stream_final_dp          0.0357 +/- 0.0253 (n=937365)
+stream_final_eo          0.0506 +/- 0.0351 (n=937365)
