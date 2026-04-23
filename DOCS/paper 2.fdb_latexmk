@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1776963016.97194 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" "paper.pdf" "paper" 1776963017.3272 0
-  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" 1776963016.78057 35900 31ed1e9f9a00a6207a96917e182b635c ""
+["pdflatex"] 1776783419.76797 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" "paper.pdf" "paper" 1776783420.12161 0
+  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" 1776783419.62261 35526 6e7ee522ca214c2685d7d5db2bf5ef16 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/base/8r.enc" 1772380719 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1772380719 2971 def0b6c1f0b107b3b936def894055589 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/fontname/texfonts.map" 1772380719 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -99,9 +99,9 @@
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/web2c/texmf.cnf" 1772380719 43633 14bbc273cebd985e64ab1a698333eaf9 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-var/web2c/pdftex/pdflatex.fmt" 1772380719 3636956 5168b884cb430e6a6336cfea08fa659a ""
   "neurips_2025.sty" 1776429036.53314 13023 2817c1b954c70ec3156371423da6545c ""
-  "paper.aux" 1776963017.29902 2490 810b9c6c36059e02e8ad58297127428c "pdflatex"
-  "paper.out" 1776963017.29935 492 dc698564577734b823e8395d5f1b0ef1 "pdflatex"
-  "paper.tex" 1776963016.78057 35900 31ed1e9f9a00a6207a96917e182b635c ""
+  "paper.aux" 1776783420.09326 2223 4a5f9eb2e9bd3557aaf07e132999fd97 "pdflatex"
+  "paper.out" 1776783420.09361 492 dc698564577734b823e8395d5f1b0ef1 "pdflatex"
+  "paper.tex" 1776783419.62261 35526 6e7ee522ca214c2685d7d5db2bf5ef16 ""
   (generated)
   "paper.aux"
   "paper.log"
