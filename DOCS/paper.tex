@@ -116,94 +116,50 @@ can be used to preserve fairness guarantees over time.
 
 
 \section{Experiments}
-Tables~\ref{tab:no-drift}--\ref{tab:occupation-gender-reversal} report per-scenario results on Adult with mean $\pm$ standard deviation across seeds from \texttt{files/experiments}. Aranyani results use 4 available seeds; ARF and RFR use 5 seeds.
-
-\begin{table}[htbp]
+\begin{table}[h]
 \centering
+\caption{Experimental results on the Adult dataset across four drift scenarios. Aranyani maintains superior accuracy while effectively mitigating fairness violations (DP) during drift events.}
+\label{tab:adult-results}
+\small
+\setlength{\tabcolsep}{5pt} % Tighten column spacing
 
-\caption{No drift scenario results on Adult (mean $\pm$ std over seeds)}
-\label{tab:no-drift}
-
-\begin{tabular}{lccc}
+% --- Accuracy Table ---
+\begin{tabular}{lcccc}
 \toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$\\
+\textbf{Model} & \textbf{No Drift (Acc $\uparrow$)} & \textbf{Abrupt (Acc $\uparrow$)} & \textbf{Gradual (Acc $\uparrow$)} & \textbf{Reversal (Acc $\uparrow$)} \\
 \midrule
-Aranyani & $\mathbf{0.8538 \pm 0.0035}$ & $0.0860 \pm 0.0022$ \\
-ARF & $0.8350 \pm 0.0000$ & $0.1040 \pm 0.0000$ \\
-RFR & $0.8038 \pm 0.0074$ & $\mathbf{0.0592 \pm 0.0071}$ \\
+ARF      & $0.8350 \pm 0.0000$ & $0.8100 \pm 0.0000$ & $0.8400 \pm 0.0000$ & $0.8200 \pm 0.0000$ \\
+RFR      & $0.8038 \pm 0.0074$ & $0.8025 \pm 0.0043$ & $0.8063 \pm 0.0054$ & $0.7888 \pm 0.0096$ \\
+\textbf{Aranyani} & $\mathbf{0.8538 \pm 0.0035}$ & $\mathbf{0.8607 \pm 0.0172}$ & $\mathbf{0.8573 \pm 0.0022}$ & $\mathbf{0.8516 \pm 0.0045}$ \\
 \bottomrule
 \end{tabular}
 
+\vspace{1em} % Space between the two sub-tables
+
+% --- Fairness Table ---
+\begin{tabular}{lcccc}
+    \toprule
+    \textbf{Model} & \textbf{No Drift (DP $\downarrow$)} & \textbf{Abrupt (DP $\downarrow$)} & \textbf{Gradual (DP $\downarrow$)} & \textbf{Reversal (DP $\downarrow$)} \\
+    \midrule
+    ARF      & $0.1040 \pm 0.0000$ & $0.1154 \pm 0.0000$ & $0.0890 \pm 0.0000$ & $0.1154 \pm 0.0000$ \\
+    RFR      & $\mathbf{0.0592 \pm 0.0071}$ & $0.0639 \pm 0.0017$ & $0.0668 \pm 0.0106$ & $\mathbf{0.0753 \pm 0.0111}$ \\
+    \textbf{Aranyani} & $0.0860 \pm 0.0022$ & $\mathbf{0.0414 \pm 0.0167}$ & $\mathbf{0.0129 \pm 0.0063}$ & $0.0854 \pm 0.0056$ \\
+    \bottomrule
+    \end{tabular}
 \end{table}
 
-\begin{table}[htbp]
-\centering
-
-\caption{Abrupt gender scenario results on Adult (mean $\pm$ std over seeds)}
-\label{tab:abrupt-gender}
-
-\begin{tabular}{lcc}
-\toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$ \\
-\midrule
-Aranyani & $\mathbf{0.8607 \pm 0.0172}$ & $\mathbf{0.0414 \pm 0.0167}$\\
-ARF & $0.8100 \pm 0.0000$ & $0.1154 \pm 0.0000$\\
-RFR & $0.8025 \pm 0.0043$ & $0.0639 \pm 0.0017$\\
-\bottomrule
-\end{tabular}
-
-\end{table}
-
-\begin{table}[htbp]
-\centering
-
-\caption{Gradual gender scenario results on Adult (mean $\pm$ std over seeds)}
-\label{tab:gradual-gender}
-
-\begin{tabular}{lcc}
-\toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$ \\
-\midrule
-Aranyani & $\mathbf{0.8573 \pm 0.0022}$ & $\mathbf{0.0129 \pm 0.0063}$ \\
-ARF & $0.8400 \pm 0.0000$ & $0.0890 \pm 0.0000$ \\
-RFR & $0.8063 \pm 0.0054$ & $0.0668 \pm 0.0106$ \\
-\bottomrule
-\end{tabular}
-
-\end{table}
-
-
-\begin{table}[htbp]
-\centering
-
-\caption{Occupation gender reversal scenario results on Adult (mean $\pm$ std over seeds)}
-\label{tab:occupation-gender-reversal}
-
-\begin{tabular}{lcc}
-\toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$\\
-\midrule
-Aranyani & $\mathbf{0.8516 \pm 0.0045}$ & $ 0.0854 \pm 0.0056$ \\
-ARF & $0.8200 \pm 0.0000$ & $0.1154 \pm 0.0000$ \\
-RFR & $0.7888 \pm 0.0096$ & $\mathbf{0.0753 \pm 0.0111}$ \\
-\bottomrule
-\end{tabular}
-
-\end{table}
-
-\begin{table}[htbp]
-\centering
-\caption{Folktables dataset results (mean $\pm$ std over seeds)}
-\label{tab:folktables}
-
-\begin{tabular}{lcc}
-\toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$\\
-\midrule
-Aranyani &  &  \\
-ARF & $0.735 \pm 0.0000$ & $0.0750 \pm 0.0000$ \\
-RFR & $0.747 \pm 0.0175$ & $0.0257 \pm 0.0168$ \\
-\bottomrule
+\begin{table}[h]
+    \centering
+    \caption{Folktables dataset results (mean $\pm$ std over seeds)}
+    \label{tab:folktables}
+    \begin{tabular}{lcc}
+    \toprule
+    Model & Accuracy $\uparrow$ & DP $\downarrow$\\
+    \midrule
+    Aranyani &  &  \\
+    ARF & $0.735 \pm 0.0000$ & $0.0750 \pm 0.0000$ \\
+    RFR & $0.747 \pm 0.0175$ & $0.0257 \pm 0.0168$ \\
+    \bottomrule
 \end{tabular}
 
 \end{table}
