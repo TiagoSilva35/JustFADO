@@ -1324,4 +1324,1734 @@ TRAINING SET FINAL CONFUSION MATRIX
 ================================================================================
 
 Confusion Matrix:
-[[21759  2021]
+[[21759  2021]
+ [ 9746  3969]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6907    0.9150    0.7872     23780
+     Class 1     0.6626    0.2894    0.4028     13715
+
+    accuracy                         0.6862     37495
+   macro avg     0.6766    0.6022    0.5950     37495
+weighted avg     0.6804    0.6862    0.6466     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21759
+  False Positives (FP):   2021
+  False Negatives (FN):   9746
+  True Positives (TP):    3969
+  Sensitivity/Recall:   0.2894
+  Specificity:          0.9150
+  Precision:            0.6626
+  F1-Score:             0.4028
+  Accuracy:             0.6862
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.728
+Test Sensitivity: 0.461
+Test DP: 0.013
+Test EO: 0.018
+Test AUC: 0.676
+Test F1-Score: 0.549
+Fairness type: dp
+lambda for fairness penalty: 1.8549168676029582
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21838  1942]
+ [ 9812  3903]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6900    0.9183    0.7879     23780
+     Class 1     0.6678    0.2846    0.3991     13715
+
+    accuracy                         0.6865     37495
+   macro avg     0.6789    0.6015    0.5935     37495
+weighted avg     0.6819    0.6865    0.6457     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21838
+  False Positives (FP):   1942
+  False Negatives (FN):   9812
+  True Positives (TP):    3903
+  Sensitivity/Recall:   0.2846
+  Specificity:          0.9183
+  Precision:            0.6678
+  F1-Score:             0.3991
+  Accuracy:             0.6865
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.733
+Test Sensitivity: 0.420
+Test DP: 0.024
+Test EO: 0.022
+Test AUC: 0.711
+Test F1-Score: 0.530
+Fairness type: dp
+lambda for fairness penalty: 15.08265734098251
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21824  1956]
+ [ 9697  4018]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6924    0.9177    0.7893     23780
+     Class 1     0.6726    0.2930    0.4081     13715
+
+    accuracy                         0.6892     37495
+   macro avg     0.6825    0.6054    0.5987     37495
+weighted avg     0.6851    0.6892    0.6499     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21824
+  False Positives (FP):   1956
+  False Negatives (FN):   9697
+  True Positives (TP):    4018
+  Sensitivity/Recall:   0.2930
+  Specificity:          0.9177
+  Precision:            0.6726
+  F1-Score:             0.4081
+  Accuracy:             0.6892
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.705
+Test Sensitivity: 0.296
+Test DP: 0.016
+Test EO: 0.014
+Test AUC: 0.645
+Test F1-Score: 0.419
+Fairness type: dp
+lambda for fairness penalty: 2.4879222089161073
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21554  2226]
+ [ 9410  4305]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6961    0.9064    0.7874     23780
+     Class 1     0.6592    0.3139    0.4253     13715
+
+    accuracy                         0.6897     37495
+   macro avg     0.6776    0.6101    0.6064     37495
+weighted avg     0.6826    0.6897    0.6550     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21554
+  False Positives (FP):   2226
+  False Negatives (FN):   9410
+  True Positives (TP):    4305
+  Sensitivity/Recall:   0.3139
+  Specificity:          0.9064
+  Precision:            0.6592
+  F1-Score:             0.4253
+  Accuracy:             0.6897
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.523
+Test Sensitivity: 0.759
+Test DP: 0.009
+Test EO: 0.004
+Test AUC: 0.653
+Test F1-Score: 0.534
+Fairness type: dp
+lambda for fairness penalty: 11.751474425970212
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21697  2083]
+ [ 9768  3947]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6896    0.9124    0.7855     23780
+     Class 1     0.6546    0.2878    0.3998     13715
+
+    accuracy                         0.6839     37495
+   macro avg     0.6721    0.6001    0.5926     37495
+weighted avg     0.6768    0.6839    0.6444     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21697
+  False Positives (FP):   2083
+  False Negatives (FN):   9768
+  True Positives (TP):    3947
+  Sensitivity/Recall:   0.2878
+  Specificity:          0.9124
+  Precision:            0.6546
+  F1-Score:             0.3998
+  Accuracy:             0.6839
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.709
+Test Sensitivity: 0.319
+Test DP: 0.014
+Test EO: 0.004
+Test AUC: 0.650
+Test F1-Score: 0.440
+Fairness type: dp
+lambda for fairness penalty: 2.965037160504501
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21916  1864]
+ [ 9817  3898]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6906    0.9216    0.7896     23780
+     Class 1     0.6765    0.2842    0.4003     13715
+
+    accuracy                         0.6885     37495
+   macro avg     0.6836    0.6029    0.5949     37495
+weighted avg     0.6855    0.6885    0.6472     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21916
+  False Positives (FP):   1864
+  False Negatives (FN):   9817
+  True Positives (TP):    3898
+  Sensitivity/Recall:   0.2842
+  Specificity:          0.9216
+  Precision:            0.6765
+  F1-Score:             0.4003
+  Accuracy:             0.6885
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.708
+Test Sensitivity: 0.301
+Test DP: 0.018
+Test EO: 0.013
+Test AUC: 0.638
+Test F1-Score: 0.426
+Fairness type: dp
+lambda for fairness penalty: 15.17442869802413
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[22379  1401]
+ [10772  2943]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6751    0.9411    0.7862     23780
+     Class 1     0.6775    0.2146    0.3259     13715
+
+    accuracy                         0.6753     37495
+   macro avg     0.6763    0.5778    0.5561     37495
+weighted avg     0.6759    0.6753    0.6178     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   22379
+  False Positives (FP):   1401
+  False Negatives (FN):  10772
+  True Positives (TP):    2943
+  Sensitivity/Recall:   0.2146
+  Specificity:          0.9411
+  Precision:            0.6775
+  F1-Score:             0.3259
+  Accuracy:             0.6753
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.702
+Test Sensitivity: 0.309
+Test DP: 0.016
+Test EO: 0.017
+Test AUC: 0.618
+Test F1-Score: 0.426
+Fairness type: dp
+lambda for fairness penalty: 13.467921609404478
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21815  1965]
+ [ 9704  4011]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6921    0.9174    0.7890     23780
+     Class 1     0.6712    0.2925    0.4074     13715
+
+    accuracy                         0.6888     37495
+   macro avg     0.6817    0.6049    0.5982     37495
+weighted avg     0.6845    0.6888    0.6494     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21815
+  False Positives (FP):   1965
+  False Negatives (FN):   9704
+  True Positives (TP):    4011
+  Sensitivity/Recall:   0.2925
+  Specificity:          0.9174
+  Precision:            0.6712
+  F1-Score:             0.4074
+  Accuracy:             0.6888
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.688
+Test Sensitivity: 0.222
+Test DP: 0.013
+Test EO: 0.008
+Test AUC: 0.683
+Test F1-Score: 0.339
+Fairness type: dp
+lambda for fairness penalty: 16.11638503665616
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21727  2053]
+ [ 9872  3843]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6876    0.9137    0.7847     23780
+     Class 1     0.6518    0.2802    0.3919     13715
+
+    accuracy                         0.6820     37495
+   macro avg     0.6697    0.5969    0.5883     37495
+weighted avg     0.6745    0.6820    0.6410     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21727
+  False Positives (FP):   2053
+  False Negatives (FN):   9872
+  True Positives (TP):    3843
+  Sensitivity/Recall:   0.2802
+  Specificity:          0.9137
+  Precision:            0.6518
+  F1-Score:             0.3919
+  Accuracy:             0.6820
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.688
+Test Sensitivity: 0.227
+Test DP: 0.016
+Test EO: 0.021
+Test AUC: 0.632
+Test F1-Score: 0.343
+Fairness type: dp
+lambda for fairness penalty: 12.339408089399479
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21409  2371]
+ [ 9388  4327]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6952    0.9003    0.7845     23780
+     Class 1     0.6460    0.3155    0.4239     13715
+
+    accuracy                         0.6864     37495
+   macro avg     0.6706    0.6079    0.6042     37495
+weighted avg     0.6772    0.6864    0.6526     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21409
+  False Positives (FP):   2371
+  False Negatives (FN):   9388
+  True Positives (TP):    4327
+  Sensitivity/Recall:   0.3155
+  Specificity:          0.9003
+  Precision:            0.6460
+  F1-Score:             0.4239
+  Accuracy:             0.6864
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.685
+Test Sensitivity: 0.219
+Test DP: 0.012
+Test EO: 0.013
+Test AUC: 0.587
+Test F1-Score: 0.333
+Fairness type: dp
+lambda for fairness penalty: 11.057696466075466
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21719  2061]
+ [ 9309  4406]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.7000    0.9133    0.7925     23780
+     Class 1     0.6813    0.3213    0.4366     13715
+
+    accuracy                         0.6968     37495
+   macro avg     0.6906    0.6173    0.6146     37495
+weighted avg     0.6931    0.6968    0.6624     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21719
+  False Positives (FP):   2061
+  False Negatives (FN):   9309
+  True Positives (TP):    4406
+  Sensitivity/Recall:   0.3213
+  Specificity:          0.9133
+  Precision:            0.6813
+  F1-Score:             0.4366
+  Accuracy:             0.6968
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.714
+Test Sensitivity: 0.342
+Test DP: 0.017
+Test EO: 0.014
+Test AUC: 0.659
+Test F1-Score: 0.462
+Fairness type: dp
+lambda for fairness penalty: 15.408267343562287
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21775  2005]
+ [ 9764  3951]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6904    0.9157    0.7873     23780
+     Class 1     0.6634    0.2881    0.4017     13715
+
+    accuracy                         0.6861     37495
+   macro avg     0.6769    0.6019    0.5945     37495
+weighted avg     0.6805    0.6861    0.6462     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21775
+  False Positives (FP):   2005
+  False Negatives (FN):   9764
+  True Positives (TP):    3951
+  Sensitivity/Recall:   0.2881
+  Specificity:          0.9157
+  Precision:            0.6634
+  F1-Score:             0.4017
+  Accuracy:             0.6861
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.710
+Test Sensitivity: 0.349
+Test DP: 0.013
+Test EO: 0.010
+Test AUC: 0.658
+Test F1-Score: 0.464
+Fairness type: dp
+lambda for fairness penalty: 12.544110149580405
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21252  2528]
+ [ 8697  5018]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.7096    0.8937    0.7911     23780
+     Class 1     0.6650    0.3659    0.4720     13715
+
+    accuracy                         0.7006     37495
+   macro avg     0.6873    0.6298    0.6316     37495
+weighted avg     0.6933    0.7006    0.6744     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21252
+  False Positives (FP):   2528
+  False Negatives (FN):   8697
+  True Positives (TP):    5018
+  Sensitivity/Recall:   0.3659
+  Specificity:          0.8937
+  Precision:            0.6650
+  F1-Score:             0.4720
+  Accuracy:             0.7006
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.707
+Test Sensitivity: 0.317
+Test DP: 0.016
+Test EO: 0.014
+Test AUC: 0.745
+Test F1-Score: 0.438
+Fairness type: dp
+lambda for fairness penalty: 6.58256416346994
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21560  2220]
+ [ 9290  4425]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6989    0.9066    0.7893     23780
+     Class 1     0.6659    0.3226    0.4347     13715
+
+    accuracy                         0.6930     37495
+   macro avg     0.6824    0.6146    0.6120     37495
+weighted avg     0.6868    0.6930    0.6596     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21560
+  False Positives (FP):   2220
+  False Negatives (FN):   9290
+  True Positives (TP):    4425
+  Sensitivity/Recall:   0.3226
+  Specificity:          0.9066
+  Precision:            0.6659
+  F1-Score:             0.4347
+  Accuracy:             0.6930
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.690
+Test Sensitivity: 0.214
+Test DP: 0.019
+Test EO: 0.021
+Test AUC: 0.633
+Test F1-Score: 0.332
+Fairness type: dp
+lambda for fairness penalty: 10.113296777714696
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21872  1908]
+ [ 9911  3804]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6882    0.9198    0.7873     23780
+     Class 1     0.6660    0.2774    0.3916     13715
+
+    accuracy                         0.6848     37495
+   macro avg     0.6771    0.5986    0.5895     37495
+weighted avg     0.6800    0.6848    0.6426     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21872
+  False Positives (FP):   1908
+  False Negatives (FN):   9911
+  True Positives (TP):    3804
+  Sensitivity/Recall:   0.2774
+  Specificity:          0.9198
+  Precision:            0.6660
+  F1-Score:             0.3916
+  Accuracy:             0.6848
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.706
+Test Sensitivity: 0.301
+Test DP: 0.017
+Test EO: 0.013
+Test AUC: 0.658
+Test F1-Score: 0.424
+Fairness type: dp
+lambda for fairness penalty: 12.841069789659612
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[22415  1365]
+ [11159  2556]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6676    0.9426    0.7816     23780
+     Class 1     0.6519    0.1864    0.2899     13715
+
+    accuracy                         0.6660     37495
+   macro avg     0.6598    0.5645    0.5357     37495
+weighted avg     0.6619    0.6660    0.6018     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   22415
+  False Positives (FP):   1365
+  False Negatives (FN):  11159
+  True Positives (TP):    2556
+  Sensitivity/Recall:   0.1864
+  Specificity:          0.9426
+  Precision:            0.6519
+  F1-Score:             0.2899
+  Accuracy:             0.6660
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.668
+Test Sensitivity: 0.117
+Test DP: 0.009
+Test EO: 0.010
+Test AUC: 0.538
+Test F1-Score: 0.202
+Fairness type: dp
+lambda for fairness penalty: 15.463248947786859
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21080  2700]
+ [ 9011  4704]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.7005    0.8865    0.7826     23780
+     Class 1     0.6353    0.3430    0.4455     13715
+
+    accuracy                         0.6877     37495
+   macro avg     0.6679    0.6147    0.6140     37495
+weighted avg     0.6767    0.6877    0.6593     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21080
+  False Positives (FP):   2700
+  False Negatives (FN):   9011
+  True Positives (TP):    4704
+  Sensitivity/Recall:   0.3430
+  Specificity:          0.8865
+  Precision:            0.6353
+  F1-Score:             0.4455
+  Accuracy:             0.6877
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.704
+Test Sensitivity: 0.316
+Test DP: 0.012
+Test EO: 0.006
+Test AUC: 0.632
+Test F1-Score: 0.434
+Fairness type: dp
+lambda for fairness penalty: 10.491911513122623
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[22289  1491]
+ [10274  3441]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6845    0.9373    0.7912     23780
+     Class 1     0.6977    0.2509    0.3691     13715
+
+    accuracy                         0.6862     37495
+   macro avg     0.6911    0.5941    0.5801     37495
+weighted avg     0.6893    0.6862    0.6368     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   22289
+  False Positives (FP):   1491
+  False Negatives (FN):  10274
+  True Positives (TP):    3441
+  Sensitivity/Recall:   0.2509
+  Specificity:          0.9373
+  Precision:            0.6977
+  F1-Score:             0.3691
+  Accuracy:             0.6862
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.718
+Test Sensitivity: 0.374
+Test DP: 0.021
+Test EO: 0.018
+Test AUC: 0.748
+Test F1-Score: 0.488
+Fairness type: dp
+lambda for fairness penalty: 12.811726982042714
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[20809  2971]
+ [ 8392  5323]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.7126    0.8751    0.7855     23780
+     Class 1     0.6418    0.3881    0.4837     13715
+
+    accuracy                         0.6969     37495
+   macro avg     0.6772    0.6316    0.6346     37495
+weighted avg     0.6867    0.6969    0.6751     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   20809
+  False Positives (FP):   2971
+  False Negatives (FN):   8392
+  True Positives (TP):    5323
+  Sensitivity/Recall:   0.3881
+  Specificity:          0.8751
+  Precision:            0.6418
+  F1-Score:             0.4837
+  Accuracy:             0.6969
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.709
+Test Sensitivity: 0.355
+Test DP: 0.013
+Test EO: 0.011
+Test AUC: 0.634
+Test F1-Score: 0.467
+Fairness type: dp
+lambda for fairness penalty: 14.180507473101493
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21601  2179]
+ [ 9345  4370]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6980    0.9084    0.7894     23780
+     Class 1     0.6673    0.3186    0.4313     13715
+
+    accuracy                         0.6927     37495
+   macro avg     0.6826    0.6135    0.6104     37495
+weighted avg     0.6868    0.6927    0.6584     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21601
+  False Positives (FP):   2179
+  False Negatives (FN):   9345
+  True Positives (TP):    4370
+  Sensitivity/Recall:   0.3186
+  Specificity:          0.9084
+  Precision:            0.6673
+  F1-Score:             0.4313
+  Accuracy:             0.6927
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.695
+Test Sensitivity: 0.252
+Test DP: 0.019
+Test EO: 0.023
+Test AUC: 0.679
+Test F1-Score: 0.372
+Fairness type: dp
+lambda for fairness penalty: 1.8549168676029582
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21809  1971]
+ [ 9789  3926]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6902    0.9171    0.7876     23780
+     Class 1     0.6658    0.2863    0.4004     13715
+
+    accuracy                         0.6864     37495
+   macro avg     0.6780    0.6017    0.5940     37495
+weighted avg     0.6813    0.6864    0.6460     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21809
+  False Positives (FP):   1971
+  False Negatives (FN):   9789
+  True Positives (TP):    3926
+  Sensitivity/Recall:   0.2863
+  Specificity:          0.9171
+  Precision:            0.6658
+  F1-Score:             0.4004
+  Accuracy:             0.6864
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.686
+Test Sensitivity: 0.209
+Test DP: 0.013
+Test EO: 0.017
+Test AUC: 0.581
+Test F1-Score: 0.323
+Fairness type: dp
+lambda for fairness penalty: 15.431168786583381
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21333  2447]
+ [ 9377  4338]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6947    0.8971    0.7830     23780
+     Class 1     0.6394    0.3163    0.4232     13715
+
+    accuracy                         0.6847     37495
+   macro avg     0.6670    0.6067    0.6031     37495
+weighted avg     0.6744    0.6847    0.6514     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21333
+  False Positives (FP):   2447
+  False Negatives (FN):   9377
+  True Positives (TP):    4338
+  Sensitivity/Recall:   0.3163
+  Specificity:          0.8971
+  Precision:            0.6394
+  F1-Score:             0.4232
+  Accuracy:             0.6847
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.710
+Test Sensitivity: 0.322
+Test DP: 0.015
+Test EO: 0.009
+Test AUC: 0.627
+Test F1-Score: 0.444
+Fairness type: dp
+lambda for fairness penalty: 6.633396751168006
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21236  2544]
+ [ 8479  5236]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.7147    0.8930    0.7939     23780
+     Class 1     0.6730    0.3818    0.4872     13715
+
+    accuracy                         0.7060     37495
+   macro avg     0.6938    0.6374    0.6406     37495
+weighted avg     0.6994    0.7060    0.6817     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21236
+  False Positives (FP):   2544
+  False Negatives (FN):   8479
+  True Positives (TP):    5236
+  Sensitivity/Recall:   0.3818
+  Specificity:          0.8930
+  Precision:            0.6730
+  F1-Score:             0.4872
+  Accuracy:             0.7060
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.745
+Test Sensitivity: 0.557
+Test DP: 0.011
+Test EO: 0.021
+Test AUC: 0.715
+Test F1-Score: 0.610
+Fairness type: dp
+lambda for fairness penalty: 10.491911513122623
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[22172  1608]
+ [10114  3601]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6867    0.9324    0.7909     23780
+     Class 1     0.6913    0.2626    0.3806     13715
+
+    accuracy                         0.6874     37495
+   macro avg     0.6890    0.5975    0.5857     37495
+weighted avg     0.6884    0.6874    0.6408     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   22172
+  False Positives (FP):   1608
+  False Negatives (FN):  10114
+  True Positives (TP):    3601
+  Sensitivity/Recall:   0.2626
+  Specificity:          0.9324
+  Precision:            0.6913
+  F1-Score:             0.3806
+  Accuracy:             0.6874
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.690
+Test Sensitivity: 0.212
+Test DP: 0.014
+Test EO: 0.013
+Test AUC: 0.711
+Test F1-Score: 0.330
+Fairness type: dp
+lambda for fairness penalty: 3.161508632367503
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21748  2032]
+ [ 9602  4113]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6937    0.9146    0.7890     23780
+     Class 1     0.6693    0.2999    0.4142     13715
+
+    accuracy                         0.6897     37495
+   macro avg     0.6815    0.6072    0.6016     37495
+weighted avg     0.6848    0.6897    0.6519     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21748
+  False Positives (FP):   2032
+  False Negatives (FN):   9602
+  True Positives (TP):    4113
+  Sensitivity/Recall:   0.2999
+  Specificity:          0.9146
+  Precision:            0.6693
+  F1-Score:             0.4142
+  Accuracy:             0.6897
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.673
+Test Sensitivity: 0.160
+Test DP: 0.012
+Test EO: 0.011
+Test AUC: 0.679
+Test F1-Score: 0.260
+Fairness type: dp
+lambda for fairness penalty: 10.41496797336742
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[22328  1452]
+ [10728  2987]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6755    0.9389    0.7857     23780
+     Class 1     0.6729    0.2178    0.3291     13715
+
+    accuracy                         0.6752     37495
+   macro avg     0.6742    0.5784    0.5574     37495
+weighted avg     0.6745    0.6752    0.6187     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   22328
+  False Positives (FP):   1452
+  False Negatives (FN):  10728
+  True Positives (TP):    2987
+  Sensitivity/Recall:   0.2178
+  Specificity:          0.9389
+  Precision:            0.6729
+  F1-Score:             0.3291
+  Accuracy:             0.6752
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.720
+Test Sensitivity: 0.378
+Test DP: 0.015
+Test EO: 0.010
+Test AUC: 0.649
+Test F1-Score: 0.493
+Fairness type: dp
+lambda for fairness penalty: 10.491911513122623
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21064  2716]
+ [ 8610  5105]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.7098    0.8858    0.7881     23780
+     Class 1     0.6527    0.3722    0.4741     13715
+
+    accuracy                         0.6979     37495
+   macro avg     0.6813    0.6290    0.6311     37495
+weighted avg     0.6890    0.6979    0.6733     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21064
+  False Positives (FP):   2716
+  False Negatives (FN):   8610
+  True Positives (TP):    5105
+  Sensitivity/Recall:   0.3722
+  Specificity:          0.8858
+  Precision:            0.6527
+  F1-Score:             0.4741
+  Accuracy:             0.6979
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.720
+Test Sensitivity: 0.370
+Test DP: 0.021
+Test EO: 0.018
+Test AUC: 0.716
+Test F1-Score: 0.487
+Fairness type: dp
+lambda for fairness penalty: 1.9168776611864944
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21938  1842]
+ [ 9718  3997]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6930    0.9225    0.7915     23780
+     Class 1     0.6845    0.2914    0.4088     13715
+
+    accuracy                         0.6917     37495
+   macro avg     0.6888    0.6070    0.6001     37495
+weighted avg     0.6899    0.6917    0.6515     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21938
+  False Positives (FP):   1842
+  False Negatives (FN):   9718
+  True Positives (TP):    3997
+  Sensitivity/Recall:   0.2914
+  Specificity:          0.9225
+  Precision:            0.6845
+  F1-Score:             0.4088
+  Accuracy:             0.6917
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.704
+Test Sensitivity: 0.308
+Test DP: 0.018
+Test EO: 0.015
+Test AUC: 0.735
+Test F1-Score: 0.428
+Fairness type: dp
+lambda for fairness penalty: 15.071579594651858
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21653  2127]
+ [ 9658  4057]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6915    0.9106    0.7861     23780
+     Class 1     0.6560    0.2958    0.4078     13715
+
+    accuracy                         0.6857     37495
+   macro avg     0.6738    0.6032    0.5969     37495
+weighted avg     0.6786    0.6857    0.6477     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21653
+  False Positives (FP):   2127
+  False Negatives (FN):   9658
+  True Positives (TP):    4057
+  Sensitivity/Recall:   0.2958
+  Specificity:          0.9106
+  Precision:            0.6560
+  F1-Score:             0.4078
+  Accuracy:             0.6857
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.705
+Test Sensitivity: 0.366
+Test DP: 0.012
+Test EO: 0.011
+Test AUC: 0.696
+Test F1-Score: 0.472
+Fairness type: dp
+lambda for fairness penalty: 15.619927333133095
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21227  2553]
+ [ 8640  5075]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.7107    0.8926    0.7914     23780
+     Class 1     0.6653    0.3700    0.4756     13715
+
+    accuracy                         0.7015     37495
+   macro avg     0.6880    0.6313    0.6335     37495
+weighted avg     0.6941    0.7015    0.6758     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21227
+  False Positives (FP):   2553
+  False Negatives (FN):   8640
+  True Positives (TP):    5075
+  Sensitivity/Recall:   0.3700
+  Specificity:          0.8926
+  Precision:            0.6653
+  F1-Score:             0.4756
+  Accuracy:             0.7015
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.709
+Test Sensitivity: 0.330
+Test DP: 0.018
+Test EO: 0.012
+Test AUC: 0.629
+Test F1-Score: 0.449
+[NSGA2-TREE] Selected hyperparameters: {'depth': 8, 'num_trees': 5, 'lambda_const': 6.633396751168006, 'objective': (0.2554939389228821, 0.011392389010620674)}
+[NSGA2-TREE] Applying tuned settings for final training: depth=8, num_trees=5, lambda_const=6.6334
+DP in the original dataset: 0.054089836218504384
+EO in the original dataset: 0.0
+Fairness type: dp
+lambda for fairness penalty: 6.633396751168006
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[106258  12508]
+ [ 44503  24206]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.7048    0.8947    0.7885    118766
+     Class 1     0.6593    0.3523    0.4592     68709
+
+    accuracy                         0.6959    187475
+   macro avg     0.6821    0.6235    0.6238    187475
+weighted avg     0.6881    0.6959    0.6678    187475
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):  106258
+  False Positives (FP):  12508
+  False Negatives (FN):  44503
+  True Positives (TP):   24206
+  Sensitivity/Recall:   0.3523
+  Specificity:          0.8947
+  Precision:            0.6593
+  F1-Score:             0.4592
+  Accuracy:             0.6959
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.692
+Test Sensitivity: 0.360
+Test DP: 0.017
+Test EO: 0.012
+Test AUC: 0.676
+Test F1-Score: 0.479
+
+================================================================================
+TEST SET CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[103277  10523]
+ [ 47136  26537]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6866    0.9075    0.7818    113800
+     Class 1     0.7161    0.3602    0.4793     73673
+
+    accuracy                         0.6924    187473
+   macro avg     0.7013    0.6339    0.6305    187473
+weighted avg     0.6982    0.6924    0.6629    187473
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):  103277
+  False Positives (FP):  10523
+  False Negatives (FN):  47136
+  True Positives (TP):   26537
+  Sensitivity/Recall:   0.3602
+  Specificity:          0.9075
+  Precision:            0.7161
+  F1-Score:             0.4793
+  Accuracy:             0.6924
+
+Confusion matrix saved to: files/test_confusion_matrix.png
+================================================================================
+
+
+================================================================================
+Test Set Results:
+  Test Accuracy: 0.6924
+  Test DP: 0.0173
+  Test AUC: 0.6760
+  Test Sensitivity: 0.3602
+  Test F1-Score: 0.4793
+  Test EO: 0.0120
+================================================================================
+
+Model saved to models/folktables_model.pkl
+>>> Training completed in 153887.0s
+
+################################################################################
+# Evaluating scenario (aranyani): folktables
+# 
+################################################################################
+
+Evaluating model over 187473 timesteps with test-then-train=True
+          Fairness penalty lambda: 0.1, fairness type: dp
+Parameters:
+  ADWIN_DELTA_WARN: 1e-05
+  ADWIN_DELTA_CONFIRM: 0.02
+\  DRIFT_LR_PREWARM: 0.01
+  DRIFT_LR_SPIKE: 0.02
+  LR_DECAY_STEPS: 3000
+  FAIRNESS_WINDOW: 1000
+  COOLDOWN: 200
+  MIN_SAMPLES_PER_STREAM: 30
+  Lambda for fairness penalty: 0.1
+  Accuracy window: 200
+  Use rolling accuracy: False
+  Compute fairness: True
+  Fairness type: dp
+Fairness window: 1000, starting fairness computations at sample index: 0
+[DBG] Processing sample 1/187473...
+[DBG] Processing sample 1000/187473...
+[DBG] Processing sample 2000/187473...
+[DBG] Processing sample 3000/187473...
+[DBG] Processing sample 4000/187473...
+[DBG] Processing sample 5000/187473...
+[DBG] Processing sample 6000/187473...
+[DBG] Processing sample 7000/187473...
+[DBG] Processing sample 8000/187473...
+[DBG] Processing sample 9000/187473...
+[DBG] Processing sample 10000/187473...
+[DBG] Processing sample 11000/187473...
+[DRIFT] Concept drift confirmed at sample 11263 — spiking LR to 2.00e-02 and making hard routing decisions
+[DRIFT] Concept drift confirmed at sample 11967 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 12000/187473...
+[DBG] Processing sample 13000/187473...
+[DBG] Processing sample 14000/187473...
+[DBG] Processing sample 15000/187473...
+[DRIFT] Concept drift confirmed at sample 15711 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 15967. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 16000/187473...
+[DBG] Processing sample 17000/187473...
+[DBG] Processing sample 18000/187473...
+[DRIFT] Concept drift confirmed at sample 18495 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 18495. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 19000/187473...
+[DBG] Processing sample 20000/187473...
+[DBG] Processing sample 21000/187473...
+[DBG] Processing sample 22000/187473...
+[DBG] Processing sample 23000/187473...
+[DBG] Processing sample 24000/187473...
+[DBG] Processing sample 25000/187473...
+[DBG] Processing sample 26000/187473...
+[DBG] Processing sample 27000/187473...
+[DBG] Processing sample 28000/187473...
+[DBG] Processing sample 29000/187473...
+[DBG] Processing sample 30000/187473...
+[DBG] Processing sample 31000/187473...
+[DBG] Processing sample 32000/187473...
+[DBG] Processing sample 33000/187473...
+[DBG] Processing sample 34000/187473...
+[DBG] Processing sample 35000/187473...
+[DBG] Processing sample 36000/187473...
+[DBG] Processing sample 37000/187473...
+[DBG] Processing sample 38000/187473...
+[DBG] Processing sample 39000/187473...
+[DBG] Processing sample 40000/187473...
+[DBG] Processing sample 41000/187473...
+[DRIFT] Concept drift confirmed at sample 41439 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 41439. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 42000/187473...
+[DBG] Processing sample 43000/187473...
+[DBG] Processing sample 44000/187473...
+[DBG] Processing sample 45000/187473...
+[DBG] Processing sample 46000/187473...
+[DBG] Processing sample 47000/187473...
+[DBG] Processing sample 48000/187473...
+[DBG] Processing sample 49000/187473...
+[DBG] Processing sample 50000/187473...
+[DBG] Processing sample 51000/187473...
+[DBG] Processing sample 52000/187473...
+[DBG] Processing sample 53000/187473...
+[DBG] Processing sample 54000/187473...
+[DBG] Processing sample 55000/187473...
+[DBG] Processing sample 56000/187473...
+[DBG] Processing sample 57000/187473...
+[DBG] Processing sample 58000/187473...
+[DBG] Processing sample 59000/187473...
+[DBG] Processing sample 60000/187473...
+[DBG] Processing sample 61000/187473...
+[DBG] Processing sample 62000/187473...
+[DBG] Processing sample 63000/187473...
+[DBG] Processing sample 64000/187473...
+[DBG] Processing sample 65000/187473...
+[DBG] Processing sample 66000/187473...
+[DBG] Processing sample 67000/187473...
+[DBG] Processing sample 68000/187473...
+[DBG] Processing sample 69000/187473...
+[DBG] Processing sample 70000/187473...
+[DBG] Processing sample 71000/187473...
+[DBG] Processing sample 72000/187473...
+[DBG] Processing sample 73000/187473...
+[DBG] Processing sample 74000/187473...
+[DBG] Processing sample 75000/187473...
+[DBG] Processing sample 76000/187473...
+[DBG] Processing sample 77000/187473...
+[DBG] Processing sample 78000/187473...
+[DRIFT] Concept drift confirmed at sample 78303 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 79000/187473...
+[DRIFT] Concept drift confirmed at sample 79711 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 80000/187473...
+[DBG] Processing sample 81000/187473...
+[DRIFT] Concept drift confirmed at sample 81887 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 82000/187473...
+[DBG] Processing sample 83000/187473...
+[DRIFT] Concept drift confirmed at sample 83423 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 84000/187473...
+[DBG] Processing sample 85000/187473...
+[DRIFT] Concept drift confirmed at sample 85023 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 86000/187473...
+[DBG] Processing sample 87000/187473...
+[DBG] Processing sample 88000/187473...
+[DBG] Processing sample 89000/187473...
+[DBG] Processing sample 90000/187473...
+[DBG] Processing sample 91000/187473...
+[DBG] Processing sample 92000/187473...
+[DBG] Processing sample 93000/187473...
+[DBG] Processing sample 94000/187473...
+[DBG] Processing sample 95000/187473...
+[DBG] Processing sample 96000/187473...
+[DBG] Processing sample 97000/187473...
+[DBG] Processing sample 98000/187473...
+[DBG] Processing sample 99000/187473...
+[DBG] Processing sample 100000/187473...
+[DBG] Processing sample 101000/187473...
+[DBG] Processing sample 102000/187473...
+[DBG] Processing sample 103000/187473...
+[DBG] Processing sample 104000/187473...
+[DBG] Processing sample 105000/187473...
+[DBG] Processing sample 106000/187473...
+[DBG] Processing sample 107000/187473...
+[DBG] Processing sample 108000/187473...
+[DBG] Processing sample 109000/187473...
+[DBG] Processing sample 110000/187473...
+[DBG] Processing sample 111000/187473...
+[DBG] Processing sample 112000/187473...
+[DBG] Processing sample 113000/187473...
+[DBG] Processing sample 114000/187473...
+[DBG] Processing sample 115000/187473...
+[DBG] Processing sample 116000/187473...
+[DBG] Processing sample 117000/187473...
+[DBG] Processing sample 118000/187473...
+[DRIFT] Concept drift confirmed at sample 118015 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 119000/187473...
+[DBG] Processing sample 120000/187473...
+[DBG] Processing sample 121000/187473...
+[DRIFT] Concept drift confirmed at sample 121087 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 122000/187473...
+[DBG] Processing sample 123000/187473...
+[DRIFT] Concept drift confirmed at sample 123135 — spiking LR to 2.00e-02 and making hard routing decisions
+[DRIFT] Concept drift confirmed at sample 123487 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 124000/187473...
+[DRIFT] Concept drift confirmed at sample 124575 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 125000/187473...
+[DRIFT] Concept drift confirmed at sample 125087 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 125295. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 126000/187473...
+[DBG] Processing sample 127000/187473...
+[DBG] Processing sample 128000/187473...
+[DBG] Processing sample 129000/187473...
+[DBG] Processing sample 130000/187473...
+[DRIFT] Concept drift confirmed at sample 130495 — spiking LR to 2.00e-02 and making hard routing decisions
+[RECOVERY] Performance restored at sample 130495. Decaying LR from 2.00e-02 to 2.00e-03 over 3000 steps.
+[DBG] Processing sample 131000/187473...
+[DRIFT] Concept drift confirmed at sample 131039 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 132000/187473...
+[DBG] Processing sample 133000/187473...
+[DBG] Processing sample 134000/187473...
+[DRIFT] Concept drift confirmed at sample 134335 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 135000/187473...
+[DBG] Processing sample 136000/187473...
+[DBG] Processing sample 137000/187473...
+[DBG] Processing sample 138000/187473...
+[DRIFT] Concept drift confirmed at sample 138943 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 139000/187473...
+[DBG] Processing sample 140000/187473...
+[DBG] Processing sample 141000/187473...
+[DBG] Processing sample 142000/187473...
+[DBG] Processing sample 143000/187473...
+[DBG] Processing sample 144000/187473...
+[DBG] Processing sample 145000/187473...
+[DBG] Processing sample 146000/187473...
+[DBG] Processing sample 147000/187473...
+[DBG] Processing sample 148000/187473...
+[DBG] Processing sample 149000/187473...
+[DBG] Processing sample 150000/187473...
+[DBG] Processing sample 151000/187473...
+[DBG] Processing sample 152000/187473...
+[DBG] Processing sample 153000/187473...
+[DBG] Processing sample 154000/187473...
+[DBG] Processing sample 155000/187473...
+[DBG] Processing sample 156000/187473...
+[DBG] Processing sample 157000/187473...
+[DBG] Processing sample 158000/187473...
+[DBG] Processing sample 159000/187473...
+[DBG] Processing sample 160000/187473...
+[DBG] Processing sample 161000/187473...
+[DBG] Processing sample 162000/187473...
+[DBG] Processing sample 163000/187473...
+[DBG] Processing sample 164000/187473...
+[DBG] Processing sample 165000/187473...
+[DBG] Processing sample 166000/187473...
+[DBG] Processing sample 167000/187473...
+[DBG] Processing sample 168000/187473...
+[DBG] Processing sample 169000/187473...
+[DBG] Processing sample 170000/187473...
+[DBG] Processing sample 171000/187473...
+[DBG] Processing sample 172000/187473...
+[DBG] Processing sample 173000/187473...
+[DBG] Processing sample 174000/187473...
+[DBG] Processing sample 175000/187473...
+[DBG] Processing sample 176000/187473...
+[DBG] Processing sample 177000/187473...
+[DBG] Processing sample 178000/187473...
+[DBG] Processing sample 179000/187473...
+[DBG] Processing sample 180000/187473...
+[DBG] Processing sample 181000/187473...
+[DBG] Processing sample 182000/187473...
+[DBG] Processing sample 183000/187473...
+[DBG] Processing sample 184000/187473...
+[DRIFT] Concept drift confirmed at sample 184735 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 185000/187473...
+[DRIFT] Concept drift confirmed at sample 185919 — spiking LR to 2.00e-02 and making hard routing decisions
+[DBG] Processing sample 186000/187473...
+[DBG] Processing sample 187000/187473...
+Accuracy drift detected at samples: [11263, 11967, 15711, 18495, 41439, 78303, 79711, 81887, 83423, 85023, 118015, 121087, 123135, 123487, 124575, 125087, 130495, 131039, 134335, 138943, 184735, 185919]
+{'accuracy': 0.5862817579064719, 'dp': 0.0039690567529925835, 'eo': 0.006876567717312931}
+Done in 18271.5s | Acc=0.5862817579064719 DP=0.0039690567529925835 EO=0.006876567717312931
+Results saved to: files/experiments\model_aranyani\dataset_folktables\seed_1\results.json
+
+================================================================================
+ SUMMARY
+================================================================================
+Scenario                      Acc         DP         EO
+--------------------------------------------------------------------------------
+folktables                 0.5863     0.0040     0.0069
+
+--------------------------------------------------------------------------------
+ Seed run [2/5]: 5
+--------------------------------------------------------------------------------
+
+================================================================================
+ Running single Folktables evaluation
+ Model: aranyani
+ Dataset: folktables
+ Output: C:\Users\tjcsi\Documents\Aranyani2.0\files\experiments\model_aranyani\dataset_folktables\seed_5/
+================================================================================
+
+>>> Training model on clean data (no drift)...
+Using random seed: 42
+Sensitive attribute values in training set: {0, 1}
+SECOND TUNING ON VALIDATION SPLIT (TREE HYPERPARAMETERS)
+[NSGA2-TREE] Train size=149980, Val size=37495, base(depth=4, num_trees=3, lambda=1)
+[NSGA2-TREE] Using 25.0% subset: tune_train=37495, tune_val=9374
+Fairness type: dp
+lambda for fairness penalty: 5.500586367382385
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[21978  1802]
+ [10329  3386]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6803    0.9242    0.7837     23780
+     Class 1     0.6527    0.2469    0.3583     13715
+
+    accuracy                         0.6765     37495
+   macro avg     0.6665    0.5856    0.5710     37495
+weighted avg     0.6702    0.6765    0.6281     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   21978
+  False Positives (FP):   1802
+  False Negatives (FN):  10329
+  True Positives (TP):    3386
+  Sensitivity/Recall:   0.2469
+  Specificity:          0.9242
+  Precision:            0.6527
+  F1-Score:             0.3583
+  Accuracy:             0.6765
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.686
+Test Sensitivity: 0.229
+Test DP: 0.016
+Test EO: 0.021
+Test AUC: 0.587
+Test F1-Score: 0.344
+Fairness type: dp
+lambda for fairness penalty: 13.533989748458225
+weight updater enabled: False
+
+================================================================================
+TRAINING SET FINAL CONFUSION MATRIX
+================================================================================
+
+Confusion Matrix:
+[[22083  1697]
+ [10529  3186]]
+
+Classification Report:
+              precision    recall  f1-score   support
+
+     Class 0     0.6771    0.9286    0.7832     23780
+     Class 1     0.6525    0.2323    0.3426     13715
+
+    accuracy                         0.6739     37495
+   macro avg     0.6648    0.5805    0.5629     37495
+weighted avg     0.6681    0.6739    0.6220     37495
+
+
+Detailed Binary Classification Metrics:
+  True Negatives (TN):   22083
+  False Positives (FP):   1697
+  False Negatives (FN):  10529
+  True Positives (TP):    3186
+  Sensitivity/Recall:   0.2323
+  Specificity:          0.9286
+  Precision:            0.6525
+  F1-Score:             0.3426
+  Accuracy:             0.6739
+
+Confusion matrix saved to: files/train_confusion_matrix.png
+================================================================================
+
+Test Accuracy: 0.671
+Test Sensitivity: 0.142
+Test DP: 0.011
+Test EO: 0.014
+Test AUC: 0.681
+Test F1-Score: 0.236
+Fairness type: dp
+lambda for fairness penalty: 8.438436393705409
+weight updater enabled: False

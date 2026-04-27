@@ -7,8 +7,7 @@ def evaluate_arf_over_timesteps(
     y_test,
     a_test,
     seed,
-    x_train=None,
-    y_train=None,
+
     accuracy_window=200,
 ):
     arf = AdaptiveRandomForestClassifier(seed=seed)
@@ -24,16 +23,6 @@ def evaluate_arf_over_timesteps(
     y_true_all = []
     a_all = []
     n_samples = len(x_test)
-
-    if x_train is not None and y_train is not None:
-        n_train = len(x_train)
-        print(f"Warm-starting ARF on clean train split ({n_train} samples)...")
-        for t in range(n_train):
-            x_tr = np.array(x_train[t], dtype=np.float32)
-            y_tr = int(y_train[t])
-            x_tr_dict = {i: float(v) for i, v in enumerate(x_tr)}
-            arf.learn_one(x_tr_dict, y_tr)
-        print("ARF warm-start complete.")
 
     print(f"Running ARF baseline prequentially on {n_samples} samples...")
 

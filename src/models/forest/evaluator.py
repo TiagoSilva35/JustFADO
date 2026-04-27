@@ -3,7 +3,8 @@ import tensorflow as tf
 from river import drift
 from src.models.forest.initializers import init_fairness_state, accumulate_fairness_stats, compute_fairness_gradients
 from src.helpers.utils import _compute_window_fairness
-
+from collections import deque
+from src.helpers import utils
 
 def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
     """Infer tree depth and number of trees from a trained forest model."""
@@ -44,7 +45,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         'drift_lr_prewarm_mult': 5.0,
         'drift_lr_spike_mult': 10.0,
         'lr_decay_steps': 3000,
-        'fairness_window': 500,
+        'fairness_window': 200,
         'cooldown': 200,
         'min_samples_per_stream': 30,
         'lambda_const': float(lambda_const),
@@ -65,11 +66,11 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     COOLDOWN = max(0, int(defaults['cooldown']))
     MIN_SAMPLES_PER_STREAM = max(1, int(defaults['min_samples_per_stream']))
     lambda_const = float(defaults['lambda_const'])
+    
     print(f"Evaluating model over {len(x_test)} timesteps with test-then-train={test_then_train}\n\
           Fairness penalty lambda: {lambda_const}, fairness type: {fairness_type}")
-    USE_ROLLING = bool(accuracy_window)
+    
     USE_ROLLING = False
-    print(f"Parameters:\n  ADWIN_DELTA_WARN: {ADWIN_DELTA_WARN}\n  ADWIN_DELTA_CONFIRM: {ADWIN_DELTA_CONFIRM}\n\  DRIFT_LR_PREWARM: {DRIFT_LR_PREWARM}\n  DRIFT_LR_SPIKE: {DRIFT_LR_SPIKE}\n  LR_DECAY_STEPS: {LR_DECAY_STEPS}\n  FAIRNESS_WINDOW: {FAIRNESS_WINDOW}\n  COOLDOWN: {COOLDOWN}\n  MIN_SAMPLES_PER_STREAM: {MIN_SAMPLES_PER_STREAM}\n  Lambda for fairness penalty: {lambda_const}\n  Accuracy window: {accuracy_window}\n  Use rolling accuracy: {USE_ROLLING}\n  Compute fairness: {compute_fairness}\n  Fairness type: {fairness_type}")
     correct_buffer = []
     warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
     acc_det   = drift.ADWIN(delta=ADWIN_DELTA_CONFIRM)
@@ -98,9 +99,18 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count = \
             init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_attributes)
 
+    print(f"Inferred tree depth: {tree_depth}, number of trees: {num_trees}, internal nodes per tree: {num_internal_nodes}")
+    pred_window = deque(maxlen=FAIRNESS_WINDOW)
+    true_window = deque(maxlen=FAIRNESS_WINDOW)
+    protected_window = deque(maxlen=FAIRNESS_WINDOW)
+    
+    huber_loss_delta = 0.1
+
     for t in range(n_samples):
         if (t + 1) % 1000 == 0 or t == 0:
             print(f"[DBG] Processing sample {t + 1}/{n_samples}...")
+            print(f"Avg accuracy until now: {np.mean(accuracies) if accuracies else 0}")
+            print(f"Avg DP until now: {np.mean(dps) if dps else 0}")
         x_t = tf.convert_to_tensor(
             np.array(x_test[t], dtype=np.float32).reshape(1, data_dim)
         )
@@ -114,6 +124,10 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         y_preds_all.append(y_pred)
         y_true_all.append(y_t)
         a_all.append(a_t)
+        
+        pred_window.append(y_pred)
+        true_window.append(y_t)
+        protected_window.append(a_t)
 
         correct_buffer.append(int(y_pred == y_t))
         if USE_ROLLING and len(correct_buffer) > accuracy_window:
@@ -121,13 +135,8 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         acc_val = float(sum(correct_buffer)) / len(correct_buffer)
         accuracies.append(acc_val)
 
-        w_start = max(fairness_start, len(y_preds_all) - FAIRNESS_WINDOW)
-        w_preds = y_preds_all[w_start:]
-        w_true  = y_true_all[w_start:]
-        w_a     = a_all[w_start:]
         y_probs_np  = tf.nn.softmax(y_probs, axis=-1).numpy()[0]
         model_conf  = float(y_probs_np[y_pred])   
-        label_conf  = float(y_probs_np[y_t])      
         is_label_noise = (error == 1) and (model_conf > 0.70)
 
         
@@ -173,6 +182,8 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             fairness_window=None,
         )
 
+        dp_val, dp_sign = utils.get_demographic_parity(list(pred_window), list(protected_window))
+        eo_val, eo_sign = utils.get_equalized_odds(list(pred_window), list(protected_window), list(true_window))
         dps.append(float(dp_val))
         eos.append(float(eo_val))
         
@@ -206,25 +217,25 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                 y_probs_train = train_out[0] if isinstance(train_out, tuple) else train_out
                 node_decisions_train = train_out[1] if isinstance(train_out, tuple) else None
                 loss = criteria(y_true=y_t_tensor, y_pred=y_probs_train)
-                if compute_fairness and node_decisions_train is not None:
-                    accumulate_fairness_stats(
-                        tape, [a_t], [y_t],
-                        node_decisions_train, y_probs_train,
-                        all_tree_trainable_vars, model.trainable_variables,
-                        gradient_w, gradient_b, agg_y,
-                        subgroup_count, protected_class_count,
-                        num_internal_nodes, data_dim,
-                        constraint_type, gradient_type, base_gamma,
-                    )
-                grads = tape.gradient(loss, model.trainable_variables)
-                if compute_fairness and node_decisions_train is not None:
-                    grads = compute_fairness_gradients(
-                        grads, gradient_w, gradient_b, agg_y,
-                        subgroup_count, protected_class_count,
-                        fairness_type, lambda_const,
-                        num_internal_nodes, data_dim, number_of_attributes,
-                        gradient_type, base_gamma,
-                    )
+            if compute_fairness and node_decisions_train is not None:
+                accumulate_fairness_stats(
+                    tape, [a_t], [y_t],
+                    node_decisions_train, y_probs_train,
+                    all_tree_trainable_vars, model.trainable_variables,
+                    gradient_w, gradient_b, agg_y,
+                    subgroup_count, protected_class_count,
+                    num_internal_nodes, data_dim,
+                    constraint_type, gradient_type, base_gamma,
+                )
+            grads = tape.gradient(loss, model.trainable_variables)
+            if compute_fairness and node_decisions_train is not None:
+                grads = compute_fairness_gradients(
+                    grads, gradient_w, gradient_b, agg_y,
+                    subgroup_count, protected_class_count,
+                    fairness_type, lambda_const,
+                    num_internal_nodes, data_dim, number_of_attributes,
+                    gradient_type, base_gamma, huber_loss_delta=huber_loss_delta, dp_sign=dp_sign, constraint_type=constraint_type
+                )
             if compute_fairness:
                 del tape
 
