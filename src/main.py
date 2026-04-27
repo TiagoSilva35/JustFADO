@@ -8,14 +8,16 @@ import traceback
 import numpy as np
 from absl import app, flags
 
-from src.drift.scenarios import SCENARIO_DESCRIPTIONS, SCENARIOS, SPLITS, PHASE_LABELS
+from src.drift.scenarios import SCENARIO_DESCRIPTIONS, SCENARIOS
 from src.helpers.data import load_drifted_test_set, read_adult, read_folktables
-from src.helpers.plots import plot_metrics_over_timesteps
 from src.models.arf.arf import evaluate_arf_over_timesteps
 from src.models.forest.evaluator import evaluate_over_timesteps
 from src.models.rfr.evaluator import evaluate_rfr_over_timesteps
 from src.models.forest.train import train, FLAGS
+import src.models.forest.forest as forest
+
 from src.helpers.constants import (
+    
     OUTPUT_DIR,
     DEFAULT_SEED_RUNS,
     DEFAULT_RANDOM_SEED_MIN,
@@ -81,14 +83,18 @@ def _evaluate_selected_model(
     x_test,
     y_test,
     a_test,
-    model=None,
     data_dim=None,
-    x_train=None,
-    y_train=None,
     seed=None,
 ):
     if model_name == 'aranyani':
-        stream = evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim=data_dim)
+        model = forest.FairDecisionForest(
+            num_trees=8,
+            tree_depth=10,
+            data_dim=data_dim,
+            num_classes=2,
+        )
+        print("Evaluating Aranyani...")
+        stream = evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim=data_dim, lambda_const=0.1)
         test_metrics = {
             'accuracy': float(stream.get('accuracy')[-1]) if stream.get('accuracy') else None,
             'dp': float(stream.get('dp')[-1]) if stream.get('dp') else None,
@@ -101,8 +107,6 @@ def _evaluate_selected_model(
             x_test,
             y_test,
             a_test,
-            x_train=x_train,
-            y_train=y_train,
             seed=seed,
         )
         test_metrics = {
@@ -143,10 +147,8 @@ def _single_scenario(
     model_name,
     scenario_name,
     output_dir,
-    model=None,
     data_dim=None,
-    x_train=None,
-    y_train=None,
+
     x_test=None,
     y_test=None,
     a_test=None,
@@ -161,27 +163,19 @@ def _single_scenario(
     if x_test is None or y_test is None or a_test is None:
         x_test, y_test, a_test = load_drifted_test_set(scenario_name)
 
+    data_dim = x_test.shape[1]
+    print(f"number of features: {data_dim}")
+    
     stream, test_metrics = _evaluate_selected_model(
         model_name=model_name,
         x_test=x_test,
         y_test=y_test,
         a_test=a_test,
-        model=model,
         data_dim=data_dim,
-        x_train=x_train,
-        y_train=y_train,
         seed=seed,
     )
 
     os.makedirs(output_dir, exist_ok=True)
-    # plot_path = os.path.join(output_dir, f'timesteps_{model_name}_{scenario_name}.png')
-    # plot_metrics_over_timesteps(
-    #     stream,
-    #     save_path=plot_path,
-    #     stage_splits=SPLITS,
-    #     stage_labels=PHASE_LABELS,
-    # )
-
     return {
         'model': model_name,
         'scenario': scenario_name,
@@ -213,36 +207,6 @@ def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scena
     data_dim = None
     arf_x_train = None
     arf_y_train = None
-    if model_name == 'aranyani':
-        train_start = time.time()
-        print('>>> Training model on clean data (no drift)...')
-        _, _, _, _, _, trained_model, data_dim = train(
-            drift=False,
-            **kwargs,
-        )
-        print(f">>> Training completed in {round(time.time() - train_start, 1)}s")
-        if trained_model is None:
-            raise RuntimeError('Training returned no model - cannot evaluate scenarios.')
-    elif model_name == 'arf':
-        train_start = time.time()
-        print('>>> Loading clean train split for ARF warm-start...')
-        if dataset_key == 'adult':
-            arf_x_train, _, arf_y_train, _, _, _ = read_adult(drift=False, drift_scenario=None)
-        elif dataset_key == 'folktables':
-            folktables_states = [
-                state.strip() for state in str(FLAGS.folktables_states).split(',') if state.strip()
-            ]
-            folktables_test_years = tuple(
-                int(year.strip()) for year in str(FLAGS.folktables_test_years).split(',') if year.strip()
-            )
-            arf_x_train, _, arf_y_train, _, _, _, _ = read_folktables(
-                train_year=FLAGS.folktables_train_year,
-                test_years=folktables_test_years,
-                state=folktables_states,
-                horizon=FLAGS.folktables_horizon,
-                sensitive_attribute=FLAGS.folktables_sensitive_attribute,
-            )
-        print(f">>> Loaded {len(arf_x_train)} clean train samples in {round(time.time() - train_start, 1)}s")
 
     results = []
     if dataset_key == 'adult':
@@ -279,18 +243,11 @@ def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scena
             horizon=FLAGS.folktables_horizon,
             sensitive_attribute=FLAGS.folktables_sensitive_attribute,
         )
-        if model_name == 'aranyani':
-            result_model = trained_model
-        else:
-            result_model = None
         result = _single_scenario(
             model_name=model_name,
             scenario_name='folktables',
             output_dir=output_dir,
-            model=result_model,
             data_dim=data_dim,
-            x_train=x_train if model_name == 'arf' else None,
-            y_train=y_train if model_name == 'arf' else None,
             x_test=x_test,
             y_test=y_test,
             a_test=a_test,

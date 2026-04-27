@@ -141,28 +141,28 @@ def train_online(
         'EO': float(eo),
       }
 
-      gradients = tape.gradient(target_loss, model.trainable_variables)
-      total_gradients = gradients
-      if compute_fairness:
-        initializers.accumulate_fairness_stats(
-            tape, protected_batch.numpy(), targets_batch.numpy(),
-            node_decisions, predictions,
-            all_tree_trainable_vars, model.trainable_variables,
-            gradient_w, gradient_b, agg_y,
-            subgroup_count, protected_class_count,
-            num_internal_nodes, data_dim,
-            constraint_type, gradient_type, base_gamma
-        )
-        total_gradients = initializers.compute_fairness_gradients(
-            gradients,
-            gradient_w, gradient_b, agg_y,
-            subgroup_count, protected_class_count,
-            fairness_type, lambda_const,
-            num_internal_nodes, data_dim, number_of_attributes,
-            gradient_type, base_gamma, huber_loss_delta, dp_sign=dp_sign, constraint_type=constraint_type
-        )
-      del tape
-      optimizer.apply_gradients(zip(total_gradients, model.trainable_variables))
+    gradients = tape.gradient(target_loss, model.trainable_variables)
+    total_gradients = gradients
+    if compute_fairness:
+      initializers.accumulate_fairness_stats(
+          tape, protected_batch.numpy(), targets_batch.numpy(),
+          node_decisions, predictions,
+          all_tree_trainable_vars, model.trainable_variables,
+          gradient_w, gradient_b, agg_y,
+          subgroup_count, protected_class_count,
+          num_internal_nodes, data_dim,
+          constraint_type, gradient_type, base_gamma
+      )
+      total_gradients = initializers.compute_fairness_gradients(
+          gradients,
+          gradient_w, gradient_b, agg_y,
+          subgroup_count, protected_class_count,
+          fairness_type, lambda_const,
+          num_internal_nodes, data_dim, number_of_attributes,
+          gradient_type, base_gamma, huber_loss_delta, dp_sign=dp_sign, constraint_type=constraint_type
+      )
+    del tape
+    optimizer.apply_gradients(zip(total_gradients, model.trainable_variables))
 
   y_true_array = np.array(y_true_all)
   y_pred_array = np.array(y_predictions)
