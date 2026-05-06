@@ -12,6 +12,7 @@
 
 
 import os
+from glob import glob
 
 
 # %%
@@ -378,6 +379,166 @@ def read_celeba(path="../data/celeba/"):
   return x_train, y_train, a_train
 
 
+def _resolve_diabetes_files(path):
+  """Resolve diabetes CSV inputs from a file, directory, or glob path."""
+  path = str(path).strip()
+  if not path:
+    path = 'data/diabetes/diabetic_data.csv'
+
+  if any(token in path for token in ['*', '?', '[']):
+    files = sorted(glob(path))
+  elif os.path.isdir(path):
+    files = sorted(glob(os.path.join(path, '*.csv')))
+  elif os.path.isfile(path):
+    files = [path]
+  else:
+    files = []
+
+  files = [file_path for file_path in files if os.path.isfile(file_path)]
+  if not files:
+    raise FileNotFoundError(
+        f"No diabetes data files found for path '{path}'. "
+        "Provide a valid file, directory, or glob (e.g., data/diabetes/diabetic_data.csv)."
+    )
+
+  dataset_files = []
+  for file_path in files:
+    columns = {
+        str(column).strip().lower()
+        for column in pd.read_csv(file_path, nrows=0).columns
+    }
+    if 'readmitted' in columns:
+      dataset_files.append(file_path)
+
+  if not dataset_files:
+    raise ValueError(
+        f"No diabetes dataset CSV was found for path '{path}'. "
+        "Expected at least one CSV with a 'readmitted' column."
+    )
+  return dataset_files
+
+
+def _resolve_column_name(df, candidates, label):
+  column_map = {str(column).strip().lower(): column for column in df.columns}
+  for candidate in candidates:
+    if candidate in column_map:
+      return column_map[candidate]
+  raise ValueError(
+      f"Could not infer {label} column. Available columns: {list(df.columns)}"
+  )
+
+
+def _normalize_binary_series(series, label):
+  values = pd.Series(series)
+  if values.empty:
+    raise ValueError(f"Cannot parse empty {label} values.")
+  if values.dtype.kind in {'O', 'U', 'S'}:
+    normalized = values.astype(str).str.strip().str.lower()
+  else:
+    normalized = values
+
+  encoded = pd.factorize(normalized)[0].astype(np.int32)
+  if len(np.unique(encoded)) != 2:
+    raise ValueError(
+        f"Expected binary {label} values, found {len(np.unique(encoded))} classes."
+    )
+  return encoded
+
+
+def _preprocess_diabetes_frame(df):
+  df = df.dropna().copy()
+  target_col = _resolve_column_name(
+      df,
+      ['readmitted'],
+      'target',
+  )
+  sensitive_col = _resolve_column_name(
+      df,
+      ['gender', 'sex', 'sensitive', 'sensitive_attribute', 'group', 'a'],
+      'sensitive attribute',
+  )
+
+  sensitive_values = df[sensitive_col]
+  if sensitive_values.dtype.kind in {'O', 'U', 'S'}:
+    normalized_sensitive = sensitive_values.astype(str).str.strip().str.lower()
+    binary_sensitive_mask = normalized_sensitive.isin({'male', 'female'})
+    if binary_sensitive_mask.any() and not binary_sensitive_mask.all():
+      df = df.loc[binary_sensitive_mask].copy()
+      normalized_sensitive = normalized_sensitive.loc[df.index]
+    sensitive_values = normalized_sensitive
+
+  target_values = df[target_col]
+  if target_values.dtype.kind in {'O', 'U', 'S'}:
+    normalized_target = target_values.astype(str).str.strip().str.lower()
+    if set(normalized_target.unique()).issubset({'no', '>30', '<30'}):
+      target_values = normalized_target.replace({'no': 'no', '>30': 'yes', '<30': 'yes'})
+
+  y = _normalize_binary_series(target_values, 'target')
+  a = _normalize_binary_series(sensitive_values, 'sensitive attribute')
+
+  features = df.drop(columns=[target_col])
+  if features.empty:
+    raise ValueError("Diabetes data has no feature columns after dropping target column.")
+
+  for column in features.columns:
+    if not pd.api.types.is_numeric_dtype(features[column]):
+      encoder = preprocessing.LabelEncoder()
+      features[column] = encoder.fit_transform(features[column].astype(str))
+    features[column] = pd.to_numeric(features[column], errors='coerce')
+
+  features = features.fillna(features.median(numeric_only=True))
+  features = features.fillna(0.0)
+  for column in features.columns:
+    std = features[column].std()
+    if std and std > 0:
+      features[column] = (features[column] - features[column].mean()) / std
+
+  x = np.asarray(features.values, dtype=np.float32)
+  return x, y, a
+
+
+def read_diabetes(path='data/diabetes/diabetic_data.csv'):
+  """Read diabetes data from a file, folder, or glob path."""
+  files = _resolve_diabetes_files(path)
+  train_frames = []
+  test_frames = []
+  for file_path in files:
+    file_name = os.path.basename(file_path).lower()
+    frame = pd.read_csv(file_path)
+    if 'test' in file_name:
+      test_frames.append(frame)
+    elif 'train' in file_name:
+      train_frames.append(frame)
+    else:
+      train_frames.append(frame)
+
+  if test_frames:
+    test_df = pd.concat(test_frames, ignore_index=True)
+    if train_frames:
+      train_df = pd.concat(train_frames, ignore_index=True)
+    else:
+      split_idx = max(1, int(0.8 * len(test_df)))
+      if split_idx >= len(test_df):
+        split_idx = len(test_df) - 1
+      if split_idx <= 0:
+        raise ValueError("Not enough diabetes samples to build train/test splits.")
+      train_df = test_df.iloc[:split_idx].copy()
+      test_df = test_df.iloc[split_idx:].copy()
+  else:
+    merged_df = pd.concat(train_frames, ignore_index=True)
+    split_idx = max(1, int(0.8 * len(merged_df)))
+    if split_idx >= len(merged_df):
+      split_idx = len(merged_df) - 1
+    if split_idx <= 0:
+      raise ValueError("Not enough diabetes samples to build train/test splits.")
+    train_df = merged_df.iloc[:split_idx].copy()
+    test_df = merged_df.iloc[split_idx:].copy()
+
+  x_train, y_train, a_train = _preprocess_diabetes_frame(train_df)
+  x_test, y_test, a_test = _preprocess_diabetes_frame(test_df)
+  return x_train, x_test, y_train, y_test, a_train, a_test
+
+
 def _adult_income_filter(data):
   """Mimic Adult dataset filtering for ACS Income."""
   df = data
@@ -390,11 +551,10 @@ def _adult_income_filter(data):
 
 def _acs_income_problem(sensitive_attribute='sex'):
   sensitive_attribute = str(sensitive_attribute).lower()
+  features = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'WKHP', 'SEX', 'RAC1P']
   if sensitive_attribute == 'race':
-    features = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'WKHP', 'SEX']
     group = 'RAC1P'
   else:
-    features = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'WKHP', 'RAC1P']
     group = 'SEX'
 
   return BasicProblem(
@@ -417,7 +577,7 @@ def _normalize_sensitive_attribute(values, sensitive_attribute):
   return (values - 1).astype(np.int32)
 
 
-def read_folktables(path='data/acs-folktables', train_year=2015, test_years=(2016, 2017, 2018),
+def read_folktables(path='data/acs-folktables', train_year=2015, test_years=(2017, 2018),
                     state='CA', horizon='1-Year', sensitive_attribute='sex',
                     download=True):
   """Read Folktables ACS Income data from local cache."""
