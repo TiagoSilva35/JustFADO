@@ -88,8 +88,8 @@ def _evaluate_selected_model(
 ):
     if model_name == 'aranyani':
         model = forest.FairDecisionForest(
-            num_trees=8,
-            tree_depth=10,
+            num_trees=4,
+            tree_depth=9,
             data_dim=data_dim,
             num_classes=2,
         )
