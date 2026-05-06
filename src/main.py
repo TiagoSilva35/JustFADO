@@ -9,7 +9,7 @@ import numpy as np
 from absl import app, flags
 
 from src.drift.scenarios import SCENARIO_DESCRIPTIONS, SCENARIOS
-from src.helpers.data import load_drifted_test_set, read_adult, read_folktables
+from src.helpers.data import load_drifted_test_set, read_adult, read_diabetes, read_folktables
 from src.models.arf.arf import evaluate_arf_over_timesteps
 from src.models.forest.evaluator import evaluate_over_timesteps
 from src.models.rfr.evaluator import evaluate_rfr_over_timesteps
@@ -25,16 +25,20 @@ from src.helpers.constants import (
     RFR_CONFIG,
 )
 
-flags.DEFINE_enum(
+flags.DEFINE_string(
     'pipeline_model',
-    'aranyani',
-    ['aranyani', 'arf', 'rfr'],
-    'Model to run in main pipeline: aranyani, arf, or rfr.',
+    '',
+    'Optional model to run in main pipeline: aranyani, arf, or rfr. Empty runs all supported models for the dataset.',
 )
 flags.DEFINE_string(
     'pipeline_dataset',
     '',
     'Optional dataset override for pipeline runs. Empty keeps --dataset.',
+)
+flags.DEFINE_string(
+    'diabetes_path',
+    'data/diabetes/diabetic_data.csv',
+    'Path, directory, or glob for diabetes CSV files. Defaults to diabetic_data.csv.',
 )
 
 
@@ -53,6 +57,33 @@ def _train_kwargs(seed, dataset_name):
         'drift_scenario': FLAGS.drift_scenario ,
         'seed': FLAGS.seed,
     }
+
+
+def _supported_models_for_dataset(dataset_name):
+    dataset_key = str(dataset_name).strip().lower()
+    supported = {
+        'adult': ['aranyani', 'arf', 'rfr'],
+        'folktables': ['aranyani', 'arf', 'rfr'],
+        'diabetes': ['aranyani', 'arf', 'rfr'],
+    }
+    if dataset_key not in supported:
+        raise ValueError(
+            f"Unsupported dataset for pipeline evaluation: '{dataset_name}'."
+        )
+    return supported[dataset_key]
+
+
+def _resolve_pipeline_models(dataset_name):
+    requested_model = str(FLAGS.pipeline_model).strip().lower()
+    supported_models = _supported_models_for_dataset(dataset_name)
+    if not requested_model:
+        return supported_models
+    if requested_model not in supported_models:
+        raise ValueError(
+            f"Model '{requested_model}' is not supported for dataset '{dataset_name}'. "
+            f"Supported models: {supported_models}"
+        )
+    return [requested_model]
 
 
 def _parse_seed_list():
@@ -88,8 +119,8 @@ def _evaluate_selected_model(
 ):
     if model_name == 'aranyani':
         model = forest.FairDecisionForest(
-            num_trees=8,
-            tree_depth=10,
+            num_trees=9,
+            tree_depth=5,
             data_dim=data_dim,
             num_classes=2,
         )
@@ -185,7 +216,7 @@ def _single_scenario(
     }
 
 
-def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_name=None):
+def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filter=None):
     dataset_key = str(dataset_name).lower()
     print(f"\n{'=' * 80}")
     if dataset_key == 'adult':
@@ -194,6 +225,9 @@ def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scena
     elif dataset_key == 'folktables':
         scenarios = ['folktables']
         print(" Running single Folktables evaluation")
+    elif dataset_key == 'diabetes':
+        scenarios = ['diabetes']
+        print(" Running single Diabetes evaluation")
     else:
         raise ValueError(
             f"Unsupported dataset for pipeline evaluation: '{dataset_name}'."
@@ -203,25 +237,16 @@ def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scena
     print(f" Output: {os.path.abspath(output_dir)}/")
     print(f"{'=' * 80}\n")
 
-    trained_model = None
-    data_dim = None
-    arf_x_train = None
-    arf_y_train = None
-
     results = []
     if dataset_key == 'adult':
         for idx, scenario_name in enumerate(scenarios, 1):
-            if scenario_name != scenario_name and scenario_name is not None:
+            if scenario_filter is not None and scenario_name != scenario_filter:
                 continue
             print(f"\n>>> [{idx}/{len(scenarios)}] {scenario_name}")
             result = _single_scenario(
                 model_name=model_name,
                 scenario_name=scenario_name,
                 output_dir=output_dir,
-                model=trained_model,
-                data_dim=data_dim,
-                x_train=arf_x_train,
-                y_train=arf_y_train,
                 seed=kwargs.get('seed'),
             )
             results.append(result)
@@ -233,7 +258,7 @@ def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scena
                 f"DP={float(tm.get('dp'))} "
                 f"EO={float(tm.get('eo'))}"
             )
-    else:
+    elif dataset_key == 'folktables':
         x_train, x_test, y_train, y_test, a_train, a_test, _ = read_folktables(
             train_year=FLAGS.folktables_train_year,
             test_years=tuple(
@@ -247,7 +272,28 @@ def run_scenarios(kwargs, model_name, dataset_name, output_dir=OUTPUT_DIR, scena
             model_name=model_name,
             scenario_name='folktables',
             output_dir=output_dir,
-            data_dim=data_dim,
+            x_test=x_test,
+            y_test=y_test,
+            a_test=a_test,
+            seed=kwargs.get('seed'),
+        )
+        results.append(result)
+        tm = result['test_metrics']
+        print(tm)
+        print(
+            f"Done in {result['elapsed_seconds']}s | "
+            f"Acc={float(tm.get('accuracy'))} "
+            f"DP={float(tm.get('dp'))} "
+            f"EO={float(tm.get('eo'))}"
+        )
+    else:
+        x_train, x_test, y_train, y_test, a_train, a_test = read_diabetes(
+            path=FLAGS.diabetes_path,
+        )
+        result = _single_scenario(
+            model_name=model_name,
+            scenario_name='diabetes',
+            output_dir=output_dir,
             x_test=x_test,
             y_test=y_test,
             a_test=a_test,
@@ -336,34 +382,35 @@ def _aggregate_metrics(rows, metric_names):
 
 def main(_):
     dataset_name = _dataset_name()
-    model_name = str(FLAGS.pipeline_model).lower()
+    models_to_run = _resolve_pipeline_models(dataset_name)
     seeds = _parse_seed_list()
 
     print(f"\n{'=' * 80}")
     print(f" Multi-seed pipeline: {len(seeds)} runs")
-    print(f" Model: {model_name}")
+    print(f" Models: {models_to_run}")
     print(f" Dataset: {dataset_name}")
     print(f" Seeds: {seeds}")
     print(f" Base output: {os.path.abspath(OUTPUT_DIR)}/")
     print(f"{'=' * 80}\n")
 
     seed_runs = []
-    base_output_dir = os.path.join(OUTPUT_DIR, f'model_{model_name}', f'dataset_{dataset_name}')
+    base_output_dir = os.path.join(OUTPUT_DIR, f'dataset_{dataset_name}')
     for idx, seed in enumerate(seeds, 1):
         print(f"\n{'-' * 80}")
         print(f" Seed run [{idx}/{len(seeds)}]: {seed}")
         print(f"{'-' * 80}")
         kwargs = _train_kwargs(seed=seed, dataset_name=dataset_name)
-        seed_output_dir = os.path.join(base_output_dir, f'seed_{seed}')
-
-        results = run_scenarios(
-            kwargs=kwargs,
-            model_name=model_name,
-            dataset_name=dataset_name,
-            output_dir=seed_output_dir,
-            scenario_name=FLAGS.drift_scenario if FLAGS.drift_scenario else None
-        )
-        seed_runs.append({'seed': seed, 'results': results})
+        for model_name in models_to_run:
+            print(f"\n>>> Model run: {model_name}")
+            seed_output_dir = os.path.join(base_output_dir, f'model_{model_name}', f'seed_{seed}')
+            results = run_scenarios(
+                kwargs=kwargs,
+                model_name=model_name,
+                dataset_name=dataset_name,
+                output_dir=seed_output_dir,
+                scenario_filter=FLAGS.drift_scenario if FLAGS.drift_scenario else None
+            )
+            seed_runs.append({'seed': seed, 'model': model_name, 'results': results})
 
     if FLAGS.run_all_scenarios:
         metric_names = [
@@ -373,13 +420,21 @@ def main(_):
         grouped = {}
         for run in seed_runs:
             for row in run['results']:
-                grouped.setdefault(row['scenario'], []).append(row)
+                model_name = run.get('model')
+                grouped.setdefault(model_name, {})
+                grouped[model_name].setdefault(row['scenario'], []).append(row)
 
         summary_rows = []
-        for scenario_name in sorted(grouped.keys()):
+        for model_name in sorted(grouped.keys()):
+            scenario_rows = []
+            for scenario_name in sorted(grouped[model_name].keys()):
+                scenario_rows.append({
+                    'scenario': scenario_name,
+                    'metrics': _aggregate_metrics(grouped[model_name][scenario_name], metric_names),
+                })
             summary_rows.append({
-                'scenario': scenario_name,
-                'metrics': _aggregate_metrics(grouped[scenario_name], metric_names),
+                'model': model_name,
+                'rows': scenario_rows,
             })
         summary = {'mode': 'all_scenarios', 'rows': summary_rows}
     else:
@@ -387,17 +442,21 @@ def main(_):
             'accuracy', 'dp', 'eo',
             'stream_final_accuracy', 'stream_final_dp', 'stream_final_eo',
         ]
-        rows = [
-            row
-            for run in seed_runs
-            for row in run.get('results', [])
-            if isinstance(row, dict)
-        ]
-        summary = {'mode': 'single', 'metrics': _aggregate_metrics(rows, metric_names)}
+        metrics_by_model = {}
+        for model_name in models_to_run:
+            rows = [
+                row
+                for run in seed_runs
+                if run.get('model') == model_name
+                for row in run.get('results', [])
+                if isinstance(row, dict)
+            ]
+            metrics_by_model[model_name] = _aggregate_metrics(rows, metric_names)
+        summary = {'mode': 'single', 'metrics_by_model': metrics_by_model}
 
     payload = {
         'generated_at': time.strftime('%Y-%m-%d %H:%M:%S'),
-        'model': model_name,
+        'models': models_to_run,
         'dataset': dataset_name,
         'seeds': seeds,
         'run_all_scenarios': bool(FLAGS.run_all_scenarios),
@@ -415,18 +474,22 @@ def main(_):
     print(' Seed Pipeline Summary')
     print(f"{'=' * 80}")
     if summary['mode'] == 'all_scenarios':
-        print(f"{'Scenario':<22s} {'Acc':>28s} {'DP':>28s} {'EO':>28s}")
-        print('-' * 120)
-        for row in summary['rows']:
-            print(
-                f"{row['scenario']:<22s} "
-                f"{_fmt_stats(row['metrics']['accuracy']):>28s} "
-                f"{_fmt_stats(row['metrics']['dp']):>28s} "
-                f"{_fmt_stats(row['metrics']['eo']):>28s}"
-            )
+        for model_row in summary['rows']:
+            print(f"\nModel: {model_row['model']}")
+            print(f"{'Scenario':<22s} {'Acc':>28s} {'DP':>28s} {'EO':>28s}")
+            print('-' * 120)
+            for row in model_row['rows']:
+                print(
+                    f"{row['scenario']:<22s} "
+                    f"{_fmt_stats(row['metrics']['accuracy']):>28s} "
+                    f"{_fmt_stats(row['metrics']['dp']):>28s} "
+                    f"{_fmt_stats(row['metrics']['eo']):>28s}"
+                )
     else:
-        for metric_name, metric_stats in summary['metrics'].items():
-            print(f"{metric_name:<24s} {_fmt_stats(metric_stats)}")
+        for model_name in sorted(summary['metrics_by_model'].keys()):
+            print(f"\nModel: {model_name}")
+            for metric_name, metric_stats in summary['metrics_by_model'][model_name].items():
+                print(f"{metric_name:<24s} {_fmt_stats(metric_stats)}")
 
 
 
