@@ -77,6 +77,61 @@ flags.DEFINE_bool('run_seed_pipeline', False,
                   'Run the same train/eval pipeline across multiple seeds and aggregate metrics.')
 flags.DEFINE_string('seeds', '',
                     'Comma-separated seed list for --run_seed_pipeline (e.g., "11,22,33").')
+flags.DEFINE_float(
+    'drift_adwin_delta_warn',
+    0.00001,
+    'ADWIN warning detector delta (higher = more sensitive).',
+)
+flags.DEFINE_float(
+    'drift_adwin_delta_confirm',
+    0.02,
+    'ADWIN confirm detector delta (higher = more sensitive).',
+)
+flags.DEFINE_float(
+    'drift_lr_prewarm_mult',
+    5.0,
+    'Learning-rate multiplier during warning prewarm.',
+)
+flags.DEFINE_float(
+    'drift_lr_spike_mult',
+    10.0,
+    'Learning-rate multiplier after confirmed drift.',
+)
+flags.DEFINE_integer(
+    'drift_lr_decay_steps',
+    3000,
+    'Steps used to decay learning rate back to base after drift response.',
+)
+flags.DEFINE_integer(
+    'drift_fairness_window',
+    1000,
+    'Rolling window used for fairness metrics in prequential evaluation.',
+)
+flags.DEFINE_integer(
+    'drift_cooldown',
+    200,
+    'Cooldown (samples) between drift detector triggers.',
+)
+flags.DEFINE_integer(
+    'drift_min_samples_per_stream',
+    30,
+    'Minimum stream samples before drift confirmation is allowed.',
+)
+flags.DEFINE_float(
+    'drift_temperature_on_drift',
+    0.1,
+    'Tree routing temperature assigned immediately after drift confirmation.',
+)
+flags.DEFINE_float(
+    'drift_temperature_recovery_target',
+    1.0,
+    'Target tree routing temperature after recovery.',
+)
+flags.DEFINE_float(
+    'drift_temperature_recovery_step',
+    0.002,
+    'Per-sample temperature increment while recovering from drift.',
+)
 
 
 FLAGS = flags.FLAGS

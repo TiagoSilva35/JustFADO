@@ -11,6 +11,7 @@ protobuf==3.20.3
 tensorflow-probability==0.16.0
 tqdm==4.64.1
 wandb==0.15.2
+FERMI-ODDS==0.0.1
 matplotlib
 seaborn
 absl-py

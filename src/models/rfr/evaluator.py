@@ -202,26 +202,31 @@ def evaluate_rfr_over_timesteps(
     rho=1e-4,
     penalty_coefficient=1.0,
     fcr_threshold=0.8,
-    train_batch_size=64,
+    train_batch_size=1,
     buffer_size=512,
     adv_hidden_dim=32,
     accuracy_window=200,
     test_then_train=True,
+    model=None,
+    return_model=False,
 ):
     """Run RFR-family methods in online prequential mode over a test stream."""
     if len(x_test) == 0:
-        return {
+        result = {
             'accuracy': [],
             'dp': [],
             'eo': [],
             'n_samples': 0,
             'drifted_points': [],
         }
+        if return_model:
+            return result, None
+        return result
 
     x0 = np.asarray(x_test[0], dtype=np.float32)
     data_dim = int(x0.shape[0])
 
-    model = _build_rfr_model(
+    model = model if model is not None else _build_rfr_model(
         data_dim=data_dim,
         backbone=backbone,
         hidden_dim=hidden_dim,
@@ -272,7 +277,8 @@ def evaluate_rfr_over_timesteps(
     effective_train_batch_size = max(1, int(train_batch_size))
 
     n_samples = len(x_test)
-    print(f"Running RFR ({approach}) prequentially on {n_samples} samples...")
+    mode_label = "test-then-train" if test_then_train else "inference-only"
+    print(f"Running RFR ({approach}, {mode_label}) on {n_samples} samples...")
 
     for i in range(n_samples):
         x_i = torch.tensor(np.asarray(x_test[i], dtype=np.float32)).view(1, -1)
@@ -378,10 +384,13 @@ def evaluate_rfr_over_timesteps(
                 )
 
     print(f"RFR ({approach}) evaluation complete.")
-    return {
+    result = {
         'accuracy': accuracies,
         'dp': dps,
         'eo': eos,
         'n_samples': n_samples,
         'drifted_points': [],
     }
+    if return_model:
+        return result, model
+    return result

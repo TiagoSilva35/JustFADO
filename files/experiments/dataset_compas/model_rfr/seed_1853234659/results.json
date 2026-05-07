@@ -1,0 +1,14 @@
+[
+  {
+    "model": "rfr",
+    "scenario": "compas",
+    "accuracy": 0.6386080454915057,
+    "dp": 0.03428159099076983,
+    "eo": 0.05124377948041711,
+    "stream_final_accuracy": 0.6386080454915057,
+    "stream_final_dp": 0.03428159099076983,
+    "stream_final_eo": 0.05124377948041711,
+    "elapsed_seconds": 29.2,
+    "error": null
+  }
+]

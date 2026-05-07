@@ -12,7 +12,7 @@ RFR_CONFIG = {
     'rho': 1e-4,
     'penalty_coefficient': 1.0,
     'fcr_threshold': 0.8,
-    'train_batch_size': 64,
+    'train_batch_size': 1,
     'buffer_size': 512,
     'adv_hidden_dim': 32,
 }
