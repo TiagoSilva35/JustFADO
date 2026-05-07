@@ -7,10 +7,15 @@ def evaluate_arf_over_timesteps(
     y_test,
     a_test,
     seed,
-
+    online_batch_size=1,
     accuracy_window=200,
+    model=None,
+    test_then_train=True,
+    return_model=False,
 ):
-    arf = AdaptiveRandomForestClassifier(seed=seed)
+    if int(online_batch_size) != 1:
+        raise ValueError('ARF in this pipeline is strictly online and requires batch_size=1.')
+    arf = model if model is not None else AdaptiveRandomForestClassifier(seed=seed)
 
     accuracies = []
     dps = []
@@ -24,7 +29,8 @@ def evaluate_arf_over_timesteps(
     a_all = []
     n_samples = len(x_test)
 
-    print(f"Running ARF baseline prequentially on {n_samples} samples...")
+    mode_label = "test-then-train" if test_then_train else "inference-only"
+    print(f"Running ARF baseline ({mode_label}) on {n_samples} samples...")
 
     for t in range(n_samples):
         x_t = np.array(x_test[t], dtype=np.float32)
@@ -56,14 +62,17 @@ def evaluate_arf_over_timesteps(
         dps.append(float(dp_val))
         eos.append(float(eo_val))
 
-        # ── STEP 2: TRAIN ─────────────────────────────────────────────────
-        arf.learn_one(x_dict, y_t)
+        if test_then_train:
+            arf.learn_one(x_dict, y_t)
 
     print("ARF baseline evaluation complete.")
-    return {
+    result = {
         'accuracy': accuracies,
         'dp': dps,
         'eo': eos,
         'n_samples': n_samples,
         'drifted_points': [],  
     }
+    if return_model:
+        return result, arf
+    return result

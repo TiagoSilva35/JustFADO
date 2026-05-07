@@ -1,0 +1,28 @@
+2026-05-07 12:31:30,784 INFO    MainThread:11712 [wandb_setup.py:_flush():76] Current SDK version is 0.15.12
+2026-05-07 12:31:30,784 INFO    MainThread:11712 [wandb_setup.py:_flush():76] Configure stats pid to 11712
+2026-05-07 12:31:30,784 INFO    MainThread:11712 [wandb_setup.py:_flush():76] Loading settings from C:\Users\tjcsi\.config\wandb\settings
+2026-05-07 12:31:30,784 INFO    MainThread:11712 [wandb_setup.py:_flush():76] Loading settings from C:\Users\tjcsi\Documents\Aranyani2.0\wandb\settings
+2026-05-07 12:31:30,784 INFO    MainThread:11712 [wandb_setup.py:_flush():76] Loading settings from environment variables: {}
+2026-05-07 12:31:30,784 INFO    MainThread:11712 [wandb_setup.py:_flush():76] Applying setup settings: {'_disable_service': False}
+2026-05-07 12:31:30,784 WARNING MainThread:11712 [wandb_setup.py:_flush():76] Could not find program at -m src.main
+2026-05-07 12:31:30,784 INFO    MainThread:11712 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program_relpath': None, 'program': '-m src.main'}
+2026-05-07 12:31:30,784 INFO    MainThread:11712 [wandb_init.py:_log_setup():528] Logging user logs to C:\Users\tjcsi\Documents\Aranyani2.0\wandb\run-20260507_123130-j3kpxgcz\logs\debug.log
+2026-05-07 12:31:30,784 INFO    MainThread:11712 [wandb_init.py:_log_setup():529] Logging internal logs to C:\Users\tjcsi\Documents\Aranyani2.0\wandb\run-20260507_123130-j3kpxgcz\logs\debug-internal.log
+2026-05-07 12:31:30,784 INFO    MainThread:11712 [wandb_init.py:init():568] calling init triggers
+2026-05-07 12:31:30,784 INFO    MainThread:11712 [wandb_init.py:init():575] wandb.init called with sweep_config: {}
+config: {'dataset': 'adult', 'models': ['aranyani', 'arf', 'rfr', 'fermi'], 'batch_size': 1, 'lambda_const': 0.1, 'drift_scenario': None, 'drift_adwin_delta_warn': 1e-05, 'drift_adwin_delta_confirm': 0.02, 'drift_lr_prewarm_mult': 5.0, 'drift_lr_spike_mult': 10.0, 'drift_lr_decay_steps': 3000, 'drift_cooldown': 200, 'drift_min_samples_per_stream': 30, 'drift_temperature_on_drift': 0.1, 'drift_temperature_recovery_target': 1.0, 'drift_temperature_recovery_step': 0.002}
+2026-05-07 12:31:30,786 INFO    MainThread:11712 [wandb_init.py:init():618] starting backend
+2026-05-07 12:31:30,786 INFO    MainThread:11712 [wandb_init.py:init():622] setting up manager
+2026-05-07 12:31:30,787 INFO    MainThread:11712 [backend.py:_multiprocessing_setup():105] multiprocessing start_methods=spawn, using: spawn
+2026-05-07 12:31:30,790 INFO    MainThread:11712 [wandb_init.py:init():628] backend started and connected
+2026-05-07 12:31:30,794 INFO    MainThread:11712 [wandb_init.py:init():720] updated telemetry
+2026-05-07 12:31:30,867 INFO    MainThread:11712 [wandb_init.py:init():753] communicating run to backend with 90.0 second timeout
+2026-05-07 12:31:31,962 INFO    MainThread:11712 [wandb_run.py:_on_init():2220] communicating current version
+2026-05-07 12:31:32,133 INFO    MainThread:11712 [wandb_run.py:_on_init():2229] got version response upgrade_message: "wandb version 0.26.1 is available!  To upgrade, please run:\n $ pip install wandb --upgrade"
+
+2026-05-07 12:31:32,133 INFO    MainThread:11712 [wandb_init.py:init():804] starting run threads in backend
+2026-05-07 12:31:32,351 INFO    MainThread:11712 [wandb_run.py:_console_start():2199] atexit reg
+2026-05-07 12:31:32,351 INFO    MainThread:11712 [wandb_run.py:_redirect():2054] redirect: wrap_raw
+2026-05-07 12:31:32,351 INFO    MainThread:11712 [wandb_run.py:_redirect():2119] Wrapping output streams.
+2026-05-07 12:31:32,351 INFO    MainThread:11712 [wandb_run.py:_redirect():2144] Redirects installed.
+2026-05-07 12:31:32,352 INFO    MainThread:11712 [wandb_init.py:init():845] run started, returning control to user process

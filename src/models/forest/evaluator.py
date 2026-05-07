@@ -45,10 +45,13 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         'drift_lr_prewarm_mult': 5.0,
         'drift_lr_spike_mult': 10.0,
         'lr_decay_steps': 3000,
-        'fairness_window': 200,
+        'fairness_window': 1000,
         'cooldown': 200,
         'min_samples_per_stream': 30,
         'lambda_const': float(lambda_const),
+        'temperature_on_drift': 0.1,
+        'temperature_recovery_target': 1.0,
+        'temperature_recovery_step': 0.002,
     }
     if static_params:
         print("Overriding default static parameters with provided values:")
@@ -62,9 +65,11 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     DRIFT_LR_SPIKE = learning_rate * float(defaults['drift_lr_spike_mult'])
     LR_DECAY_STEPS = max(1, int(defaults['lr_decay_steps']))
     FAIRNESS_WINDOW = max(1, int(defaults['fairness_window']))
-    FAIRNESS_WINDOW = 1000
     COOLDOWN = max(0, int(defaults['cooldown']))
     MIN_SAMPLES_PER_STREAM = max(1, int(defaults['min_samples_per_stream']))
+    TEMP_ON_DRIFT = max(1e-4, float(defaults['temperature_on_drift']))
+    TEMP_RECOVERY_TARGET = max(TEMP_ON_DRIFT, float(defaults['temperature_recovery_target']))
+    TEMP_RECOVERY_STEP = max(1e-6, float(defaults['temperature_recovery_step']))
     lambda_const = float(defaults['lambda_const'])
     
     print(f"Evaluating model over {len(x_test)} timesteps with test-then-train={test_then_train}\n\
@@ -173,7 +178,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             print(f"[DRIFT] Concept drift confirmed at sample {t} — spiking LR to {DRIFT_LR_SPIKE:.2e} and making hard routing decisions")
             for tree in model.layers:
                 if hasattr(tree, 'temperature'):
-                    tree.temperature.assign(0.1)
+                    tree.temperature.assign(TEMP_ON_DRIFT)
         dp_val, eo_val = _compute_window_fairness(
             y_preds_all=y_preds_all,
             y_true_all=y_true_all,
@@ -200,14 +205,14 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                 steps_since_drift = LR_DECAY_STEPS
                 for tree in model.layers:
                     if hasattr(tree, 'temperature'):
-                        tree.temperature.assign(1.0)
+                        tree.temperature.assign(TEMP_RECOVERY_TARGET)
                 print(f"[RECOVERY] Performance restored at sample {t}. Decaying LR from {decay_from_lr:.2e} to {learning_rate:.2e} over {LR_DECAY_STEPS} steps.")
             else:
                 optimizer.learning_rate.assign(float(DRIFT_LR_SPIKE))
                 for tree in model.layers:
                     if hasattr(tree, 'temperature'):
                         current_temp = float(tree.temperature.value())
-                        new_temp = min(1.0, current_temp + 0.002)
+                        new_temp = min(TEMP_RECOVERY_TARGET, current_temp + TEMP_RECOVERY_STEP)
                         tree.temperature.assign(new_temp)
 
         if test_then_train:
@@ -263,5 +268,8 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             'cooldown': COOLDOWN,
             'min_samples_per_stream': MIN_SAMPLES_PER_STREAM,
             'lambda_const': lambda_const,
+            'temperature_on_drift': TEMP_ON_DRIFT,
+            'temperature_recovery_target': TEMP_RECOVERY_TARGET,
+            'temperature_recovery_step': TEMP_RECOVERY_STEP,
         },
     }
