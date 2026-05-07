@@ -1,0 +1,84 @@
+wandb_version: 1
+
+dataset:
+  desc: null
+  value: adult
+models:
+  desc: null
+  value:
+  - aranyani
+  - arf
+  - rfr
+  - fermi
+batch_size:
+  desc: null
+  value: 1
+lambda_const:
+  desc: null
+  value: 0.1
+drift_scenario:
+  desc: null
+  value: null
+drift_adwin_delta_warn:
+  desc: null
+  value: 1.0e-05
+drift_adwin_delta_confirm:
+  desc: null
+  value: 0.02
+drift_lr_prewarm_mult:
+  desc: null
+  value: 5.0
+drift_lr_spike_mult:
+  desc: null
+  value: 10.0
+drift_lr_decay_steps:
+  desc: null
+  value: 3000
+drift_cooldown:
+  desc: null
+  value: 200
+drift_min_samples_per_stream:
+  desc: null
+  value: 30
+drift_temperature_on_drift:
+  desc: null
+  value: 0.1
+drift_temperature_recovery_target:
+  desc: null
+  value: 1.0
+drift_temperature_recovery_step:
+  desc: null
+  value: 0.002
+_wandb:
+  desc: null
+  value:
+    python_version: 3.9.13
+    cli_version: 0.15.12
+    framework: torch
+    is_jupyter_run: false
+    is_kaggle_kernel: false
+    start_time: 1778153490.790232
+    t:
+      1:
+      - 1
+      - 2
+      - 3
+      - 5
+      - 53
+      - 55
+      2:
+      - 1
+      - 2
+      - 3
+      - 5
+      - 53
+      - 55
+      3:
+      - 16
+      - 23
+      4: 3.9.13
+      5: 0.15.12
+      8:
+      - 3
+      - 5
+      13: windows-amd64

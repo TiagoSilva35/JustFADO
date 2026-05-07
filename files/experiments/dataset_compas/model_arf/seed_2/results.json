@@ -1,0 +1,14 @@
+[
+  {
+    "model": "arf",
+    "scenario": "compas",
+    "accuracy": 0.663282656903925,
+    "dp": 0.09682113962564094,
+    "eo": 0.10968778514031002,
+    "stream_final_accuracy": 0.663282656903925,
+    "stream_final_dp": 0.09682113962564094,
+    "stream_final_eo": 0.10968778514031002,
+    "elapsed_seconds": 11.8,
+    "error": null
+  }
+]

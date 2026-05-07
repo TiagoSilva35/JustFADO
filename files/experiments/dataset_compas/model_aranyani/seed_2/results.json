@@ -1,0 +1,14 @@
+[
+  {
+    "model": "aranyani",
+    "scenario": "compas",
+    "accuracy": 0.6539610931908846,
+    "dp": 0.09370023670582653,
+    "eo": 0.10257468088358952,
+    "stream_final_accuracy": 0.6539610931908846,
+    "stream_final_dp": 0.09370023670582653,
+    "stream_final_eo": 0.10257468088358952,
+    "elapsed_seconds": 5946.9,
+    "error": null
+  }
+]
