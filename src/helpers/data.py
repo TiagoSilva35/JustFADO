@@ -320,49 +320,136 @@ def read_jigsaw(path='../data/jigsaw/'):
   return X, Y, A
 
 
-def read_compas(path="../data/compas"):
+def _resolve_compas_files(path):
+  """Resolve COMPAS CSV inputs from a file, directory, or glob path."""
+  path = str(path).strip()
+  if not path:
+    path = 'data/compas/*'
 
-  feature_names = [
-          "juv_fel_count",
-          "juv_misd_count",
-          "juv_other_count",
-          "priors_count",
-          "age",
-          "c_charge_degree",
-          "c_charge_desc",
-          "age_cat",
-          "sex",
-          "race",
-          "is_recid"]
-  categorical_features = ["c_charge_degree",
-          "c_charge_desc",
-          "age_cat",
-          "sex",
-          "race",
-          "is_recid"]
-  train_df = pd.read_csv(os.path.join(path, "train.csv"),
-                         names=feature_names, header=None)
-  test_df = pd.read_csv(os.path.join(path, "test.csv"),
-                        names=feature_names, header=None)
+  if any(token in path for token in ['*', '?', '[']):
+    files = sorted(glob(path))
+  elif os.path.isdir(path):
+    files = sorted(glob(os.path.join(path, '*.csv')))
+  elif os.path.isfile(path):
+    files = [path]
+  else:
+    files = []
+
+  files = [
+      file_path for file_path in files
+      if os.path.isfile(file_path) and str(file_path).lower().endswith('.csv')
+  ]
+  if not files:
+    raise FileNotFoundError(
+        f"No COMPAS data files found for path '{path}'. "
+        "Provide a valid file, directory, or glob (e.g., data/compas/*)."
+    )
+  return files
 
 
-  df = pd.concat([train_df, test_df])
-  df = df.dropna()
+def read_compas(path="data/compas/*"):
+  target_candidates = [
+      'two_year_recid', 'is_recid', 'recid', 'label', 'target', 'y',
+  ]
+  sensitive_candidates = [
+      'race', 'ethnicity', 'sensitive', 'sensitive_attribute', 'group', 'a',
+  ]
+  legacy_feature_names = [
+      "juv_fel_count",
+      "juv_misd_count",
+      "juv_other_count",
+      "priors_count",
+      "age",
+      "c_charge_degree",
+      "c_charge_desc",
+      "age_cat",
+      "sex",
+      "race",
+      "is_recid",
+  ]
+  preferred_feature_columns = [
+      'juv_fel_count',
+      'juv_misd_count',
+      'juv_other_count',
+      'priors_count',
+      'age',
+      'c_charge_degree',
+      'c_charge_desc',
+      'age_cat',
+      'sex',
+      'race',
+  ]
 
-  mapping = {'White': 1, 'Black': 0, 'Other': 0}
-  df['race'] = df['race'].map(mapping)
+  def _has_any_column(frame, candidates):
+    columns = {str(column).strip().lower() for column in frame.columns}
+    return any(candidate in columns for candidate in candidates)
 
-  label_encoder = preprocessing.LabelEncoder()
-  for feature in categorical_features:
-      df[feature] = label_encoder.fit_transform(df[feature])
+  files = _resolve_compas_files(path)
+  frames = []
+  for file_path in files:
+    frame = pd.read_csv(file_path)
+    if not (_has_any_column(frame, target_candidates) and _has_any_column(frame, sensitive_candidates)):
+      frame = pd.read_csv(file_path, names=legacy_feature_names, header=None)
+    frames.append(frame)
 
-  Y = np.array(df['is_recid'], dtype=np.float32)
-  A = np.array(df['race'], dtype=np.float32)
+  df = pd.concat(frames, ignore_index=True).copy()
 
-  df = df.drop('is_recid', axis=1)
-  X = np.array(df.values, dtype=np.float32)
+  target_col = _resolve_column_name(df, target_candidates, 'target')
+  sensitive_col = _resolve_column_name(df, sensitive_candidates, 'sensitive attribute')
 
-  return X, Y, A
+  present_preferred = [column for column in preferred_feature_columns if column in df.columns]
+  if len(present_preferred) >= 3:
+    feature_columns = list(dict.fromkeys(present_preferred))
+  else:
+    feature_columns = [
+        column for column in df.columns
+        if column != target_col and str(column).strip().lower() not in set(target_candidates)
+    ]
+
+  required_columns = list(dict.fromkeys(feature_columns + [target_col, sensitive_col]))
+  work_df = df[required_columns].copy()
+  work_df = work_df.dropna(subset=[target_col, sensitive_col]).copy()
+  if work_df.empty:
+    raise ValueError(
+        "COMPAS data has no usable rows after filtering missing target/sensitive values."
+    )
+
+  target_values = work_df[target_col]
+  y = _normalize_binary_series(target_values, 'target')
+
+  sensitive_values = work_df[sensitive_col]
+  if sensitive_values.dtype.kind in {'O', 'U', 'S'}:
+    normalized_sensitive = sensitive_values.astype(str).str.strip().str.lower()
+    known_groups = {
+        'white', 'caucasian', 'black', 'african-american',
+        'other', 'asian', 'hispanic', 'native american',
+    }
+    if normalized_sensitive.isin(known_groups).any():
+      a = normalized_sensitive.isin({'white', 'caucasian'}).astype(np.int32).to_numpy()
+    else:
+      a = _normalize_binary_series(normalized_sensitive, 'sensitive attribute')
+  else:
+    a = _normalize_binary_series(sensitive_values, 'sensitive attribute')
+
+  features = work_df.drop(columns=[target_col]).copy()
+  if features.empty:
+    raise ValueError("COMPAS data has no feature columns after dropping target column.")
+
+  for column in features.columns:
+    if not pd.api.types.is_numeric_dtype(features[column]):
+      encoder = preprocessing.LabelEncoder()
+      features[column] = encoder.fit_transform(features[column].astype(str))
+    features[column] = pd.to_numeric(features[column], errors='coerce')
+
+  features = features.fillna(features.median(numeric_only=True))
+  features = features.fillna(0.0)
+  for column in features.columns:
+    std = features[column].std()
+    if std and std > 0:
+      features[column] = (features[column] - features[column].mean()) / std
+
+  x = np.asarray(features.values, dtype=np.float32)
+  return x, np.asarray(y, dtype=np.int32), np.asarray(a, dtype=np.int32)
 
 
 # CelebA

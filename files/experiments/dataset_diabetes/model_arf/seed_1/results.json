@@ -1,0 +1,14 @@
+[
+  {
+    "model": "arf",
+    "scenario": "diabetes",
+    "accuracy": 0.365,
+    "dp": 0.008928571428571452,
+    "eo": 0.05139833711262287,
+    "stream_final_accuracy": 0.365,
+    "stream_final_dp": 0.008928571428571452,
+    "stream_final_eo": 0.05139833711262287,
+    "elapsed_seconds": 368.1,
+    "error": null
+  }
+]

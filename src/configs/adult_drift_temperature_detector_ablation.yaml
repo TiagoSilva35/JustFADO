@@ -1,0 +1,58 @@
+program: src/main.py
+method: bayes
+name: adult-drift-temperature-detector-ablation
+metric:
+  name: stream_accuracy
+  goal: maximize
+parameters:
+  pipeline_model:
+    values: ['aranyani']
+  pipeline_dataset:
+    values: ['adult']
+  run_all_scenarios:
+    values: [false]
+  drift_scenario:
+    values:
+      - abrupt_gender
+      - gradual_gender
+      - gender_relationship_decouple
+      - occupation_gender_reversal
+  seeds:
+    values: ['42']
+  batch_size:
+    values: [1]
+  lambda_const:
+    values: [0.1, 0.5, 1.0]
+  wandb_log:
+    values: [true]
+  drift_temperature_on_drift:
+    distribution: uniform
+    min: 0.05
+    max: 0.5
+  drift_temperature_recovery_step:
+    distribution: uniform
+    min: 0.0005
+    max: 0.01
+  drift_adwin_delta_warn:
+    distribution: log_uniform_values
+    min: 0.000001
+    max: 0.01
+  drift_adwin_delta_confirm:
+    distribution: log_uniform_values
+    min: 0.0005
+    max: 0.05
+  drift_cooldown:
+    values: [50, 100, 200, 400]
+  drift_min_samples_per_stream:
+    values: [10, 30, 50, 100]
+  drift_lr_spike_mult:
+    values: [3.0, 5.0, 10.0, 15.0]
+  drift_lr_prewarm_mult:
+    values: [2.0, 5.0, 8.0]
+  drift_lr_decay_steps:
+    values: [1000, 3000, 6000]
+command:
+  - ${env}
+  - python
+  - ${program}
+  - ${args}
