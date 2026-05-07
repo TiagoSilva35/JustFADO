@@ -115,6 +115,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         if (t + 1) % 1000 == 0 or t == 0:
             print(f"[DBG] Processing sample {t + 1}/{n_samples}...")
             print(f"Avg accuracy until now: {np.mean(accuracies) if accuracies else 0}")
+            print(f"Last mean accuracy over window: {np.mean(accuracies[-accuracy_window:]) if accuracies else 0}")
             print(f"Avg DP until now: {np.mean(dps) if dps else 0}")
         x_t = tf.convert_to_tensor(
             np.array(x_test[t], dtype=np.float32).reshape(1, data_dim)
