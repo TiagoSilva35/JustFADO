@@ -5,9 +5,9 @@ plots/
 results/
 src/__pycache__/
 src/wandb/
-data/
 venv/
 .venv/
 .venv39/
 *.csv
 *.pyc
+wandb/
