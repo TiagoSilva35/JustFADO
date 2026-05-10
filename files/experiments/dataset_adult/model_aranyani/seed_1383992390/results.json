@@ -1,0 +1,14 @@
+[
+  {
+    "model": "aranyani",
+    "scenario": "gradual_gender",
+    "accuracy": 0.8398629707872769,
+    "dp": 0.07226573197790662,
+    "eo": 0.09433315428068201,
+    "stream_final_accuracy": 0.8398629707872769,
+    "stream_final_dp": 0.07226573197790662,
+    "stream_final_eo": 0.09433315428068201,
+    "elapsed_seconds": 2309.9,
+    "error": null
+  }
+]

@@ -309,6 +309,12 @@ def _mean_stream_metric(values):
     return float(np.asarray(numeric_values, dtype=float).mean())
 
 
+def _numeric_or_nan(value):
+    if isinstance(value, numbers.Number):
+        return float(value)
+    return float(np.nan)
+
+
 def _run_aranyani_train_then_test(
     x_train,
     y_train,
@@ -622,10 +628,11 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
         )
 
     rows = []
+    rows_for_disk = []
     for result in results:
         tm = result.get('test_metrics') or {}
         ts = result.get('timestep_results') or {}
-        rows.append({
+        row = {
             'model': result.get('model'),
             'scenario': result.get('scenario'),
             'accuracy': float(tm.get('accuracy')),
@@ -636,12 +643,18 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
             'stream_final_eo': _mean_stream_metric(ts.get('eo')),
             'elapsed_seconds': result.get('elapsed_seconds'),
             'error': result.get('error'),
+            'test_metrics': tm,
+            'timestep_results': ts,
+        }
+        rows.append(row)
+        rows_for_disk.append({
+            k: v for k, v in row.items() if k not in ('test_metrics', 'timestep_results')
         })
 
     os.makedirs(output_dir, exist_ok=True)
     results_path = os.path.join(output_dir, 'results.json')
     with open(results_path, 'w') as f:
-        json.dump(rows, f, indent=2, default=str)
+        json.dump(rows_for_disk, f, indent=2, default=str)
     print(f'Results saved to: {results_path}')
 
     print(f"\n{'=' * 80}")
@@ -734,6 +747,7 @@ def main(_):
     print(f"{'=' * 80}\n")
 
     seed_runs = []
+    wandb_timestep_rows = []
     base_output_dir = os.path.join(OUTPUT_DIR, f'dataset_{dataset_name}')
     for idx, seed in enumerate(seeds, 1):
         print(f"\n{'-' * 80}")
@@ -760,9 +774,9 @@ def main(_):
                         'seed': int(seed),
                         'model': str(model_name),
                         'scenario': str(row.get('scenario')),
-                        'accuracy': float(tm.get('accuracy')),
-                        'dp': float(tm.get('dp')),
-                        'eo': float(tm.get('eo')),
+                        'accuracy': _numeric_or_nan(tm.get('accuracy')),
+                        'dp': _numeric_or_nan(tm.get('dp')),
+                        'eo': _numeric_or_nan(tm.get('eo')),
                         'stream_accuracy': float(stream_acc) if stream_acc is not None else np.nan,
                         'stream_dp': float(stream_dp) if stream_dp is not None else np.nan,
                         'stream_eo': float(stream_eo) if stream_eo is not None else np.nan,
@@ -771,6 +785,26 @@ def main(_):
                     if isinstance(static_used, dict):
                         wb_log.update({f'static_{k}': v for k, v in static_used.items()})
                     wandb.log(wb_log)
+
+                    acc_values = ts.get('accuracy')
+                    dp_values = ts.get('dp')
+                    if isinstance(acc_values, np.ndarray):
+                        acc_values = acc_values.reshape(-1).tolist()
+                    if isinstance(dp_values, np.ndarray):
+                        dp_values = dp_values.reshape(-1).tolist()
+                    if isinstance(acc_values, (list, tuple)) and isinstance(dp_values, (list, tuple)):
+                        for timestep, (acc_value, dp_value) in enumerate(
+                            zip(acc_values, dp_values), start=1
+                        ):
+                            if isinstance(acc_value, numbers.Number) and isinstance(dp_value, numbers.Number):
+                                wandb_timestep_rows.append([
+                                    int(seed),
+                                    str(model_name),
+                                    str(row.get('scenario')),
+                                    int(timestep),
+                                    float(acc_value),
+                                    float(dp_value),
+                                ])
             seed_runs.append({'seed': seed, 'model': model_name, 'results': results})
 
     if FLAGS.run_all_scenarios:
@@ -831,6 +865,13 @@ def main(_):
         json.dump(payload, f, indent=2, default=str)
     print(f"\nSeed pipeline results saved to: {output_path}")
     if wb_run is not None:
+        if wandb_timestep_rows:
+            wandb.log({
+                'accuracy_dp_over_time': wandb.Table(
+                    data=wandb_timestep_rows,
+                    columns=['seed', 'model', 'scenario', 'timestep', 'accuracy', 'dp'],
+                )
+            })
         wandb.summary['results_file'] = output_path
         if summary['mode'] == 'single':
             for model_name, metrics in summary['metrics_by_model'].items():
