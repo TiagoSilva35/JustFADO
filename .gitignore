@@ -8,6 +8,6 @@ src/wandb/
 venv/
 .venv/
 .venv39/
-*.csv
 *.pyc
 wandb/
+data/acs-folktables/
