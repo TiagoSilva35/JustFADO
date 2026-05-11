@@ -333,8 +333,8 @@ def _run_aranyani_train_then_test(
     a_test_arr = np.asarray(a_test, dtype=np.int32)
 
     data_dim = int(x_train_arr.shape[1])
-    tree_depth = 5
-    num_trees = 9
+    tree_depth = 4
+    num_trees = 4
     lambda_const = float(FLAGS.lambda_const)
 
     if bool(FLAGS.pipeline_tune_aranyani) and len(x_train_arr) > 1:
