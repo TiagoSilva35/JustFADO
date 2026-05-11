@@ -308,31 +308,31 @@ def train(
         )
       else:
         if dataset == 'adult':
-          data_dim = 14
           num_class = 2
           x_train, x_test, y_train, y_test, a_train, a_test = data.read_adult(
               drift, drift_scenario=drift_scenario
           )
+          data_dim = x_train.shape[1]
           assert len(set(a_train)) == 2, "Expected binary sensitive attribute for adult dataset"
           print(f"Sensitive attribute values in training set: {set(a_train)}")
         elif dataset == 'census':
-          data_dim = 40
           num_class = 2
           x_train, x_test, y_train, y_test, a_train, a_test = data.read_census()
+          data_dim = x_train.shape[1]
         elif dataset == 'compas':
-          data_dim = 10
           x_train, y_train, a_train = data.read_compas()
           num_class = 2
+          data_dim = x_train.shape[1]
         elif dataset == 'jigsaw':
-          data_dim = 768
           x_train, y_train, a_train = data.read_jigsaw()
           num_class = 2
+          data_dim = x_train.shape[1]
         elif dataset == 'celeba':
-          data_dim = 768
           x_train, y_train, a_train = data.read_celeba()
           num_class = 2
+          data_dim = x_train.shape[1]
         elif dataset == 'folktables':
-          x_train, x_test, y_train, y_test, a_train, a_test = data.read_folktables(
+          x_train, x_test, y_train, y_test, a_train, a_test, _ = data.read_folktables(
               train_year=folktables_train_year,
               test_years=folktables_test_years_tuple,
               state=folktables_states_list,
@@ -341,8 +341,6 @@ def train(
           )
           data_dim = x_train.shape[1]
           num_class = 2
-          a_train = [a-1 for a in a_train]
-          a_test = [a-1 for a in a_test]
         
         # Evaluate the loaded model
         if x_test is not None and len(x_test) > 0:
@@ -411,29 +409,29 @@ def train(
       print(f"Warning: Model file {model_file} not found. Proceeding with training...")
   
   if dataset == 'adult':
-    data_dim = 14
     num_class = 2
     x_train, x_test, y_train, y_test, a_train, a_test = data.read_adult(
         drift, drift_scenario=drift_scenario
     )
+    data_dim = x_train.shape[1]
     print(f"Sensitive attribute values in training set: {set(a_train)}")
     assert len(set(a_train)) == 2, "Expected binary sensitive attribute for adult dataset"
   elif dataset == 'census':
-    data_dim = 40
     num_class = 2
     x_train, x_test, y_train, y_test, a_train, a_test = data.read_census()
+    data_dim = x_train.shape[1]
   elif dataset == 'compas':
-    data_dim = 10
     x_train, y_train, a_train = data.read_compas()
     num_class = 2
+    data_dim = x_train.shape[1]
   elif dataset == 'jigsaw':
-    data_dim = 768
     x_train, y_train, a_train = data.read_jigsaw()
     num_class = 2
+    data_dim = x_train.shape[1]
   elif dataset == 'celeba':
-    data_dim = 768
     x_train, y_train, a_train = data.read_celeba()
     num_class = 2
+    data_dim = x_train.shape[1]
   elif dataset == 'folktables':
     x_train, x_test, y_train, y_test, a_train, a_test, number_of_attributes = data.read_folktables(
         train_year=folktables_train_year,

@@ -11,3 +11,4 @@ venv/
 *.pyc
 wandb/
 data/acs-folktables/
+/data/

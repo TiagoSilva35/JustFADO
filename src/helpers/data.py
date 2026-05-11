@@ -22,7 +22,6 @@ import numpy as np
 import pandas as pd
 from folktables import ACSDataSource, BasicProblem
 
-from sklearn import preprocessing
 from src.drift.create_drifted_ds import generate_drifted_dataset
 from src.drift.scenarios import get_scenario, SCENARIOS
 
@@ -36,42 +35,182 @@ IM_WIDTH = IM_HEIGHT = 160
 # %%
 
 
-def preprocess_adult(df):
-  """Pre-process the Adult dataset.
+def _normalize_categorical_values(values):
+  normalized = values.where(values.notna(), '__missing__')
+  normalized = normalized.astype(str).str.strip().replace('', '__missing__')
+  return normalized
 
-  Args:
-    df: pandas data frame.
 
-  Returns:
-  """
-  df = df.dropna()
+def _fit_tabular_transformer(
+    features,
+    categorical_columns,
+    frequency_encode_columns=None,
+    rare_category_min_count=1,
+):
+  """Fit a train-only tabular transformer and transform features."""
+  work = features.copy()
+  categorical = [column for column in categorical_columns if column in work.columns]
+  numeric = [column for column in work.columns if column not in categorical]
+  frequency_encode_columns = [
+      column for column in (frequency_encode_columns or [])
+      if column in categorical
+  ]
+  frequency_encode_set = set(frequency_encode_columns)
+  one_hot_columns = [
+      column for column in categorical
+      if column not in frequency_encode_set
+  ]
+  min_count = int(max(1, rare_category_min_count))
 
-  # Here we apply discretisation on column marital_status
-  df.replace(
-      [
-          'Divorced',
-          'Married-AF-spouse',
-          'Married-civ-spouse',
-          'Married-spouse-absent',
-          'Never-married',
-          'Separated',
-          'Widowed',
-      ],
-      [
-          'not married',
-          'married',
-          'married',
-          'married',
-          'not married',
-          'not married',
-          'not married',
-      ],
-      inplace=True,
+  numeric_medians, numeric_means, numeric_stds = {}, {}, {}
+  numeric_frame = pd.DataFrame(index=work.index)
+  for column in numeric:
+    values = pd.to_numeric(work[column], errors='coerce')
+    median = float(values.median()) if values.notna().any() else 0.0
+    values = values.fillna(median)
+    mean = float(values.mean()) if values.notna().any() else 0.0
+    std = float(values.std()) if values.notna().any() else 1.0
+    if not np.isfinite(std) or std <= 0:
+      std = 1.0
+    numeric_medians[column] = median
+    numeric_means[column] = mean
+    numeric_stds[column] = std
+    numeric_frame[column] = (values - mean) / std
+
+  categorical_dummy_columns = {}
+  categorical_frequency_maps = {}
+  categorical_frames = []
+  for column in one_hot_columns:
+    values = _normalize_categorical_values(work[column])
+    dummies = pd.get_dummies(values, prefix=column, dtype=np.float32)
+    categorical_dummy_columns[column] = list(dummies.columns)
+    categorical_frames.append(dummies)
+
+  for column in frequency_encode_columns:
+    values = _normalize_categorical_values(work[column])
+    if min_count > 1:
+      counts = values.value_counts()
+      rare_values = counts[counts < min_count].index
+      if len(rare_values):
+        values = values.where(~values.isin(rare_values), '__other__')
+    frequencies = values.value_counts(normalize=True).astype(np.float32).to_dict()
+    categorical_frequency_maps[column] = frequencies
+    encoded = values.map(frequencies).fillna(0.0).astype(np.float32)
+    categorical_frames.append(pd.DataFrame({f'{column}__freq': encoded}, index=work.index))
+
+  categorical_frame = (
+      pd.concat(categorical_frames, axis=1)
+      if categorical_frames
+      else pd.DataFrame(index=work.index)
   )
+  transformed = pd.concat([numeric_frame, categorical_frame], axis=1)
+  transformed = transformed.astype(np.float32)
+  transformer = {
+      'feature_columns': list(transformed.columns),
+      'numeric_columns': numeric,
+      'categorical_columns': categorical,
+      'frequency_encoded_columns': frequency_encode_columns,
+      'numeric_medians': numeric_medians,
+      'numeric_means': numeric_means,
+      'numeric_stds': numeric_stds,
+      'categorical_dummy_columns': categorical_dummy_columns,
+      'categorical_frequency_maps': categorical_frequency_maps,
+      'categorical_rare_min_count': min_count,
+  }
+  return transformed.to_numpy(dtype=np.float32), transformer
 
-  label_encoder = preprocessing.LabelEncoder()
 
-  # Perform one-hot encoding on categorical features
+def _transform_tabular_features(features, transformer):
+  """Apply a fitted tabular transformer to new feature data."""
+  work = features.copy()
+  categorical_columns = transformer.get('categorical_columns', [])
+  frequency_encoded_columns = set(transformer.get('frequency_encoded_columns', []))
+  categorical_frequency_maps = transformer.get('categorical_frequency_maps', {})
+  numeric_frame = pd.DataFrame(index=work.index)
+  for column in transformer['numeric_columns']:
+    if column in work.columns:
+      values = pd.to_numeric(work[column], errors='coerce')
+    else:
+      values = pd.Series(np.nan, index=work.index)
+    values = values.fillna(transformer['numeric_medians'][column])
+    mean = transformer['numeric_means'][column]
+    std = transformer['numeric_stds'][column]
+    numeric_frame[column] = (values - mean) / std
+
+  categorical_frames = []
+  for column in categorical_columns:
+    if column in work.columns:
+      values = _normalize_categorical_values(work[column])
+    else:
+      values = pd.Series('__missing__', index=work.index, dtype='object')
+    if column in frequency_encoded_columns:
+      frequencies = categorical_frequency_maps.get(column, {})
+      if '__other__' in frequencies:
+        values = values.where(values.isin(set(frequencies.keys())), '__other__')
+      encoded = values.map(frequencies).fillna(0.0).astype(np.float32)
+      categorical_frames.append(pd.DataFrame({f'{column}__freq': encoded}, index=work.index))
+    else:
+      dummies = pd.get_dummies(values, prefix=column, dtype=np.float32)
+      dummies = dummies.reindex(
+          columns=transformer['categorical_dummy_columns'][column],
+          fill_value=0.0,
+      )
+      categorical_frames.append(dummies)
+
+  categorical_frame = (
+      pd.concat(categorical_frames, axis=1)
+      if categorical_frames
+      else pd.DataFrame(index=work.index)
+  )
+  transformed = pd.concat([numeric_frame, categorical_frame], axis=1)
+  transformed = transformed.reindex(
+      columns=transformer['feature_columns'],
+      fill_value=0.0,
+  )
+  return transformed.to_numpy(dtype=np.float32)
+
+
+def _adult_income_to_binary(series):
+  normalized = (
+      pd.Series(series).astype(str).str.strip().str.replace('.', '', regex=False).str.lower()
+  )
+  unique_values = set(normalized.unique())
+  if unique_values.issubset({'<=50k', '>50k'}):
+    return (normalized == '>50k').astype(np.int32).to_numpy()
+  return _normalize_binary_series(normalized, 'target')
+
+
+def _adult_gender_to_binary(series):
+  normalized = pd.Series(series).astype(str).str.strip().str.lower()
+  unique_values = set(normalized.unique())
+  if unique_values.issubset({'male', 'female'}):
+    return (normalized == 'male').astype(np.int32).to_numpy()
+  return _normalize_binary_series(normalized, 'sensitive attribute')
+
+
+def _prepare_adult_frame(df):
+  frame = df.dropna().copy()
+  if 'marital-status' in frame.columns:
+    frame['marital-status'] = frame['marital-status'].replace(
+        {
+            'Divorced': 'not married',
+            'Married-AF-spouse': 'married',
+            'Married-civ-spouse': 'married',
+            'Married-spouse-absent': 'married',
+            'Never-married': 'not married',
+            'Separated': 'not married',
+            'Widowed': 'not married',
+        }
+    )
+  return frame
+
+
+def _preprocess_adult_frame(df, feature_transformer=None, fit_feature_transformer=False):
+  frame = _prepare_adult_frame(df)
+  y = _adult_income_to_binary(frame['income'])
+  a = _adult_gender_to_binary(frame['gender'])
+
+  features = frame.drop(columns=['income']).copy()
   categorical_features = [
       'workclass',
       'education',
@@ -81,23 +220,27 @@ def preprocess_adult(df):
       'race',
       'gender',
       'native-country',
-      'income',
   ]
+  if fit_feature_transformer or feature_transformer is None:
+    x, feature_transformer = _fit_tabular_transformer(features, categorical_features)
+  else:
+    x = _transform_tabular_features(features, feature_transformer)
+  return x, y, a, feature_transformer
 
-  for feature in categorical_features:
-    df[feature] = label_encoder.fit_transform(df[feature])
 
-  # Split the dataset into features and target variable
-  data = df.drop('income', axis=1)
+def preprocess_adult(df):
+  """Pre-process the Adult dataset.
 
-  for n in data.columns:
-    data[n] = (data[n] - data[n].mean()) / data[n].std()
+  Args:
+    df: pandas data frame.
 
-  x = np.array(data.values, dtype=np.float32)
-
-  y = np.array(df['income'], dtype=np.int32)
-  a = np.array(df['gender'], dtype=np.int32)
-
+  Returns:
+  """
+  x, y, a, _ = _preprocess_adult_frame(
+      df,
+      feature_transformer=None,
+      fit_feature_transformer=True,
+  )
   return x, y, a
 
 
@@ -139,7 +282,11 @@ def read_adult(drift, path='data/adult', drift_scenario=None):
     train_df = pd.read_csv(f, names=columns)
 
 
-  x_train, y_train, a_train = preprocess_adult(train_df)
+  x_train, y_train, a_train, adult_transformer = _preprocess_adult_frame(
+      train_df,
+      feature_transformer=None,
+      fit_feature_transformer=True,
+  )
 
   # Load test data if available
   test_file_path = os.path.join(path, 'adult.test')
@@ -167,7 +314,11 @@ def read_adult(drift, path='data/adult', drift_scenario=None):
         else:
             test_df = df
 
-    x_test, y_test, a_test = preprocess_adult(test_df)
+    x_test, y_test, a_test, _ = _preprocess_adult_frame(
+        test_df,
+        feature_transformer=adult_transformer,
+        fit_feature_transformer=False,
+    )
   else:
     x_test, y_test, a_test = [], [], []
 
@@ -200,6 +351,15 @@ def load_drifted_test_set(scenario_name, path='data/adult'):
   ]
 
   test_file_path = os.path.join(path, 'adult.test')
+  train_file_path = os.path.join(path, 'adult.data')
+  with open(train_file_path, 'rb') as f:
+    train_df = pd.read_csv(f, names=columns)
+  _, _, _, adult_transformer = _preprocess_adult_frame(
+      train_df,
+      feature_transformer=None,
+      fit_feature_transformer=True,
+  )
+
   with open(test_file_path, 'rb') as f:
     df = pd.read_csv(f, names=columns, skiprows=1)
 
@@ -210,14 +370,18 @@ def load_drifted_test_set(scenario_name, path='data/adult'):
   else:
     print("No drift applied (baseline)")
 
-  x_test, y_test, a_test = preprocess_adult(df)
+  x_test, y_test, a_test, _ = _preprocess_adult_frame(
+      df,
+      feature_transformer=adult_transformer,
+      fit_feature_transformer=False,
+  )
   return x_test, y_test, a_test
 
 
 # %%
 
 
-def preprocess_census(df):
+def _preprocess_census_frame(df, feature_transformer=None, fit_feature_transformer=False):
   """Pre-process the Census dataset.
 
   Args:
@@ -225,8 +389,7 @@ def preprocess_census(df):
 
   Returns:
   """
-  df.dropna(inplace=True)
-
+  frame = df.dropna().copy()
   categorical_features = [
       'class_worker',
       'education',
@@ -256,21 +419,27 @@ def preprocess_census(df):
       'country_self',
       'citizenship',
       'vet_question',
-      'income_50k',
   ]
-  for feature in categorical_features:
-    label_encoder = preprocessing.LabelEncoder()
-    df[feature] = label_encoder.fit_transform(df[feature])
+  y = _normalize_binary_series(frame['income_50k'], 'target')
+  a = _normalize_binary_series(frame['sex'], 'sensitive attribute')
+  features = frame.drop(columns=['income_50k']).copy()
+  if 'unk' in features.columns:
+    features = features.drop(columns=['unk'])
 
-  y = np.array(df['income_50k'], dtype=np.int32)
-  a = np.array(df['sex'], dtype=np.int32)
-  df.drop(columns=['income_50k'], inplace=True)
-  df.drop(columns=['unk'], inplace=True)
+  if fit_feature_transformer or feature_transformer is None:
+    x, feature_transformer = _fit_tabular_transformer(features, categorical_features)
+  else:
+    x = _transform_tabular_features(features, feature_transformer)
 
-  for n in df.columns:
-    df[n] = (df[n] - df[n].mean()) / df[n].std()
+  return x, np.asarray(y, dtype=np.int32), np.asarray(a, dtype=np.int32), feature_transformer
 
-  x = np.array(df.values, dtype=np.float32)
+
+def preprocess_census(df):
+  x, y, a, _ = _preprocess_census_frame(
+      df,
+      feature_transformer=None,
+      fit_feature_transformer=True,
+  )
   return x, y, a
 
 
@@ -407,6 +576,8 @@ def read_compas(path="data/compas/*"):
     ]
 
   required_columns = list(dict.fromkeys(feature_columns + [target_col, sensitive_col]))
+  # length of the feature vector
+  print(f"Using {len(feature_columns)} features: {feature_columns}")
   work_df = df[required_columns].copy()
   work_df = work_df.dropna(subset=[target_col, sensitive_col]).copy()
   if work_df.empty:
@@ -435,20 +606,16 @@ def read_compas(path="data/compas/*"):
   if features.empty:
     raise ValueError("COMPAS data has no feature columns after dropping target column.")
 
-  for column in features.columns:
-    if not pd.api.types.is_numeric_dtype(features[column]):
-      encoder = preprocessing.LabelEncoder()
-      features[column] = encoder.fit_transform(features[column].astype(str))
-    features[column] = pd.to_numeric(features[column], errors='coerce')
-
-  features = features.fillna(features.median(numeric_only=True))
-  features = features.fillna(0.0)
-  for column in features.columns:
-    std = features[column].std()
-    if std and std > 0:
-      features[column] = (features[column] - features[column].mean()) / std
-
-  x = np.asarray(features.values, dtype=np.float32)
+  categorical_features = [
+      column for column in features.columns
+      if not pd.api.types.is_numeric_dtype(features[column])
+  ]
+  x, _ = _fit_tabular_transformer(
+      features,
+      categorical_features,
+      frequency_encode_columns=['c_charge_desc'],
+      rare_category_min_count=10,
+  )
   return x, np.asarray(y, dtype=np.int32), np.asarray(a, dtype=np.int32)
 
 
@@ -532,7 +699,7 @@ def _normalize_binary_series(series, label):
   return encoded
 
 
-def _preprocess_diabetes_frame(df):
+def _preprocess_diabetes_frame(df, feature_transformer=None, fit_feature_transformer=False):
   df = df.dropna().copy()
   target_col = _resolve_column_name(
       df,
@@ -567,21 +734,15 @@ def _preprocess_diabetes_frame(df):
   if features.empty:
     raise ValueError("Diabetes data has no feature columns after dropping target column.")
 
-  for column in features.columns:
-    if not pd.api.types.is_numeric_dtype(features[column]):
-      encoder = preprocessing.LabelEncoder()
-      features[column] = encoder.fit_transform(features[column].astype(str))
-    features[column] = pd.to_numeric(features[column], errors='coerce')
-
-  features = features.fillna(features.median(numeric_only=True))
-  features = features.fillna(0.0)
-  for column in features.columns:
-    std = features[column].std()
-    if std and std > 0:
-      features[column] = (features[column] - features[column].mean()) / std
-
-  x = np.asarray(features.values, dtype=np.float32)
-  return x, y, a
+  categorical_features = [
+      column for column in features.columns
+      if not pd.api.types.is_numeric_dtype(features[column])
+  ]
+  if fit_feature_transformer or feature_transformer is None:
+    x, feature_transformer = _fit_tabular_transformer(features, categorical_features)
+  else:
+    x = _transform_tabular_features(features, feature_transformer)
+  return x, y, a, feature_transformer
 
 
 def read_diabetes(path='data/diabetes/diabetic_data.csv'):
@@ -621,8 +782,16 @@ def read_diabetes(path='data/diabetes/diabetic_data.csv'):
     train_df = merged_df.iloc[:split_idx].copy()
     test_df = merged_df.iloc[split_idx:].copy()
 
-  x_train, y_train, a_train = _preprocess_diabetes_frame(train_df)
-  x_test, y_test, a_test = _preprocess_diabetes_frame(test_df)
+  x_train, y_train, a_train, diabetes_transformer = _preprocess_diabetes_frame(
+      train_df,
+      feature_transformer=None,
+      fit_feature_transformer=True,
+  )
+  x_test, y_test, a_test, _ = _preprocess_diabetes_frame(
+      test_df,
+      feature_transformer=diabetes_transformer,
+      fit_feature_transformer=False,
+  )
   return x_train, x_test, y_train, y_test, a_train, a_test
 
 
@@ -664,6 +833,33 @@ def _normalize_sensitive_attribute(values, sensitive_attribute):
   return (values - 1).astype(np.int32)
 
 
+def _preprocess_folktables_frame(
+    frame,
+    sensitive_attribute,
+    feature_transformer=None,
+    fit_feature_transformer=False,
+):
+  work = _adult_income_filter(frame).copy()
+  sensitive_attribute = str(sensitive_attribute).lower()
+  sensitive_column = 'RAC1P' if sensitive_attribute == 'race' else 'SEX'
+  feature_columns = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'WKHP', 'SEX', 'RAC1P']
+  required_columns = list(dict.fromkeys(feature_columns + ['PINCP', sensitive_column]))
+  work = work.dropna(subset=required_columns).copy()
+
+  y = (pd.to_numeric(work['PINCP'], errors='coerce') > 50000).astype(np.int32).to_numpy()
+  a = _normalize_sensitive_attribute(
+      pd.to_numeric(work[sensitive_column], errors='coerce').to_numpy(),
+      sensitive_attribute,
+  )
+  features = work[feature_columns].copy()
+  categorical_features = ['COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'SEX', 'RAC1P']
+  if fit_feature_transformer or feature_transformer is None:
+    x, feature_transformer = _fit_tabular_transformer(features, categorical_features)
+  else:
+    x = _transform_tabular_features(features, feature_transformer)
+  return x, y, a, feature_transformer
+
+
 def read_folktables(path='data/acs-folktables', train_year=2015, test_years=(2017, 2018),
                     state='CA', horizon='1-Year', sensitive_attribute='sex',
                     download=True):
@@ -677,22 +873,28 @@ def read_folktables(path='data/acs-folktables', train_year=2015, test_years=(201
   if not states:
     states = ['CA']
 
-  income_problem = _acs_income_problem(sensitive_attribute=sensitive_attribute)
-
   train_source = ACSDataSource(
       survey_year=train_year, horizon=horizon, survey='person', root_dir=path
   )
   train_df = train_source.get_data(states=states, download=download)
-  x_train, y_train, a_train = income_problem.df_to_numpy(train_df)
-  a_train = _normalize_sensitive_attribute(a_train, sensitive_attribute)
+  x_train, y_train, a_train, folktables_transformer = _preprocess_folktables_frame(
+      train_df,
+      sensitive_attribute=sensitive_attribute,
+      feature_transformer=None,
+      fit_feature_transformer=True,
+  )
   x_tests, y_tests, a_tests = [], [], []
   for year in test_years:
     test_source = ACSDataSource(
         survey_year=year, horizon=horizon, survey='person', root_dir=path
     )
     test_df = test_source.get_data(states=states, download=download)
-    x_t, y_t, a_t = income_problem.df_to_numpy(test_df)
-    a_t = _normalize_sensitive_attribute(a_t, sensitive_attribute)
+    x_t, y_t, a_t, _ = _preprocess_folktables_frame(
+        test_df,
+        sensitive_attribute=sensitive_attribute,
+        feature_transformer=folktables_transformer,
+        fit_feature_transformer=False,
+    )
     # append only a subset of the test data
     split_size = len(x_train) // max(len(test_years), 1)
     x_tests.append(x_t[:split_size])
