@@ -205,7 +205,8 @@ def evaluate_rfr_over_timesteps(
     train_batch_size=1,
     buffer_size=512,
     adv_hidden_dim=32,
-    accuracy_window=200,
+    accuracy_window=None,
+    fairness_window=1000,
     test_then_train=True,
     model=None,
     return_model=False,
@@ -295,7 +296,7 @@ def evaluate_rfr_over_timesteps(
         a_all.append(a_i)
 
         correct_buffer.append(int(pred == y_i))
-        if use_rolling and len(correct_buffer) > accuracy_window:
+        if use_rolling and len(correct_buffer) > int(accuracy_window):
             correct_buffer.pop(0)
         accuracies.append(float(sum(correct_buffer)) / len(correct_buffer))
 
@@ -304,7 +305,7 @@ def evaluate_rfr_over_timesteps(
             y_true_all=y_true_all,
             a_all=a_all,
             fairness_start=0,
-            fairness_window=200,
+            fairness_window=fairness_window,
         )
         dps.append(float(dp_val))
         eos.append(float(eo_val))

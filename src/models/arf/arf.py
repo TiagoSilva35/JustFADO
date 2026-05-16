@@ -8,7 +8,8 @@ def evaluate_arf_over_timesteps(
     a_test,
     seed,
     online_batch_size=1,
-    accuracy_window=200,
+    accuracy_window=None,
+    fairness_window=1000,
     model=None,
     test_then_train=True,
     return_model=False,
@@ -21,7 +22,7 @@ def evaluate_arf_over_timesteps(
     dps = []
     eos = []
 
-    FAIRNESS_WINDOW = int(accuracy_window) if accuracy_window else None
+    FAIRNESS_WINDOW = int(fairness_window) if fairness_window else None
     correct_buffer = []
     USE_ROLLING = bool(accuracy_window)
     y_preds_all = []
@@ -47,7 +48,7 @@ def evaluate_arf_over_timesteps(
         a_all.append(a_t)
 
         correct_buffer.append(int(y_pred == y_t))
-        if USE_ROLLING and len(correct_buffer) > accuracy_window:
+        if USE_ROLLING and len(correct_buffer) > int(accuracy_window):
             correct_buffer.pop(0)
         accuracies.append(float(sum(correct_buffer)) / len(correct_buffer))
 
