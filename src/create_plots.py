@@ -1,78 +1,92 @@
 import matplotlib.pyplot as plt
 from src.drift.scenarios import SCENARIOS
-import pandas as pd
 import json
 import numpy as np
-
+from src.drift.scenarios import SCENARIOS
 # -------------------------------------------------------------------------
-# 1) Existing part – average final metrics over seeds (unchanged)
+# 1) Average final metrics over available runs
 # -------------------------------------------------------------------------
 folder_results_path = 'files/experiments'
-names = ['aranyani', 'arf', 'rfr']
-seeds = [2, 3, 4, 5]
+RESULTS_PATH = f'{folder_results_path}/dataset_adult/seed_pipeline_results.json'
 target_metrics = ["accuracy", "dp", "eo"]
 
+with open(RESULTS_PATH, 'r') as f:
+    raw_results = json.load(f)
+
+
+def _normalize_runs(payload):
+    if isinstance(payload, dict) and 'seed_runs' in payload:
+        return payload['seed_runs']
+    if isinstance(payload, list):
+        # Legacy format: one run as a flat list of scenario entries.
+        return [{'model': 'unknown', 'seed': None, 'results': payload}]
+    raise ValueError("Unsupported results format in seed_pipeline_results.json")
+
+
+seed_runs = _normalize_runs(raw_results)
+model_names = sorted({run.get('model', 'unknown') for run in seed_runs})
+scenario_order = list(SCENARIOS.keys())
+
 json_results_dict = {
-    name: {
-        scenario: {m: [] for m in target_metrics}
-        for scenario in SCENARIOS.keys()
-    } for name in names
+    model: {
+        scenario: {metric: [] for metric in target_metrics}
+        for scenario in scenario_order
+    }
+    for model in model_names
 }
 
-for name in names:
-    folder = f"model_{name}"
-    for seed in seeds:
-        scenario_path = f'{folder_results_path}/{folder}/dataset_adult/seed_{seed}/results.json'
-        with open(scenario_path, 'r') as f:
-            metrics_list = json.load(f)
-            for i, scenario_name in enumerate(SCENARIOS.keys()):
-                result_entry = metrics_list[i]
-                for key in target_metrics:
-                    json_results_dict[name][scenario_name][key].append(result_entry[key])
+for run in seed_runs:
+    model = run.get('model', 'unknown')
+    for result_entry in run.get('results', []):
+        scenario_name = result_entry.get('scenario')
+        if scenario_name not in json_results_dict[model]:
+            continue
+        for key in target_metrics:
+            value = result_entry.get(key)
+            if value is not None:
+                json_results_dict[model][scenario_name][key].append(value)
 
 # Print average ± std for each scenario and model
-for scenario_name in SCENARIOS.keys():
+for scenario_name in scenario_order:
     print(f"Scenario: {scenario_name}")
-    for name in names:
+    for model in model_names:
         for metric in target_metrics:
-            values = json_results_dict[name][scenario_name][metric]
+            values = json_results_dict[model][scenario_name][metric]
+            if not values:
+                continue
             avg = np.mean(values)
             std = np.std(values)
-            print(f"  {name}: {metric} = {avg:.4f} ± {std:.4f}")
+            print(f"  {model}: {metric} = {avg:.4f} ± {std:.4f}")
 
 # -------------------------------------------------------------------------
 # 2) New function – plot gradual gender overtime (accuracy example)
 # -------------------------------------------------------------------------
-def plot_gradual_gender_overtime(seed=2, metric='accuracy'):
-    scenario_name = 'gradual_gender'   # exact key used in your results
-    models = ['aranyani', 'arf', 'rfr']  # you can add 'fermi' if needed
+def plot_overtime(seed=1383992390, metric='accuracy', scenario_name='gradual_gender'):
+    available_models = raw_results.get('models') if isinstance(raw_results, dict) else model_names
+    models = available_models or model_names
 
     plt.figure(figsize=(12, 6))
 
     for model in models:
-        path = f'{folder_results_path}/model_{model}/dataset_adult/seed_{seed}/results.json'
-        with open(path, 'r') as f:
-            data = json.load(f)
+        matching_runs = [
+            run for run in seed_runs
+            if run.get('model') == model and (seed is None or run.get('seed') == seed)
+        ]
+        if not matching_runs:
+            print(f"Warning: no run for model '{model}' and seed '{seed}'")
+            continue
 
-        # data can be either a list of scenario results directly, or
-        # a dict with 'seed_runs' (as in the sample).  We handle both.
+        entry = next(
+            (result for result in matching_runs[0].get('results', [])
+             if result.get('scenario') == scenario_name),
+            None
+        )
         timestep_values = None
-        if isinstance(data, list):
-            # flat list of scenario entries (your actual pipeline output)
-            for entry in data:
-                if entry.get('scenario') == scenario_name:
-                    timestep_values = entry['timestep_results'][metric]
-                    break
-        elif isinstance(data, dict) and 'seed_runs' in data:
-            # structure as in the sample file
-            seed_run = data['seed_runs'][0]
-            for entry in seed_run['results']:
-                if entry['scenario'] == scenario_name:
-                    timestep_values = entry['timestep_results'][metric]
-                    break
+        if entry and isinstance(entry.get('timestep_results'), dict):
+            timestep_values = entry['timestep_results'].get(metric)
 
-        if timestep_values is None:
-            print(f"Warning: scenario '{scenario_name}' not found for model {model}")
+        if not timestep_values:
+            print(f"Warning: metric '{metric}' not found for {model} in scenario '{scenario_name}'")
             continue
 
         plt.plot(timestep_values, label=model)
@@ -86,5 +100,6 @@ def plot_gradual_gender_overtime(seed=2, metric='accuracy'):
     plt.show()
 
 # Call the function – adjust seed and metric as you like.
-# Here we use seed=2 and metric='accuracy' (you can also try 'dp', 'eo')
-plot_gradual_gender_overtime(seed=2, metric='accuracy')
+# Here we use the default seed in the dataset and metric='accuracy'
+for scenario in SCENARIOS.keys():
+    plot_overtime(metric='accuracy', scenario_name=scenario)

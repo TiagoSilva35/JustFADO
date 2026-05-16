@@ -214,9 +214,9 @@ In the Reversal scenario, all methods exhibit higher DP, likely due to the extre
 \toprule
 \textbf{Model} & \textbf{No Drift (Acc $\uparrow$)} & \textbf{Abrupt (Acc $\uparrow$)} & \textbf{Gradual (Acc $\uparrow$)} & \textbf{Reversal (Acc $\uparrow$)} \\
 \midrule
-ARF      & $0.8350 \pm 0.0000$ & $0.8100 \pm 0.0000$ & $0.8400 \pm 0.0000$ & $0.8200 \pm 0.0000$ \\
-RFR      & $0.8038 \pm 0.0074$ & $0.8025 \pm 0.0043$ & $0.8063 \pm 0.0054$ & $0.7888 \pm 0.0096$ \\
-FERMI    & $0.8077 \pm 0.0000$ & $0.7921 \pm 0.0000$ & $0.8016 \pm 0.0000$ & $0.8049 \pm 0.0000$ \\
+ARF      & $0.8403 \pm 0.0024$ & $0.8262 \pm 0.0056$ & $0.8360 \pm 0.0029$ & $0.8385 \pm 0.0026$ \\
+RFR      & $0.8337 \pm 0.0075$ & $0.8238 \pm 0.0093$ & $0.8352 \pm 0.0077$ & $0.8385 \pm 0.0077$ \\
+FERMI    & $0.8487 \pm 0.0000$ & $0.8343 \pm 0.0000$ & $0.8435 \pm 0.0000$ & $0.8473 \pm 0.0000$ \\
 \textbf{Aranyani} & $\mathbf{0.8538 \pm 0.0035}$ & $\mathbf{0.8607 \pm 0.0172}$ & $\mathbf{0.8573 \pm 0.0022}$ & $\mathbf{0.8516 \pm 0.0045}$ \\
 \bottomrule
 \end{tabular}
@@ -227,10 +227,10 @@ FERMI    & $0.8077 \pm 0.0000$ & $0.7921 \pm 0.0000$ & $0.8016 \pm 0.0000$ & $0.
 \toprule
 \textbf{Model} & \textbf{No Drift (DP $\downarrow$)} & \textbf{Abrupt (DP $\downarrow$)} & \textbf{Gradual (DP $\downarrow$)} & \textbf{Reversal (DP $\downarrow$)} \\
 \midrule
-ARF      & $0.1040 \pm 0.0000$ & $0.1154 \pm 0.0000$ & $0.0890 \pm 0.0000$ & $0.1154 \pm 0.0000$ \\
-RFR      & $\mathbf{0.0592 \pm 0.0071}$ & $0.0639 \pm 0.0017$ & $0.0668 \pm 0.0106$ & $0.0753 \pm 0.0111$ \\
-FERMI    & $0.0886 \pm 0.0000$ & $0.0627 \pm 0.0000$ & $0.0691 \pm 0.0000$ & $\mathbf{0.0746 \pm 0.0000}$ \\
-\textbf{Aranyani} & $0.0860 \pm 0.0022$ & $\mathbf{0.0414 \pm 0.0167}$ & $\mathbf{0.0129 \pm 0.0063}$ & $0.0854 \pm 0.0056$ \\
+ARF      & $0.0900 \pm 0.0041$ & $0.0614\pm 0.0032$ & $0.0662 \pm 0.0043$ & $0.0656 \pm 0.0041$ \\
+RFR      & $0.0995 \pm 0.0199$ & $0.0573 \pm 0.0185$ & $0.0885 \pm 0.0172$ & $0.0552 \pm 0.0193$ \\
+FERMI    & $0.0886 \pm 0.0000$ & $0.0559 \pm 0.0000$ & $0.0515 \pm 0.0000$ & $\mathbf{0.0524 \pm 0.0000}$ \\
+\textbf{Aranyani} & $\mathbf{0.0860 \pm 0.0022}$ & $\mathbf{0.0414 \pm 0.0167}$ & $\mathbf{0.0129 \pm 0.0063}$ & $0.0854 \pm 0.0056$ \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -239,15 +239,15 @@ FERMI    & $0.0886 \pm 0.0000$ & $0.0627 \pm 0.0000$ & $0.0691 \pm 0.0000$ & $\m
 
 \begin{table}[h]
 \centering
-\caption{Folktables dataset results (mean $\pm$ std over seeds). \textsc{Aranyani} results are pending.}
+\caption{Folktables dataset results (mean $\pm$ std over seeds).}
 \label{tab:folktables}
 \begin{tabular}{lcc}
 \toprule
 Model & Accuracy $\uparrow$ & DP $\downarrow$ \\
 \midrule
-Aranyani & -- & -- \\
-ARF & $0.735 \pm 0.0000$ & $0.0750 \pm 0.0000$ \\
-RFR & $0.747 \pm 0.0175$ & $0.0257 \pm 0.0168$ \\
+\textbf{Aranyani} & $\mathbf{0.8225 \pm 0.0004}$ & $\mathbf{0.0710 \pm 0.0027}$ \\
+ARF & $0.7780 \pm 0.0000$ & $0.0806 \pm 0.0000$ \\
+RFR & $0.7878 \pm 0.0071$ & $0.0759 \pm 0.0137$ \\
 \bottomrule
 \end{tabular}
 \end{table}
