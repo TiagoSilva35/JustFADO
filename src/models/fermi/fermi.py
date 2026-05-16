@@ -34,7 +34,8 @@ def evaluate_fermi_over_timesteps(
     lam=10.0,
     epochs=5,
     initial_epochs=0,
-    accuracy_window=200,
+    accuracy_window=None,
+    fairness_window=1000,
 ):
     if int(batch_size) != 1:
         raise ValueError('FERMI online mode requires batch_size=1.')
@@ -87,6 +88,7 @@ def evaluate_fermi_over_timesteps(
     a_all = []
     correct_buffer = []
     use_rolling = bool(accuracy_window)
+    fairness_window_value = int(fairness_window) if fairness_window else None
     n_samples = len(preds)
 
     for i in range(n_samples):
@@ -99,7 +101,7 @@ def evaluate_fermi_over_timesteps(
         a_all.append(a_i)
 
         correct_buffer.append(int(pred == y_i))
-        if use_rolling and len(correct_buffer) > accuracy_window:
+        if use_rolling and len(correct_buffer) > int(accuracy_window):
             correct_buffer.pop(0)
         accuracies.append(float(sum(correct_buffer)) / len(correct_buffer))
 
@@ -108,7 +110,7 @@ def evaluate_fermi_over_timesteps(
             y_true_all=y_true_all,
             a_all=a_all,
             fairness_start=0,
-            fairness_window=200,
+            fairness_window=fairness_window_value,
         )
         dps.append(float(dp_val))
         eos.append(float(eo_val))
