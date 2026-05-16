@@ -428,12 +428,15 @@ def _run_aranyani_train_then_test(
 
 
 def _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, seed):
+    fairness_window = int(FLAGS.drift_fairness_window)
     _, trained_model = evaluate_arf_over_timesteps(
         np.asarray(x_train, dtype=np.float32),
         np.asarray(y_train, dtype=np.int32),
         np.asarray(a_train, dtype=np.int32),
         seed=seed,
         online_batch_size=1,
+        accuracy_window=None,
+        fairness_window=fairness_window,
         test_then_train=True,
         return_model=True,
     )
@@ -443,12 +446,15 @@ def _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, 
         np.asarray(a_test, dtype=np.int32),
         seed=seed,
         online_batch_size=1,
+        accuracy_window=None,
+        fairness_window=fairness_window,
         model=trained_model,
         test_then_train=False,
     )
 
 
 def _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test):
+    fairness_window = int(FLAGS.drift_fairness_window)
     _, trained_model = evaluate_rfr_over_timesteps(
         np.asarray(x_train, dtype=np.float32),
         np.asarray(y_train, dtype=np.int32),
@@ -464,6 +470,8 @@ def _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test):
         train_batch_size=1,
         buffer_size=RFR_CONFIG['buffer_size'],
         adv_hidden_dim=RFR_CONFIG['adv_hidden_dim'],
+        accuracy_window=None,
+        fairness_window=fairness_window,
         test_then_train=True,
         return_model=True,
     )
@@ -482,12 +490,15 @@ def _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test):
         train_batch_size=1,
         buffer_size=RFR_CONFIG['buffer_size'],
         adv_hidden_dim=RFR_CONFIG['adv_hidden_dim'],
+        accuracy_window=None,
+        fairness_window=fairness_window,
         model=trained_model,
         test_then_train=False,
     )
 
 
 def _run_fermi_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test):
+    fairness_window = int(FLAGS.drift_fairness_window)
     return evaluate_fermi_over_timesteps(
         np.asarray(x_train, dtype=np.float32),
         np.asarray(y_train, dtype=np.int32),
@@ -499,6 +510,8 @@ def _run_fermi_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test
         lam=float(FLAGS.lambda_const),
         epochs=5,
         initial_epochs=0,
+        accuracy_window=None,
+        fairness_window=fairness_window,
     )
 
 
