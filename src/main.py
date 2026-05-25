@@ -27,6 +27,7 @@ from src.helpers.data import (
 )
 from src.models.arf.arf import evaluate_arf_over_timesteps
 from src.models.fermi.fermi import evaluate_fermi_over_timesteps
+from src.models.forest.baseline_evaluator import evaluate_aranyani_baseline_over_timesteps
 from src.models.forest.evaluator import evaluate_over_timesteps
 from src.models.forest.train import FLAGS
 from src.models.rfr.evaluator import evaluate_rfr_over_timesteps
@@ -42,7 +43,8 @@ FOLKTABLES_PIPELINE_TEST_YEARS = (2017, 2018)
 flags.DEFINE_string(
     'pipeline_model',
     '',
-    'Optional model to run in main pipeline: aranyani, arf, rfr, or fermi. Empty runs all supported models for the dataset.',
+    'Optional model to run in main pipeline: aranyani, aranyani_base, arf, rfr, or fermi. Empty runs all supported models for the dataset. '
+    '"aranyani" is the full FADO framework (Aranyani + drift detection + reaction); "aranyani_base" is the pure Aranyani baseline without the controller.',
 )
 flags.DEFINE_string(
     'pipeline_dataset',
@@ -106,10 +108,10 @@ def _build_aranyani_static_params():
 def _supported_models_for_dataset(dataset_name):
     dataset_key = str(dataset_name).strip().lower()
     supported = {
-        'adult': ['aranyani', 'arf', 'rfr', 'fermi'],
-        'folktables': ['aranyani', 'arf', 'rfr', 'fermi'],
-        'diabetes': ['aranyani', 'arf', 'rfr'],
-        'compas': ['aranyani', 'arf', 'rfr'],
+        'adult': ['aranyani', 'aranyani_base', 'arf', 'rfr', 'fermi'],
+        'folktables': ['aranyani', 'aranyani_base', 'arf', 'rfr', 'fermi'],
+        'diabetes': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
+        'compas': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
     }
     if dataset_key not in supported:
         raise ValueError(
@@ -324,7 +326,19 @@ def _run_aranyani_train_then_test(
     a_test,
     dataset_name,
     seed=None,
+    use_drift_controller=True,
 ):
+    """Train a FairDecisionForest offline (Aranyani training) and evaluate prequentially.
+
+    When ``use_drift_controller=True`` (default), the test stream is evaluated with
+    the full FADO controller (`evaluate_over_timesteps`): ADWIN drift detection,
+    learning-rate reaction, and temperature modulation. When ``False``, the same
+    offline-trained model is evaluated with the pure Aranyani baseline
+    (`evaluate_aranyani_baseline_over_timesteps`), which keeps the prequential
+    test-then-train protocol and fairness-aware updates but disables every
+    component of the FADO reaction controller. This second mode is what we
+    report as the ``aranyani_base`` baseline in the paper.
+    """
     x_train_arr = np.asarray(x_train, dtype=np.float32)
     y_train_arr = np.asarray(y_train, dtype=np.int32)
     a_train_arr = np.asarray(a_train, dtype=np.int32)
@@ -413,17 +427,36 @@ def _run_aranyani_train_then_test(
         gradient_type=FLAGS.gradient_type,
         local_run=True,
     )
-    return evaluate_over_timesteps(
+    if use_drift_controller:
+        return evaluate_over_timesteps(
+            model,
+            x_test_arr,
+            y_test_arr,
+            a_test_arr,
+            data_dim=data_dim,
+            test_then_train=True,
+            lambda_const=lambda_const,
+            tree_depth=tree_depth,
+            num_trees=num_trees,
+            static_params=_build_aranyani_static_params(),
+        )
+
+    # Pure Aranyani baseline: same offline-trained model, no controller.
+    print(
+        "[PIPELINE][ARANYANI-BASE] Drift controller disabled; "
+        "evaluating with pure Aranyani prequential loop."
+    )
+    return evaluate_aranyani_baseline_over_timesteps(
         model,
         x_test_arr,
         y_test_arr,
         a_test_arr,
         data_dim=data_dim,
-        test_then_train=False,
+        test_then_train=True,
         lambda_const=lambda_const,
         tree_depth=tree_depth,
         num_trees=num_trees,
-        static_params=_build_aranyani_static_params(),
+        fairness_window=int(FLAGS.drift_fairness_window),
     )
 
 
@@ -449,7 +482,7 @@ def _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, 
         accuracy_window=None,
         fairness_window=fairness_window,
         model=trained_model,
-        test_then_train=False,
+        test_then_train=True,
     )
 
 
@@ -493,7 +526,7 @@ def _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test):
         accuracy_window=None,
         fairness_window=fairness_window,
         model=trained_model,
-        test_then_train=False,
+        test_then_train=True,
     )
 
 
@@ -536,6 +569,19 @@ def _evaluate_selected_model(
             a_test,
             dataset_name=dataset_name,
             seed=seed,
+            use_drift_controller=True,
+        )
+    if model_name == 'aranyani_base':
+        return _run_aranyani_train_then_test(
+            x_train,
+            y_train,
+            a_train,
+            x_test,
+            y_test,
+            a_test,
+            dataset_name=dataset_name,
+            seed=seed,
+            use_drift_controller=False,
         )
     if model_name == 'arf':
         return _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, seed=seed)
