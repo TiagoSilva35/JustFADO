@@ -427,6 +427,14 @@ def _run_aranyani_train_then_test(
         gradient_type=FLAGS.gradient_type,
         local_run=True,
     )
+    # Both branches use a true prequential test-then-train protocol so that the
+    # forest is a real online learner on the test stream: forward pass → metrics
+    # → (FADO controller, if enabled) → fairness-aware gradient step on
+    # (x_t, y_t, a_t). The offline `aranyani.train_online` call above only
+    # warm-starts the model; adaptation continues during evaluation. With
+    # test_then_train=True the FADO controller's LR-spike pathway is actually
+    # exercised (apply_gradients fires every step) and the baseline runs as a
+    # genuine fairness-aware online learner with a fixed LR / fixed temperature.
     if use_drift_controller:
         return evaluate_over_timesteps(
             model,
@@ -444,7 +452,7 @@ def _run_aranyani_train_then_test(
     # Pure Aranyani baseline: same offline-trained model, no controller.
     print(
         "[PIPELINE][ARANYANI-BASE] Drift controller disabled; "
-        "evaluating with pure Aranyani prequential loop."
+        "evaluating with pure Aranyani prequential loop (test-then-train)."
     )
     return evaluate_aranyani_baseline_over_timesteps(
         model,
