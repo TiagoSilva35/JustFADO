@@ -129,11 +129,11 @@ def compute_fairness_gradients(
             if len(grad.shape) == 1 and grad.shape[0] == num_internal_nodes:
                 fair_penalty = tf.zeros_like(grad)
                 for k in group_ids:
-                    cf_a = correction_factor[k]
+                    cf_a = correction_factor[k] # type: ignore
                     gb_a = gradient_b[(k, 0)] + gradient_b[(k, 1)]
                     mean_other = tf.convert_to_tensor(
                         sum(
-                            (gradient_b[(g, 0)] + gradient_b[(g, 1)])[idx_b] * correction_factor[g]
+                            (gradient_b[(g, 0)] + gradient_b[(g, 1)])[idx_b] * correction_factor[g] # type: ignore
                             for g in group_ids
                         ) / number_of_atributes,
                         dtype=tf.float32,
@@ -149,11 +149,11 @@ def compute_fairness_gradients(
             elif len(grad.shape) == 2 and grad.shape[0] == data_dim:
                 fair_penalty = tf.zeros_like(grad)
                 for k in group_ids:
-                    cf_a = correction_factor[k]
+                    cf_a = correction_factor[k] # type: ignore
                     gw_a = gradient_w[(k, 0)] + gradient_w[(k, 1)]
                     mean_other = tf.convert_to_tensor(
                         sum(
-                            (gradient_w[(g, 0)] + gradient_w[(g, 1)])[idx_w] * correction_factor[g]
+                            (gradient_w[(g, 0)] + gradient_w[(g, 1)])[idx_w] * correction_factor[g] # type: ignore
                             for g in group_ids
                         ) / number_of_atributes,
                         dtype=tf.float32,
@@ -191,7 +191,7 @@ def compute_fairness_gradients(
                 for y_cond in [0, 1]:
                     mean_grad = tf.convert_to_tensor(
                         sum(
-                            gradient_b[(g, y_cond)][idx_b] * correction_factor[(g, y_cond)]
+                            gradient_b[(g, y_cond)][idx_b] * correction_factor[(g, y_cond)] # type: ignore
                             for g in group_ids
                         ) / number_of_atributes,
                         dtype=tf.float32,
@@ -200,7 +200,7 @@ def compute_fairness_gradients(
                         F_yc = F_y[y_cond][a]
                         diff = mean_grad - tf.cast(
                             tf.convert_to_tensor(
-                                gradient_b[(a, y_cond)][idx_b] * correction_factor[(a, y_cond)]
+                                gradient_b[(a, y_cond)][idx_b] * correction_factor[(a, y_cond)] #type: ignore
                             ),
                             tf.float32,
                         )
@@ -216,7 +216,7 @@ def compute_fairness_gradients(
                 for y_cond in [0, 1]:
                     mean_grad = tf.convert_to_tensor(
                         sum(
-                            gradient_w[(g, y_cond)][idx_w] * correction_factor[(g, y_cond)]
+                            gradient_w[(g, y_cond)][idx_w] * correction_factor[(g, y_cond)] # type: ignore
                             for g in group_ids
                         ) / number_of_atributes,
                         dtype=tf.float32,
@@ -225,7 +225,7 @@ def compute_fairness_gradients(
                         F_yc = F_y[y_cond][a]
                         diff = mean_grad - tf.cast(
                             tf.convert_to_tensor(
-                                gradient_w[(a, y_cond)][idx_w] * correction_factor[(a, y_cond)]
+                                gradient_w[(a, y_cond)][idx_w] * correction_factor[(a, y_cond)] # type: ignore
                             ),
                             tf.float32,
                         )
