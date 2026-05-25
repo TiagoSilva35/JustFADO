@@ -60,16 +60,91 @@ def _normalize_runs(payload):
             normalized_runs.append(run_copy)
         return normalized_runs
     if isinstance(payload, list):
-        return [{'model': 'unknown', 'seed': None, 'results': payload}]
+        model_hint = _infer_model_from_payload(payload, default='unknown')
+        return [{'model': model_hint, 'seed': None, 'results': payload}]
     raise ValueError('Unsupported JSON format. Expected {"seed_runs":[...]} or list.')
 
 
-def _load_seed_runs(paths):
+def _infer_model_from_payload(payload, default=None):
+    if isinstance(payload, dict):
+        model = payload.get('model')
+        if model:
+            return model
+    if isinstance(payload, list):
+        for entry in payload:
+            if isinstance(entry, dict):
+                model = entry.get('model')
+                if model:
+                    return model
+    return default
+
+
+def _parse_seed_from_dir(seed_dir):
+    name = seed_dir.name
+    if name.startswith('seed_'):
+        token = name[len('seed_'):]
+    else:
+        token = name
+    try:
+        return int(token)
+    except ValueError:
+        return token
+
+
+def _infer_model_from_path(path):
+    for parent in path.parents:
+        if parent.name.startswith('model_'):
+            return parent.name[len('model_'):]
+    return None
+
+
+def _load_seed_runs_from_results_file(path):
+    with path.open('r') as f:
+        payload = json.load(f)
+    if isinstance(payload, list):
+        model_hint = _infer_model_from_payload(payload, default=_infer_model_from_path(path))
+        return [{
+            'seed': _parse_seed_from_dir(path.parent),
+            'model': model_hint or 'unknown',
+            'results': payload,
+        }]
+    return _normalize_runs(payload)
+
+
+def _find_seed_results_files(base_dir):
+    results_files = set()
+    for seed_dir in base_dir.rglob('seed_*'):
+        if not seed_dir.is_dir():
+            continue
+        results_path = seed_dir / 'results.json'
+        if results_path.is_file():
+            results_files.add(results_path.resolve())
+    return sorted(results_files)
+
+
+def _resolve_input_path(path, experiments_dir):
+    if path.exists():
+        return path
+    candidate = experiments_dir / path
+    if candidate.exists():
+        return candidate
+    return path
+
+
+def _load_seed_runs(paths, experiments_dir):
     all_runs = []
-    for path in paths:
-        with path.open('r') as f:
-            payload = json.load(f)
-        all_runs.extend(_normalize_runs(payload))
+    for raw_path in paths:
+        path = _resolve_input_path(raw_path, experiments_dir)
+        if path.is_dir():
+            results_files = _find_seed_results_files(path)
+            if not results_files:
+                raise ValueError(f'No seed_*/results.json files found under: {path}')
+            for results_file in results_files:
+                all_runs.extend(_load_seed_runs_from_results_file(results_file))
+            continue
+        if not path.is_file():
+            raise FileNotFoundError(f'Input path not found: {path}')
+        all_runs.extend(_load_seed_runs_from_results_file(path))
     return all_runs
 
 
@@ -179,8 +254,14 @@ def main():
         '--inputs',
         nargs='+',
         type=Path,
-        default=[Path('files/experiments/dataset_adult/seed_pipeline_results.json')],
-        help='One or more seed_pipeline_results.json files.',
+        default=[Path('files/experiments/dataset_folktables/seed_pipeline_results.json')],
+        help='One or more seed_pipeline_results.json files or experiment directories.',
+    )
+    parser.add_argument(
+        '--experiments-dir',
+        type=Path,
+        default=Path('files/experiments'),
+        help='Base directory for experiment outputs (used to resolve relative --inputs).',
     )
     parser.add_argument(
         '--metrics',
@@ -223,7 +304,7 @@ def main():
     if not model_filter:
         model_filter = None
 
-    seed_runs = _load_seed_runs(args.inputs)
+    seed_runs = _load_seed_runs(args.inputs, args.experiments_dir)
     aggregated = _aggregate(seed_runs, metrics=metrics, model_filter=model_filter)
     if not aggregated:
         raise ValueError('No matching runs found. Check --inputs/--models.')

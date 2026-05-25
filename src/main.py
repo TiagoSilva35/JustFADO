@@ -107,7 +107,7 @@ def _supported_models_for_dataset(dataset_name):
     dataset_key = str(dataset_name).strip().lower()
     supported = {
         'adult': ['aranyani', 'arf', 'rfr', 'fermi'],
-        'folktables': ['aranyani', 'arf', 'rfr'],
+        'folktables': ['aranyani', 'arf', 'rfr', 'fermi'],
         'diabetes': ['aranyani', 'arf', 'rfr'],
         'compas': ['aranyani', 'arf', 'rfr'],
     }
@@ -542,8 +542,11 @@ def _evaluate_selected_model(
     if model_name == 'rfr':
         return _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test)
     if model_name == 'fermi':
-        if str(dataset_name).lower() != 'adult':
-            raise ValueError("FERMI pipeline support is currently limited to the adult dataset.")
+        dataset_key = str(dataset_name).lower()
+        if dataset_key not in {'adult', 'folktables'}:
+            raise ValueError(
+                "FERMI pipeline support is currently limited to the adult and folktables datasets."
+            )
         return _run_fermi_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test)
     raise ValueError(f'Unsupported model: {model_name}')
 
