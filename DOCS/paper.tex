@@ -13,6 +13,7 @@
 \usepackage{tikz}
 \usepackage{graphicx}
 \usetikzlibrary{positioning, arrows.meta, shapes.geometric, calc, backgrounds}
+\newcommand{\TODO}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
 
 \title{Fairness-Aware Online Learning Under Concept Drift}
 
@@ -51,9 +52,9 @@ predictive utility, while fairness considerations remain comparatively underexpl
 may deteriorate over time even when predictive accuracy remains relatively stable. This limitation is particularly critical in high-stakes applications, 
 where persistent fairness violations may remain undetected for extended periods, compromising trustworthiness, reinforcing societal inequalities, 
 and causing tangible harm to affected groups.
-Existing fairness-aware online learning methods remain limited along two main axes. First, many approaches that explicitly handle drift focus exclusively on predictive
+Existing fairness-aware online learning methods remain limited among two dimensions. First, many approaches that explicitly handle drift focus exclusively on predictive
 performance, leaving fairness guarantees unmonitored once the underlying distribution moves. Second, methods that do enforce fairness in streaming settings typically rely on
-static interventions—fixed regularizers, fixed thresholds, or one-shot pre-processing—that adapt slowly, if at all, to shifts in the protected-attribute conditional or the
+static intervention, fixed regularizers, fixed thresholds, or one-shot pre-processing that adapt slowly, if at all, to shifts in the protected-attribute conditional or the
 decision boundary. These limitations highlight an important gap in the literature and motivate the following research questions:
 \begin{itemize}
 \item \textbf{RQ1:} To what extent does concept drift affect group fairness metrics in online learning settings?
@@ -85,7 +86,7 @@ problem statement, notation, fairness metrics, online evaluation, and drift; Sec
 Section~6 concludes and outlines directions for future work.
 
 \section{Related Work}
-Most existing work on fair machine learning algorithms can be grouped into three categories: (i) pre-processing methods, (ii) in-processing and (iii) post-processing methods.
+Following the most adopted taxonomy~\cite{Salazar_2026}, in this section, the works will be divided into three categories: (i) pre-processing methods, (ii) in-processing and (iii) post-processing methods.
 This is the most common taxonomy used in the literature and it helps providing a clear overview of the different approaches commonly used to achieve fairness. 
 \subsection{Pre-processing methods}
 Pre-processing methods aim to mitigate bias in the data before the training stage of a model. Xiong et al.~\cite{Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024} 
@@ -176,46 +177,54 @@ not currently focused on addressing the challenges posed by concept drift in onl
 
 \subsection{Main Limitations of Prior Work}
 \label{sec:related:limitations}
-Synthesising the three families surveyed above, we identify four recurring limitations that jointly motivate this work and the design of \textsc{FADO}:
+Synthesising the three families surveyed above, we identify four main limitations that jointly motivate this work and the design of \textsc{FADO}:
 \begin{itemize}
-  \item \textbf{L1 -- Static fairness assumption.} The majority of pre-, in-, and post-processing methods are developed under a stationary-data assumption. Once the protected-attribute conditional or the label distribution shifts, the fairness guarantees obtained at training time provide no protection at deployment.
+  \item \textbf{L1 -- Static fairness assumption.} Most of processing methods are developed under a stationary-data assumption. Once the protected-attribute conditional or the label distribution shifts, the fairness guarantees obtained at training time provide no protection at deployment.
   \item \textbf{L2 -- Adaptive methods are accuracy-oriented.} Streaming ensembles such as \textsc{ARF}~\cite{10.1007/s10994-017-5642-8} explicitly detect and react to drift but do so purely on the predictive-error signal, with no mechanism for tracking or correcting fairness violations.
   \item \textbf{L3 -- Existing fair online learners do not react to drift.} \textsc{Aranyani}~\cite{chowdhury2024enhancing} and \textsc{FERMI}~\cite{lowy2021fermi} provide memory-efficient online fairness, but their regularisers are non-adaptive: when the distribution moves they continue to optimise the same penalty with the same hyperparameters, and convergence to the new optimum is slow.
-  \item \textbf{L4 -- Drift-aware fair methods rely on assumptions that do not transfer to streams.} Approaches such as~\cite{jiang2023chasingfairnessdistributionshift} treat distribution shift as a bounded weight-space perturbation, which is informative for worst-case analysis but does not yield an actionable online detector or controller.
+  \item \textbf{L4 -- Drift-aware fair methods rely on assumptions that do not transfer to streams.} Approaches such as~\cite{jiang2023chasingfairnessdistributionshift} treat distribution shift as a bounded weight-space perturbation, which is usefull in worst-case analysis but doesn't yield an actionable online detector or controller.
 \end{itemize}
-\textsc{FADO} addresses L1--L4 directly by retaining the node-level fairness regulariser of \textsc{Aranyani} as the in-processing base learner, and adding on top of it (i) an ADWIN-based dual-threshold detector on the online error stream, (ii) a reaction controller that modulates the optimiser learning rate and the soft-routing temperature on warning and confirmation events, and (iii) a rolling-window fairness monitor whose statistics also drive the fairness-aware updates.
+\textsc{FADO} focuses on adressing L1--L4 directly by retaining the node-level fairness regulariser of \textsc{Aranyani} as the in-processing base learner, and adding on top of it (i) an ADWIN-based dual-threshold detector on the online error stream, (ii) a reaction controller that modulates the optimiser learning rate and the soft-routing temperature on warning and confirmation events, and (iii) a rolling-window fairness monitor whose statistics also drive the fairness-aware updates.
 
 \section{Problem Statement}
 \subsection{Online Learning Setting}
+\label{sec:problem:online}
 We consider an online binary classification problem over a data stream $\{(x_t, y_t, a_t)\}_{t=1}^{T}$, where $x_t \in \mathbb{R}^d$ is the feature vector observed at time $t$,
 $y_t \in \{0,1\}$ is the binary target label, and $a_t \in \mathcal{A}$ is a sensitive attribute taking values in a finite set with $|\mathcal{A}|=K \ge 2$. Following the
 formulation of previous work~\cite{chowdhury2024enhancing,ijcai2019p205}, at each time step the learner receives $x_t$, produces a prediction
 $\hat{y}_t = \arg\max f_t(x_t)$, then observes $(y_t, a_t)$ and updates its parameters under a prequential, test-then-train protocol. The fairness formulation introduced below
-supports arbitrary $K$, although some datasets are binarised in our study.
+supports arbitrary $K$, although some datasets are binarised in our study (given that most existing benchmarks only contain binary protected attributes).
 
 \subsection{Group Fairness Metrics}
-We focus on \emph{group fairness}, which assesses whether model behaviour is statistically similar across protected groups. Let $\mathcal{A}_t \subseteq \mathcal{A}$ denote the set
+We focus on \emph{group fairness}, which assesses whether model behaviour is statistically similar across protected groups. Although~\cite{chowdhury2024enhancing} already 
+introduces demographic parity as the node-level regulariser we had to generalize it to support equalised odds as well as non-binary protected attributes and, for that reason,
+we must introduce the group-level metrics in their refactored form.
+Let $\mathcal{A}_t \subseteq \mathcal{A}$ denote the set
 of sensitive groups observed within the current evaluation window, and let $\hat{p}_a = \mathbb{E}[\hat{y} \mid a]$ be the positive-prediction rate for group $a \in \mathcal{A}_t$.
-We define the unweighted mean group rate as
+We define the unweighted mean group rate as:
 \[
 \bar{p} = \frac{1}{|\mathcal{A}_t|}\sum_{a' \in \mathcal{A}_t}\hat{p}_{a'},
 \]
 i.e.\ the average positive-prediction rate across the observed groups (a reference value against which each per-group rate $\hat{p}_a$ is compared). The \emph{demographic parity
-(DP) violation} is then the worst-case deviation of any group's positive-prediction rate from this mean,
+(DP) violation} is then the worst-case deviation of any group's positive-prediction rate from this mean:
 \[
 \mathrm{DP} = \max_{a \in \mathcal{A}_t}\left|\hat{p}_a - \bar{p}\right|,
 \]
-and is bounded between $0$ (perfect parity) and $1$ (one group always predicted positive while another never is). DP measures bias in the prediction \emph{marginal} and is
-sensitive to differences in base rates across groups.
+and is bounded between $0$ (perfect parity) and $1$ (one group always predicted positive while another never is). DP measures bias in the prediction marginal and is
+sensitive to differences in base rates across groups. We adopt this mean-from-average form rather than the more common pairwise gap $\max_{a,a'}|\hat p_a - \hat p_{a'}|$
+because it matches the structure of the node-level fairness regulariser introduced in Section~\ref{sec:problem:regulariser}, which the model actually optimises. As noted in
+Section~\ref{sec:problem:online}, all datasets used in our experiments have binary protected attributes; in that regime the two formulations are equivalent up to a constant
+factor of two, $\mathrm{DP} = \tfrac{1}{2}\,|\hat p_0 - \hat p_1|$, so the rank-ordering of methods reported in Section~V is identical to what the textbook pairwise
+formulation would yield off by a factor of two.
 
 To complement DP we also report \emph{equalised odds} (EO), a label-conditional notion of fairness that compares group prediction rates separately within each true-label
-class. For each $y \in \{0,1\}$,
+class. For each $y \in \{0,1\}$:
 \[
 \hat{p}_{a|y} = \mathbb{E}[\hat{y} \mid a, y], \qquad
 \bar{p}_y = \frac{1}{|\mathcal{A}_t|}\sum_{a' \in \mathcal{A}_t}\hat{p}_{a'|y},
 \]
 where $\hat{p}_{a|y}$ is the positive-prediction rate of group $a$ \emph{within} class $y$ and $\bar{p}_y$ is the corresponding cross-group mean (the natural per-class
-analogue of $\bar{p}$). The EO violation is then
+analogue of $\bar{p}$). The EO violation is then:
 \[
 \mathrm{EO} = \max_{y \in \{0,1\}} \max_{a \in \mathcal{A}_t}
 \left|\hat{p}_{a|y} - \bar{p}_y\right|,
@@ -224,67 +233,64 @@ i.e.\ the worst-case group deviation across both classes; restricting the outer 
 rate only. EO is particularly informative when base rates differ across groups, because it disentangles bias from class imbalance.
 
 \subsection{Node-Level Fairness Regulariser}
+\label{sec:problem:regulariser}
 To connect these group-level fairness notions with the learning objective, we follow the in-processing strategy introduced
 by~\cite{chowdhury2024enhancing} and impose fairness constraints on the local outputs of the soft-routed oblique trees that form the base learner of \textsc{FADO}. Let
 $n_{ij}(x)\in[0,1]$ denote the soft routing decision at node $(i,j)$, where $i$ indexes the depth and $j$ the node within that depth, i.e.\ the probability with which an
 input $x$ is routed to the right child of that node. Each node thus plays a role analogous to a per-step prediction, and the same group-fairness language can be applied to it.
-For demographic parity, define
+For demographic parity, define:
 \[
 \bar{n}_{ij,a} = \mathbb{E}[n_{ij}(x) \mid a], \qquad
 \bar{n}_{ij} = \frac{1}{|\mathcal{A}|}\sum_{a' \in \mathcal{A}} \bar{n}_{ij,a'},
 \]
 where $\bar{n}_{ij,a}$ is the group-conditional average routing decision at node $(i,j)$ (the analogue of $\hat{p}_a$ but applied to the routing signal) and $\bar{n}_{ij}$ is its
-unweighted cross-group mean. The \emph{node-level deviation} for group $a$ is then
+unweighted cross-group mean. The \emph{node-level deviation} for group $a$ is then:
 \[
 F_{ij,a} = \bar{n}_{ij} - \bar{n}_{ij,a},
 \]
 which is the per-node analogue of the demographic parity gap, signed so that positive values indicate that group $a$ is being routed less often to the right child than the
-cross-group average. The relaxed fairness-regularised objective is
+cross-group average. The relaxed fairness-regularised objective is:
 \[
-\mathcal{L} = \mathcal{L}_{\text{pred}} + \lambda \sum_{(i,j)} \frac{1}{|\mathcal{A}|}\sum_{a \in \mathcal{A}} H_{\delta}(F_{ij,a}),
+\mathcal{L} = \mathcal{L}_{\text{pred}} + \lambda \sum_{(i,j)} \frac{1}{|\mathcal{A}|}\sum_{a \in \mathcal{A}} \phi_{\delta}(F_{ij,a}),
 \]
-where $\mathcal{L}_{\text{pred}}$ is the predictive (cross-entropy) loss, the outer sum aggregates the fairness penalty across every routing node $(i,j)$ in every tree, and the
-inner sum averages over protected groups. The hyperparameter $\lambda > 0$ controls the accuracy--fairness trade-off, and $H_{\delta}(\cdot)$ is the Huber surrogate
+where $\mathcal{L}_{\text{pred}}$ is the predictive (cross-entropy) loss, the outer sum aggregates the fairness penalty across every routing node $(i,j)$ in every tree,
+the inner sum averages over protected groups, and the hyperparameter $\lambda > 0$ controls the accuracy--fairness trade-off. Following the in-processing update of the
+\textsc{Aranyani} base learner~\cite{chowdhury2024enhancing}, we use a Huber-style piecewise quadratic--linear surrogate $\phi_\delta$, specified by its subgradient:
 \[
-H_{\delta}(z) =
+\phi'_{\delta}(z) =
 \begin{cases}
-\tfrac{1}{2}z^2, & |z| < \delta, \\
-\delta |z| - \tfrac{\delta^2}{2}, & \text{otherwise},
+z, & |z| < \delta, \\
+\mathrm{sign}(z), & |z| \ge \delta,
 \end{cases}
 \]
-which behaves quadratically near zero (so small deviations receive a smooth, well-conditioned gradient) and linearly in the tails (so large, possibly outlier-driven deviations
-do not dominate the gradient). This makes the fairness penalty differentiable and stable under the noisy, single-sample gradients of online learning.
+which, up to an additive constant, corresponds to the function:
+\[
+\phi_{\delta}(z) =
+\begin{cases}
+\tfrac{1}{2}z^2, & |z| < \delta, \\
+|z| + \tfrac{\delta^2}{2} - \delta, & |z| \ge \delta.
+\end{cases}
+\]
+This surrogate behaves quadratically near zero, so small deviations receive a smooth, well-conditioned gradient, and is linear in the tails so large (possibly
+outlier driven) deviations do not dominate the update. It differs from the textbook Huber loss in the slope of the linear branch (unit slope rather than $\delta$),
+which produces a more aggressive correction once $|F_{ij,a}|$ exceeds the threshold $\delta$ at the cost of a gradient discontinuity at $|F_{ij,a}| = \delta$. We retain
+this form unchanged for compatibility with the published \textsc{Aranyani} update.
 
-For equalised odds we condition each running statistic on the true label. For $c \in \{0,1\}$,
+For equalised odds we condition each running statistic on the true label. For $c \in \{0,1\}$:
 \[
 \bar{n}_{ij,a|c} = \mathbb{E}[n_{ij}(x) \mid y=c, a], \qquad
 \bar{n}_{ij|c} = \frac{1}{|\mathcal{A}|}\sum_{a' \in \mathcal{A}} \bar{n}_{ij,a'|c},
 \]
 where $\bar{n}_{ij,a|c}$ is the group-and-label-conditional average routing decision at node $(i,j)$ (the per-node analogue of $\hat{p}_{a|y}$) and $\bar{n}_{ij|c}$ is its
-cross-group mean within class $c$. The corresponding node deviation and EO regulariser are
+cross-group mean within class $c$. The corresponding node deviation and EO regulariser are:
 \[
 F_{ij,a}^{(c)} = \bar{n}_{ij|c} - \bar{n}_{ij,a|c},
 \]
 \[
-\mathcal{L}_{\text{EO}} = \lambda \sum_{(i,j)} \frac{1}{2|\mathcal{A}|}\sum_{c \in \{0,1\}}\sum_{a \in \mathcal{A}} H_{\delta}\!\left(F_{ij,a}^{(c)}\right),
+\mathcal{L}_{\text{EO}} = \lambda \sum_{(i,j)} \frac{1}{2|\mathcal{A}|}\sum_{c \in \{0,1\}}\sum_{a \in \mathcal{A}} \phi_{\delta}\!\left(F_{ij,a}^{(c)}\right),
 \]
-which differs from the DP regulariser only by the additional sum over $c$ and the corresponding $\tfrac{1}{2}$ normalisation; the rest of the structure (per-node penalty, group
-average, Huber surrogate) is identical.
-
-\subsection{Parameterisation}
-The formulation above is governed by a small set of hyperparameters that we summarise here once for clarity; their values and the rationale for the chosen settings are
-discussed in Section~\ref{sec:method:hpo}.
-\begin{itemize}
-  \item $\lambda > 0$ -- fairness-penalty weight. Controls the accuracy/fairness trade-off in $\mathcal{L}$; selected via NSGA-II from the range $\{1.0, 5.5, 13.5\}$ depending on the dataset.
-  \item $\delta > 0$ -- Huber transition point. Sets the deviation magnitude beyond which the penalty becomes linear; fixed at $\delta = 0.1$ throughout.
-  \item $K$ trees of depth $h$ -- ensemble geometry of the base learner. Fixed at $K=3$, $h=4$ ($16$ leaves, $15$ routing nodes per tree).
-  \item $\tau > 0$ -- soft-routing temperature. Modulates the sharpness of $n_{ij}(x)$; defaults to $\tau = 1$ during steady state and is reduced to $\tau_{\mathrm{drift}} = 0.1$ on a confirmed drift, then annealed back.
-  \item $\eta$ -- optimiser learning rate. Base value $\eta_0 = 2 \times 10^{-3}$, multiplied by $\beta_w = 5$ on warning and $\beta_c = 10$ on confirmed drift.
-  \item $W$ -- rolling-window size used both for the online expectations $\mathbb{E}[\cdot]$ above and for reporting DP/EO; fixed at $W = 1000$.
-  \item $\delta_w, \delta_c$ -- ADWIN significance levels for the warning and confirmation detectors, set to $10^{-5}$ and $2 \times 10^{-2}$ respectively.
-\end{itemize}
-In the online setting, the expectations $\mathbb{E}[\cdot]$ above are approximated using running estimates or a rolling window of $W$ samples, which enables fairness monitoring
-and fairness-aware updates without storing past instances.
+which differs from the DP regulariser only by the additional sum over $c$ and the corresponding $\tfrac{1}{2}$ normalisation; the rest of the structure (per-node penalty,
+group average, $\phi_\delta$ surrogate) is identical.
 
 \section{Methodology and Experimental Design}
 \textsc{FADO} combines three components: (i) a base learner consisting of an ensemble of soft-routed oblique decision trees with fairness regularization applied at the
@@ -307,15 +313,14 @@ All experiments were run in Python 3.9 on an Intel i5-8500 CPU, an NVIDIA GTX 10
 
 \subsection{Fair Oblique Decision Forest}
 \label{sec:method:model}
-The base model is an ensemble of $K$ soft-routed oblique decision trees $\{T_1, \ldots, T_K\}$, instantiated with $K=3$ and depth $h=4$ in all
-reported experiments. Each tree $T_k$ has $2^{h}-1 = 15$ internal routing nodes and $2^{h} = 16$ leaves. The routing node at index $j$ implements a
-learned linear function followed by a temperature-scaled sigmoid,
+The base model is an ensemble of $K$ soft-routed oblique decision trees $\{T_1, \ldots, T_K\}$ of depth $h$ (concrete values in Table~\ref{tab:hparams}). Each tree
+$T_k$ has $2^{h}-1$ internal routing nodes and $2^{h}$ leaves. The routing node at index $j$ implements a learned linear function followed by a temperature-scaled sigmoid:
 \[
 n_j(x) \;=\; \sigma\!\left(\frac{w_j^{\top} x + b_j}{\tau}\right) \in (0,1),
 \]
 with trainable parameters $w_j \in \mathbb{R}^d$, $b_j \in \mathbb{R}$, and a shared non-trainable temperature $\tau > 0$. Path probabilities are
 assembled from the routing decisions through a pre-computed mask matrix $M$ that encodes, for each (internal node, leaf) pair, whether the leaf
-sits in the left or right subtree of that node (\texttt{src/models/forest/fdt.py}). Each leaf $\ell$ stores class logits $\theta_\ell \in \mathbb{R}^{C}$,
+sits in the left or right subtree of that node. Each leaf $\ell$ stores class logits $\theta_\ell \in \mathbb{R}^{C}$,
 and the per-tree output is $f_k(x) = \sum_\ell p_\ell(x)\,\theta_\ell$, where $p_\ell(x)$ is the path probability to leaf $\ell$. The forest aggregates per-tree
 softmax distributions, $f(x) = \tfrac{1}{K}\sum_{k=1}^{K} \mathrm{softmax}(f_k(x))$, and the prediction is $\hat{y} = \arg\max_c f_c(x)$.
 
@@ -325,43 +330,38 @@ immediately after a confirmed drift event (Section~\ref{sec:method:drift}).
 
 \subsection{Fairness-Aware Online Updates}
 \label{sec:method:updates}
-Following the in-processing strategy of the \textsc{Aranyani} base learner~\cite{chowdhury2024enhancing}, \textsc{FADO} enforces fairness at the level of individual routing nodes rather than only at the output layer. Specifically, following the formulation in
-Section~III, for each node $(k,j)$ we maintain running group-conditional averages $\bar{n}_{kj,a}$ and the unweighted mean $\bar{n}_{kj}$, and we
-penalize the group deviation $F_{kj,a} = \bar{n}_{kj} - \bar{n}_{kj,a}$ through a Huber surrogate $H_\delta$ with $\delta = 0.1$. The per-step objective is
+Following the in-processing strategy of the \textsc{Aranyani} base learner~\cite{chowdhury2024enhancing}, \textsc{FADO} enforces fairness at the level of individual routing
+nodes rather than only at the output layer. Per-step learning combines the predictive loss with the node-level fairness penalty introduced in Section~III:
 \[
-\mathcal{L}_t \;=\; \mathcal{L}_{\mathrm{CE}}\bigl(f(x_t), y_t\bigr) \;+\; \lambda \sum_{(k,j)} \frac{1}{|\mathcal{A}|}\sum_{a \in \mathcal{A}} H_\delta\!\bigl(F_{kj,a}\bigr),
+\mathcal{L}_t \;=\; \mathcal{L}_{\mathrm{CE}}\bigl(f(x_t), y_t\bigr) \;+\; \lambda \sum_{(k,j)} \frac{1}{|\mathcal{A}|}\sum_{a \in \mathcal{A}} \phi_\delta\!\bigl(F_{kj,a}\bigr),
 \]
-where $\mathcal{L}_{\mathrm{CE}}$ is cross-entropy with logits and $\lambda > 0$ trades off accuracy against fairness. For equalized odds the same
-construction is applied conditionally on the true label, yielding $\mathcal{L}_{\mathrm{EO}}$ as derived in Section~III.
+where $\mathcal{L}_{\mathrm{CE}}$ is the per-step cross-entropy with logits and $\phi_\delta(\cdot)$ is the piecewise quadratic--linear surrogate of Section~III. For equalised odds the same
+construction is applied conditionally on the true label, yielding $\mathcal{L}_{\mathrm{EO}}$ as derived there. Symbols and concrete values for $\lambda$, $\delta$, and the
+remaining hyperparameters are listed in Table~\ref{tab:hparams}.
 
-To keep the update memory-efficient, the fairness gradient state is maintained as five running tensors—per-node weight and bias gradient
-accumulators, a per-class output accumulator, a subgroup count, and a per-class subgroup count—initialized in
-\texttt{initializers.init\_fairness\_state} and updated with exponential decay $\gamma$ via \texttt{accumulate\_fairness\_stats} on every sample.
-The fairness contribution to the gradient is then assembled in closed form by \texttt{compute\_fairness\_gradients} and added to the predictive
-gradient before the optimizer step. This design preserves the parameter-isolation property of the original Aranyani
-formulation~\cite{chowdhury2024enhancing}: each fairness term depends only on local node parameters, which keeps the per-step cost linear in the
-number of nodes and removes any need to store past samples.
+To keep the update memory-efficient, the fairness gradient state is maintained as five running tensors—per-node weight and bias gradient accumulators, a per-class
+output accumulator, a subgroup count, and a per-class subgroup count—initialised once at the start of the stream and updated in place via an exponential moving average
+on every observed sample. The fairness contribution to the gradient is then assembled in closed form from these running statistics and added to the predictive gradient
+before the optimiser step. This design preserves the parameter-isolation property of the original Aranyani formulation~\cite{chowdhury2024enhancing}: each fairness term
+depends only on local node parameters, which keeps the per-step cost linear in the number of nodes and removes any need to store past samples.
 
-All forest parameters are updated with Adam at base learning rate $\eta_0 = 2 \times 10^{-3}$ and online batch size $1$. Predictive and fairness
-metrics are computed over a rolling window of $W = 1000$ samples, implemented as a deque of predictions, labels, and protected attributes so that
-per-step fairness evaluation is $\mathcal{O}(W)$ rather than $\mathcal{O}(t)$. Using the same window for the reported metric and for the regularizer
-ensures that the quantity exposed to the reader is exactly the quantity the model is being trained against.
+Predictive and fairness metrics are computed over the rolling window of size $W$ (Table~\ref{tab:hparams}); using the same window for the reported metric and for the
+regulariser ensures that the quantity exposed to the reader is exactly the quantity the model is being trained against, with per-step fairness evaluation in $\mathcal{O}(W)$
+rather than $\mathcal{O}(t)$.
 
 \subsection{Drift Detection and Reaction Controller}
 \label{sec:method:drift}
-The controller observes the online error stream $e_t = \mathbf{1}[\hat{y}_t \neq y_t]$ through two independent ADWIN detectors, a pre-warm detector
-$D_w$ and a confirmation detector $D_c$, parameterized by significance levels $\delta_w = 10^{-5}$ and $\delta_c = 2 \times 10^{-2}$
-respectively. The pre-warm detector is paired with a label-noise guard that excludes a sample from the change signal whenever an incorrect
-prediction is emitted with post-softmax confidence above $\nu = 0.7$, preventing single confident-but-wrong samples from spuriously activating
-the controller. A minimum of $30$ samples per detector is enforced before the first activation to avoid early-stream false positives.
+The controller observes the online error stream $e_t = \mathbf{1}[\hat{y}_t \neq y_t]$ through two independent ADWIN detectors—a pre-warm detector $D_w$ and a
+confirmation detector $D_c$—parameterised by significance levels $\delta_w$ and $\delta_c$. The pre-warm detector is paired with a label-noise guard that excludes a
+sample from the change signal whenever an incorrect prediction is emitted with post-softmax confidence above $\nu$, preventing single confident-but-wrong samples from
+spuriously activating the controller. A minimum of $m_0$ samples per detector is enforced before the first activation to avoid early-stream false positives.
 
-When $D_w$ fires, the optimizer learning rate is multiplied by $\beta_w = 5$ over a $\Delta = 3000$-step horizon, pre-warming the parameters for
-a potential change. When $D_c$ subsequently confirms a drift, three actions are taken atomically: (i) the learning rate is set to
-$\beta_c \cdot \eta_0$ with $\beta_c = 10$; (ii) the soft-routing temperature of every tree is set to $\tau_{\mathrm{drift}} = 0.1$, sharpening
-routing decisions while the ensemble re-fits; and (iii) both detectors are reset and a cooldown window of $C = 200$ samples is enforced before a
-new event can fire. Recovery is signalled when the rolling accuracy returns to the pre-drift baseline (estimated over the $1000$ samples preceding
-the event), after which $\tau$ is annealed back toward $\tau_{\mathrm{target}} = 1.0$ with step $2 \times 10^{-3}$ and $\eta$ decays linearly to
-$\eta_0$ over $\Delta$ steps.
+When $D_w$ fires, the optimiser learning rate is multiplied by $\beta_w$ over the $\Delta$-step horizon, pre-warming the parameters for a potential change. When $D_c$
+subsequently confirms a drift, three actions are taken atomically: (i) the learning rate is set to $\beta_c \cdot \eta_0$; (ii) the soft-routing temperature of every tree
+is set to $\tau_{\mathrm{drift}}$, sharpening routing decisions while the ensemble re-fits; and (iii) both detectors are reset and a cooldown of $C$ samples is enforced
+before a new event can fire. Recovery is signalled when the rolling accuracy returns to the pre-drift baseline (estimated over the preceding window of $W$ samples),
+after which $\tau$ is annealed back toward its steady-state value at rate $\Delta\tau$ per step and $\eta$ decays linearly to $\eta_0$ over $\Delta$ steps. Concrete values
+for $\delta_w$, $\delta_c$, $\beta_w$, $\beta_c$, $\Delta$, $\tau_{\mathrm{drift}}$, $\Delta\tau$, $C$, $\nu$, and $m_0$ are reported in Table~\ref{tab:hparams}.
 
 The two-stage design is motivated by the observation that purely confirmation-based reactions are too slow under sudden drift, while
 pre-warming without a confirmation gate amplifies noise. Combined with the label-noise guard, the controller can distinguish genuine
@@ -406,13 +406,13 @@ partitioned into five phases of equal protocol across scenarios: \emph{Warmup} (
 reflect the original distribution, while drift phases apply a scenario-specific perturbation that decays back to baseline during the subsequent
 recovery phase. The scenarios are:
 \begin{itemize}
-  \item \textbf{No drift}: the original test distribution is preserved throughout, providing a null reference.
-  \item \textbf{Abrupt gender drift}: in Drift Phase 1, every high-income (\$$>50$K) male sample has its gender label flipped to female; in Drift Phase 2 the swap is applied with a decaying probability initialised at $0.999$ and multiplied by $0.999$ per sample, modelling a sharp shift followed by a slow relaxation.
-  \item \textbf{Gradual gender drift}: the swap probability for high-income males grows linearly from $0$ to $0.8$ across Drift Phase 1 and from $0$ to $0.6$ across Drift Phase 2, modelling a slow but persistent shift in the protected-attribute conditional.
-  \item \textbf{Occupation--gender reversal}: gender labels are swapped within strongly stereotyped occupations (a curated set of male- and female-dominated job categories), with $100\%$ swap probability in Drift Phase 1 and a decaying $0.50 \to 0.10$ probability in Drift Phase 2. Unlike the gender drifts, this scenario affects all income levels and many occupation cells simultaneously.
+  \item \textbf{No drift}: the original test distribution is preserved throughout, providing a null reference;
+  \item \textbf{Abrupt gender drift}: in Drift Phase 1, every high-income (\$$>50$K) male sample has its gender (the sensitive attribute) label flipped to female; in Drift Phase 2 the swap is applied with a decaying probability initialised at $0.999$ and multiplied by $0.999$ per sample, modelling a sharp shift followed by a slow relaxation;
+  \item \textbf{Gradual gender drift}: the swap probability for high-income males grows linearly from $0$ to $0.8$ across Drift Phase 1 and from $0$ to $0.6$ across Drift Phase 2, modelling a slow but persistent shift in the protected-attribute conditional;
+  \item \textbf{Occupation--gender reversal}: gender (the sensitive attribute) labels are swapped within strongly stereotyped occupations (a curated set of male- and female-dominated job categories), with $100\%$ swap probability in Drift Phase 1 and a decaying $0.50 \to 0.10$ probability in Drift Phase 2. Unlike the gender drifts, this scenario affects all income levels and many occupation cells simultaneously;
 \end{itemize}
 The four scenarios isolate, respectively, the steady-state regime, an abrupt label-correlated shift, a gradual label-correlated shift, and a
-wide-front multi-feature shift. The implementation is contained in \texttt{src/drift/scenarios.py}.
+wide-front multi-feature shift.
 
 \subsection{Baselines}
 \label{sec:method:baselines}
@@ -426,50 +426,91 @@ All baselines are evaluated under the same batch-size-one test-then-train preque
 
 \subsection{Hyperparameter Selection}
 \label{sec:method:hpo}
-The fairness penalty $\lambda$ is selected via a compact NSGA-II procedure (population $8$, $4$ generations) that jointly minimises the
-prequential $1-\mathrm{Accuracy}$ and demographic parity on a held-out portion of the training set; from the first Pareto front we select the
-compromise candidate that minimises the normalised sum of objectives. The procedure is implemented in \texttt{src/hpo/nsga2.py} and yields
-$\lambda \in \{1.0, 5.5, 13.5\}$ depending on the dataset. The ADWIN thresholds, learning-rate multipliers, and temperature schedule were tuned
-once on the Adult abrupt scenario and held fixed across all other scenarios and datasets, to avoid per-scenario over-tuning of the controller.
+The formulation above is governed by a compact set of hyperparameters that fall into three groups: those that define the \emph{base learner} (ensemble geometry and online
+optimiser), those that define the \emph{fairness regulariser} (penalty weight, surrogate shape, statistics window), and those that define the \emph{drift controller}
+(ADWIN thresholds, learning-rate and temperature schedules, gating logic). Table~\ref{tab:hparams} lists every symbol, its role, and the value used in all reported experiments;
+the rationale for the non-obvious choices is discussed below.
+
+\begin{table}[htbp]
+\centering
+\caption{Hyperparameters of \textsc{FADO}. Symbols match those used in Sections~III and IV. Values are held fixed across all datasets and drift scenarios unless noted otherwise.}
+\label{tab:hparams}
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{l l p{4.6cm}}
+\toprule
+\textbf{Symbol} & \textbf{Value} & \textbf{Role} \\
+\midrule
+\multicolumn{3}{l}{\emph{Base learner (\textsc{Aranyani} forest)}} \\
+\midrule
+$K$         & $3$                   & Number of oblique trees in the ensemble \\
+$h$         & $4$                   & Depth of each tree ($15$ internal nodes, $16$ leaves) \\
+$\eta_0$    & $2 \times 10^{-3}$    & Base Adam learning rate \\
+\midrule
+\multicolumn{3}{l}{\emph{Fairness regulariser}} \\
+\midrule
+$\lambda$   & $10.0$  & Fairness-penalty weight;\\
+$\delta$    & $0.1$                 & Quadratic/linear transition point in $\phi_\delta$ \\
+$\gamma$    & $0.9$                 & EMA decay of running fairness statistics \\
+$W$         & $1000$                & Rolling window for expectations $\mathbb{E}[\cdot]$ and reported DP/EO \\
+\midrule
+\multicolumn{3}{l}{\emph{Drift controller}} \\
+\midrule
+$\delta_w$  & $1 \times 10^{-5}$    & ADWIN significance level (pre-warm detector) \\
+$\delta_c$  & $2 \times 10^{-2}$    & ADWIN significance level (confirmation detector) \\
+$\beta_w$   & $5$                   & Learning-rate multiplier on warning \\
+$\beta_c$   & $10$                  & Learning-rate multiplier on confirmed drift \\
+$\Delta$    & $3000$                & LR decay horizon back to $\eta_0$ \\
+$\tau$              & $1.0$         & Steady-state soft-routing temperature \\
+$\tau_{\mathrm{drift}}$ & $0.1$     & Temperature set on confirmed drift \\
+$\Delta\tau$ & $2 \times 10^{-3}$   & Per-step temperature anneal back to $\tau$ \\
+$C$         & $200$                 & Cooldown (samples) between consecutive events \\
+$\nu$       & $0.7$                 & Label-noise confidence guard \\
+$m_0$       & $30$                  & Min.\ samples per detector before first activation \\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+\paragraph{Rationale for the non-obvious choices.}
+For the base learner, we use a small ensemble of shallow trees to balace expressivity capabilities and computational efficiency since,
+in online settings, each sample must be processed sequentially and the model must be updated in real time (which can be really costly for large datasets); the public available code
+had $K=3$, $h=3$ and $\eta_0= 2 \times 10^{-3}$ as defaults. We chose to slightly increase the depth so we could test on a wider range of more complex datasets.
+For Fairness regularisation, we set $\lambda$ to a relatively high value to prioritise fairness over accuracy (more on lambda ablations can be found on the original paper of Aranyani~\cite{chowdhury2024enhancing})
+and $\delta$ to a small value to make the surrogate $\phi_\delta$ more sensitive to small deviations, which is important in online learning where single-sample gradients are noisy; the EMA decay $\gamma$ and the window $W$ were selected to
+balance stability and responsiveness in the rolling fairness statistics, with $\gamma=0.9$ providing a strong bias towards recent samples while still retaining some memory of past data, and $W=1000$ allowing for a sufficiently large sample
+size to compute reliable estimates of DP and EO while still being responsive to changes. We note that all models (including baselines) are evaluated with the same window size for fairness metrics to ensure a fair comparison.
+For the drift controller, it's important to clarify that there was no tunning of thresholds because it would mean having access to future data (not possible). Therefore,
+the values were selected based on the expected noise level of the error stream and the desired sensitivity to drift. The most important design choice was to set the warning threshold $\delta_w$ much lower than the confirmation threshold
+$\delta_c$ to create a two-stage detection process that allows for early warnings while reducing false positives. The learning-rate multipliers $\beta_w$ and $\beta_c$ were chosen to provide a significant
+boost in learning rate upon drift detection, with a more aggressive increase on confirmed drift to facilitate rapid adaptation. The decay horizon $\Delta$ and temperature parameters
+were selected to balance quick recovery from drift with stability during steady state, while the cooldown period $C$ was set to prevent overreacting
+to noise in the error stream. Finally, the label-noise confidence guard $\nu$ and minimum samples $m_0$ were included as safeguards against unreliable drift signals
+during early training stages.
+
+The fairness penalty $\lambda$ is the only hyperparameter tuned per dataset; it is selected via a compact NSGA-II procedure (population $8$, $4$ generations) that
+jointly minimises the prequential $1-\mathrm{Accuracy}$ and demographic parity on a held-out portion of the training set, from the first Pareto front we then select the
+compromise candidate that minimises the normalised sum of objectives. The resulting values are listed in Table~\ref{tab:hparams}. The ADWIN thresholds, learning-rate
+multipliers, and temperature schedule were tuned once on the Adult abrupt scenario and held fixed across all other scenarios and datasets, to avoid per-scenario
+over-tuning of the controller.
 
 \subsection{Evaluation Protocol}
 \label{sec:method:protocol}
 All methods are evaluated under a strict prequential, batch-size-one, test-then-train protocol: at each step the model emits $\hat{y}_t$, the
 prequential metrics are updated, and only then is the parameter update performed using the just-observed $(y_t, a_t)$. We report mean and
 standard deviation over five random seeds. The primary metrics are prequential accuracy, demographic parity (DP), and equalised odds (EO),
-all computed over the same $W=1000$-sample rolling window that drives the fairness regulariser. For Adult, results are aggregated per
+all computed over the same $W$-sample rolling window that drives the fairness regulariser (Table~\ref{tab:hparams}). For Adult, results are aggregated per
 scenario across the five phases described in Section~\ref{sec:method:scenarios}; for Folktables, results are aggregated over the full
 $2017$--$2018$ test stream.
 
 \section{Results and Discussion}
+\TODO{STILL WAITING FOR FINAL RESULTS TO REFACTOR THIS SECTION. NOT FINISHED!}
 This section reports a prequential evaluation of \textsc{FADO} and the three baselines (ARF, RFR, FERMI) under the four drift scenarios defined in Section~IV and the
 cross-year Folktables protocol. All numbers correspond to the mean and standard deviation over five random seeds; bold entries denote the best mean per column.
 We frame the discussion around the three research questions introduced in Section~I and conclude with an analysis of the drift detection and reaction controller, a
 windowed view of fairness dynamics, and a brief discussion of limitations.
 
 \subsection{Performance on the Adult Dataset}
-Table~\ref{tab:adult-results} reports prequential accuracy and demographic parity (DP) on the Adult test stream across the four drift scenarios.
-\textsc{FADO} attains the highest mean accuracy in every scenario, exceeding the best competing baseline by between $0.4$ and $2.6$ percentage points,
-while at the same time achieving the lowest DP in the no-drift, abrupt, and gradual scenarios. The improvement is most pronounced under \emph{gradual} drift, where DP drops to
-$0.0129 \pm 0.0063$ against $0.0515$ for FERMI and $0.0662$ for ARF—an $80\%$ relative reduction over the strongest accuracy-only baseline despite simultaneously
-delivering the highest accuracy ($0.8573$). This pattern indicates that the joint operation of node-level fairness regularization and the ADWIN-driven reaction controller
-is able to absorb a slowly evolving perturbation without sacrificing predictive utility, which directly addresses \textbf{RQ2}.
 
-The behaviour under the \emph{reversal} scenario is qualitatively different and worth a closer reading. In this regime the perturbation is applied
-\emph{across all income levels} and several strongly stereotyped occupations, breaking the occupation--gender co-occurrence that all four models exploit.
-\textsc{FADO} still retains the strongest accuracy ($0.8516 \pm 0.0045$) but its DP rises to $0.0854$, exceeding FERMI ($0.0524$). We attribute this to the fact that
-the node-level fairness statistics inherited from the \textsc{Aranyani} base learner are estimated from a rolling window of $W=1000$ samples; when the distribution of the protected attribute conditional on
-features is inverted simultaneously across many occupations, the windowed gradient signal initially pushes node parameters in a direction that is fairness-correct under
-the \emph{pre-drift} statistics, before the controller has had enough samples to update them. FERMI, which does not adapt to drift but relies on an exponential R\'enyi
-regularizer that is largely insensitive to feature semantics, is comparatively less affected on the DP axis at the cost of $0.5$ accuracy points. This trade-off
-illustrates a broader phenomenon also reported in~\cite{jiang2023chasingfairnessdistributionshift}: adaptive fairness mechanisms can transiently overshoot when the
-distributional shift is sudden, multidimensional, and decoupled from the label.
-
-A second observation, relevant to \textbf{RQ1}, concerns the gap between fairness-aware and accuracy-only methods. Under no drift, all methods sit within roughly
-$0.014$ DP of one another, and ARF—an accuracy-oriented baseline—is essentially competitive with FERMI on DP. Once drift is introduced, however, the spread widens
-substantially: under the abrupt scenario the ARF--FADO DP gap doubles, and under the gradual scenario it grows roughly fivefold. This empirically confirms that
-concept drift acts as a fairness amplifier even when predictive performance degrades only mildly, and that fairness guarantees obtained at training time provide no
-protection against the kind of shift studied here.
 
 \begin{table}[htbp]
 \centering
@@ -505,12 +546,7 @@ protection against the kind of shift studied here.
 \end{table}
 
 \subsection{Performance on Folktables: Cross-Year Distributional Shift}
-While the Adult scenarios isolate controlled, synthetic perturbations, the Folktables (ACS Income, CA) protocol exposes models to a \emph{natural} distributional shift:
-training on 2015 and evaluating prequentially on 2017--2018. This setting is harder than the Adult stream both in size ($\sim$$1.9 \times 10^{5}$ test samples) and because
-the shift is unstructured—covering covariates, prevalence, and the protected-attribute conditional simultaneously. Table~\ref{tab:folktables} reports the results.
-\textsc{FADO} improves accuracy by $3.5$--$4.5$ percentage points over ARF and RFR while reducing DP by roughly $12\%$ relative to ARF and $6\%$ relative to RFR.
-The variance across seeds is also markedly lower ($\pm 0.0004$ on accuracy, $\pm 0.0027$ on DP), suggesting that the adaptive controller and the node-level fairness
-regularizer interact stably in the absence of the synthetic, label-correlated perturbations used in the Adult stream.
+
 
 \begin{table}[htbp]
 \centering
@@ -527,55 +563,12 @@ RFR & $0.7878 \pm 0.0071$ & $0.0759 \pm 0.0137$ \\
 \end{tabular}
 \end{table}
 
-\subsection{Effect of Drift Type on Fairness Stability (RQ3)}
-Taken together, the four Adult scenarios and the Folktables protocol allow us to characterize how the \emph{nature} of the drift conditions fairness stability. We
-observe three regimes. First, when the perturbation is label-correlated and concentrated on a single feature (\emph{abrupt} and \emph{gradual} gender drift on
-high-income males), \textsc{FADO} achieves both the lowest DP and the highest accuracy: the rolling-window statistics quickly capture the change in the
-protected-attribute conditional, and the node-level penalty redirects gradients to re-balance the affected leaves before fairness deteriorates. Second, when the
-perturbation is distributed across many feature--label cells (\emph{reversal}), the windowed estimator is slower to converge to the post-drift statistics, and DP
-transiently exceeds that of a static regularizer such as FERMI even though predictive accuracy remains the best. Third, when the shift is natural and untargeted
-(Folktables), all methods degrade gracefully and \textsc{FADO} dominates on both metrics. These observations support the hypothesis that fairness degradation under
-drift is highly sensitive to drift type, and that adaptive mechanisms are most effective when the protected-attribute conditional shifts in a few low-dimensional
-directions—precisely the case where the node-level penalty is statistically efficient.
-
 \subsection{Controller Behaviour in Practice}
-We briefly summarise the operating regime of the dual-ADWIN controller (described in detail in Section~\ref{sec:method:drift}) on the
-prequential streams. With $\delta_w = 10^{-5}$, $\delta_c = 2 \times 10^{-2}$, $\beta_w = 5$, $\beta_c = 10$, $\tau_{\mathrm{drift}} = 0.1$, and a
-$200$-step cooldown, the controller produces between $0$ and $2$ confirmed drift events per Adult scenario depending on the perturbation
-profile, and $0$ spurious detections on the no-drift baseline. The label-noise guard (confidence threshold $\nu = 0.7$) was a necessary
-addition: in pilot runs without it, isolated confident-but-wrong predictions accounted for the vast majority of premature warnings, which the
-guard suppresses without affecting recall on genuine shifts. The temperature schedule also matters in practice: removing the
-$\tau_{\mathrm{drift}} = 0.1$ step degrades recovery speed under the abrupt scenario by a factor of roughly $2\times$ in our pilots, since the
-ensemble has to re-fit through smooth routing rather than locking onto sharp boundaries during the high-LR window.
 
-\subsection{Limitations and Threats to Validity}
-We see four main limitations. \emph{(i) Window size and lag.} Fairness statistics are estimated from a rolling window of $W=1000$ samples; this is sufficient to
-capture localized drift but introduces lag under wide-front perturbations such as the reversal scenario. \emph{(ii) Binary sensitive attribute.}
-The reported experiments use binary protected attributes (gender, race); although the formulation in Section~III supports $|\mathcal{A}|=K\ge 2$, multi-group
-evaluation is left for future work. \emph{(iii) Controller hyperparameters.} The ADWIN thresholds, the learning-rate multipliers, and the temperature schedule were
-tuned on the Adult abrupt scenario and transferred unchanged to the remaining scenarios and to Folktables; cross-scenario tuning would likely improve the reversal
-result. \emph{(iv) Demographic parity emphasis.} The Adult tables report DP only; EO is monitored online (see Section~III) but is not reported per-scenario to
-preserve table readability. A companion ablation including EO and equal opportunity is consistent with the DP trends reported here.
+
 
 \section{Conclusion and Future Work}
-We introduced \textsc{FADO}, an online learning framework that wraps the \textsc{Aranyani} fair oblique decision forest with an ADWIN-driven drift detection and reaction
-controller designed to preserve group fairness under concept drift. The base learner enforces fairness at the level of individual tree nodes through a Huber-smoothed
-group-deviation penalty, and \textsc{FADO} reacts to confirmed drift events by spiking the learning rate, sharpening the soft-routing temperature, and annealing both
-quantities back to baseline during recovery.
 
-Empirically, \textsc{FADO} attains the highest prequential accuracy across all four Adult drift scenarios and on the Folktables cross-year stream, while
-simultaneously achieving the lowest demographic parity violation in five of the six (scenario, metric) cells we evaluate. The reduction is most pronounced under
-gradual gender drift, where DP drops by roughly $80\%$ relative to ARF without any accuracy penalty, and is preserved under natural cross-year shift on Folktables.
-The results give an affirmative answer to RQ2—adaptive mechanisms can preserve fairness while maintaining utility—and quantify the answer to RQ1 and RQ3: drift
-acts as a fairness amplifier, and its effect on fairness stability depends strongly on whether the protected-attribute conditional shifts along a few directions
-(handled well by windowed estimators) or across many feature--label cells simultaneously (where adaptive methods may transiently overshoot).
-
-Several extensions are immediate. First, the EO upper bound derived in Appendix~A suggests a depth-dependent regularization schedule that ties $\lambda$ to the tree
-depth $h$ and the per-node deviation budget $\mathcal{E}$; integrating this bound into the optimizer should improve EO control under deeper ensembles. Second, the
-reversal result motivates a multi-window or change-point-aware fairness estimator that can track several drift fronts simultaneously. Third, we plan to extend the
-evaluation to multi-valued sensitive attributes and to additional fairness notions (calibration, counterfactual equalized odds), and to investigate the interaction
-between the reaction controller and post-processing methods such as~\cite{Small_2024}, which may complement in-processing adaptation by smoothing the
-prediction-layer response during recovery windows.
 
 \bibliography{references}
 \bibliographystyle{plain}

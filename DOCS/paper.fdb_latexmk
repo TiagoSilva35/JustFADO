@@ -1,14 +1,14 @@
 # Fdb version 4
-["bibtex paper"] 1779464172.34878 "paper.aux" "paper.bbl" "paper" 1779464173.00069 0
-  "./references.bib" 1779372216.82108 15716 c41772100fbc7510b2d4709a750e97a5 ""
+["bibtex paper"] 1779835488.99597 "paper.aux" "paper.bbl" "paper" 1779835489.69658 0
+  "./references.bib" 1779834094.21589 16278 986416e1d6a12616c32765ebaaac63e2 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/bibtex/bst/base/plain.bst" 1772380719 20613 bd3fbfa9f64872b81ac57a0dd2ed855f ""
-  "paper.aux" 1779464172.88143 9373 156d621a66ee60ac2c08842334305a53 "pdflatex"
+  "paper.aux" 1779835489.563 9853 1083083b2da200519d41d7d2034ab8f1 "pdflatex"
   (generated)
   "paper.bbl"
   "paper.blg"
   (rewritten before read)
-["pdflatex"] 1779464172.39489 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" "paper.pdf" "paper" 1779464173.00078 0
-  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" 1779464171.51787 60435 21b351c639b94441be1225254247469f ""
+["pdflatex"] 1779835489.03651 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" "paper.pdf" "paper" 1779835489.69669 0
+  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" 1779835488.24085 55599 cbee93d863c2ee32a2c1d09f3eab3ba2 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/base/8r.enc" 1772380719 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/fontname/texfonts.map" 1772380719 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/pdftex/updmap/pdftex.map" 1772380719 5541360 f183aac233c4cd1e5ef882fcbe8e7096 ""
@@ -63,11 +63,13 @@
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb" 1772380719 36094 798f80770b3b148ceedd006d487db67c ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb" 1772380719 35752 024fb6c41858982481f6968b5fc26508 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb" 1772380719 31809 8670ca339bf94e56da1fc21c80635e2a ""
+  "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb" 1772380719 32734 69e00a6b65cedb993666e42eedb3d48f ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb" 1772380719 32762 224316ccc9ad3ca0423a14971cfa7fc1 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb" 1772380719 32726 0a1aea6fcd6468ee2cf64d891f5c43c8 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb" 1772380719 33993 9b89b85fd2d9df0482bd47194d1d3bf3 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb" 1772380719 32569 5e5ddc8df908dea60932f3c484a54c0d ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb" 1772380719 32915 7bf7720c61a5b3a7ff25b0964421c9b6 ""
+  "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb" 1772380719 32587 1788b0c1c5b39540c96f5e42ccd6dae8 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb" 1772380719 32716 08e384dc442464e7285e891af9f45947 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb" 1772380719 32626 4f5c1b83753b1dd3a97d1b399a005b4b ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb" 1772380719 32442 c975af247b6702f7ca0c299af3616b80 ""
@@ -215,10 +217,10 @@
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/web2c/texmf.cnf" 1772380719 43633 14bbc273cebd985e64ab1a698333eaf9 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-var/web2c/pdftex/pdflatex.fmt" 1772380719 3636956 5168b884cb430e6a6336cfea08fa659a ""
   "1846ea20-2f1d-415b-9b62-cb781adbf1f6.png" 1779378635.71972 1366075 eec666c94b36c2b0c5ca781196f833bd ""
-  "paper.aux" 1779464172.88143 9373 156d621a66ee60ac2c08842334305a53 "pdflatex"
-  "paper.bbl" 1779464172.3925 5020 ab940992c0f7ed2cee3012df560c283b "bibtex paper"
-  "paper.out" 1779464172.88202 5284 377a10d46616710402cc47ad5deb8e1e "pdflatex"
-  "paper.tex" 1779464171.51787 60435 21b351c639b94441be1225254247469f ""
+  "paper.aux" 1779835489.563 9853 1083083b2da200519d41d7d2034ab8f1 "pdflatex"
+  "paper.bbl" 1779835489.03466 5328 fbe81e4bd7f3882cb7f044fabbf6699c "bibtex paper"
+  "paper.out" 1779835489.56363 4576 132397d064e28a23f264c2e7e4d3eded "pdflatex"
+  "paper.tex" 1779835488.24085 55599 cbee93d863c2ee32a2c1d09f3eab3ba2 ""
   (generated)
   "paper.aux"
   "paper.log"
