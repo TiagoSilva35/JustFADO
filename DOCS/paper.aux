@@ -14,6 +14,7 @@
 \citation{10.1007/s10994-017-5642-8}
 \citation{lowy2021fermi}
 \@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{section.1}\protected@file@percent }
+\citation{Salazar_2026}
 \citation{Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024}
 \citation{zeng2024fairrrpreprocessinggroupfairness}
 \citation{lowy2021fermi}
@@ -34,16 +35,19 @@
 \citation{chowdhury2024enhancing}
 \citation{ijcai2019p205}
 \citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-D}}Main Limitations of Prior Work}{4}{subsection.2.4}\protected@file@percent }
 \newlabel{sec:related:limitations}{{\mbox  {II-D}}{4}{Main Limitations of Prior Work}{subsection.2.4}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {III}Problem Statement}{4}{section.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Online Learning Setting}{4}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:problem:online}{{\mbox  {III-A}}{4}{Online Learning Setting}{subsection.3.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Group Fairness Metrics}{4}{subsection.3.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Node-Level Fairness Regulariser}{4}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:problem:regulariser}{{\mbox  {III-C}}{4}{Node-Level Fairness Regulariser}{subsection.3.3}{}}
 \citation{chowdhury2024enhancing}
 \citation{chowdhury2024enhancing}
 \citation{chowdhury2024enhancing}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Parameterisation}{5}{subsection.3.4}\protected@file@percent }
+\citation{chowdhury2024enhancing}
 \@writefile{toc}{\contentsline {section}{\numberline {IV}Methodology and Experimental Design}{5}{section.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Fair Oblique Decision Forest}{5}{subsection.4.1}\protected@file@percent }
 \newlabel{sec:method:model}{{\mbox  {IV-A}}{5}{Fair Oblique Decision Forest}{subsection.4.1}{}}
@@ -53,9 +57,11 @@
 \newlabel{fig:drift-pipeline}{{1}{6}{End-to-end overview of \textsc {FADO}. At each step $t$ the model emits a prediction $\hat {y}_t$; the prequential evaluator updates rolling accuracy, demographic parity, and equalized odds; the dual ADWIN detector monitors the online error stream and triggers the reaction controller, which modulates the learning rate $\eta _t$ and the soft-routing temperature $\tau _t$; finally, the test-then-train branch performs a fairness-aware gradient step over the forest parameters. The forest itself is the \textsc {Aranyani} base learner of~\cite {chowdhury2024enhancing}}{figure.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Fairness-Aware Online Updates}{6}{subsection.4.2}\protected@file@percent }
 \newlabel{sec:method:updates}{{\mbox  {IV-B}}{6}{Fairness-Aware Online Updates}{subsection.4.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Drift Detection and Reaction Controller}{6}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:method:drift}{{\mbox  {IV-C}}{6}{Drift Detection and Reaction Controller}{subsection.4.3}{}}
 \citation{10.1007/s10994-017-5642-8}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Drift Detection and Reaction Controller}{7}{subsection.4.3}\protected@file@percent }
-\newlabel{sec:method:drift}{{\mbox  {IV-C}}{7}{Drift Detection and Reaction Controller}{subsection.4.3}{}}
+\citation{jiang2023chasingfairnessdistributionshift}
+\citation{lowy2021fermi}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Datasets and Preprocessing}{7}{subsection.4.4}\protected@file@percent }
 \newlabel{sec:method:data}{{\mbox  {IV-D}}{7}{Datasets and Preprocessing}{subsection.4.4}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Datasets used in the experiments.}}{7}{table.1}\protected@file@percent }
@@ -64,25 +70,14 @@
 \newlabel{sec:method:scenarios}{{\mbox  {IV-E}}{7}{Drift Scenarios}{subsection.4.5}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-F}}Baselines}{7}{subsection.4.6}\protected@file@percent }
 \newlabel{sec:method:baselines}{{\mbox  {IV-F}}{7}{Baselines}{subsection.4.6}{}}
-\citation{jiang2023chasingfairnessdistributionshift}
-\citation{lowy2021fermi}
-\citation{jiang2023chasingfairnessdistributionshift}
+\citation{chowdhury2024enhancing}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-G}}Hyperparameter Selection}{8}{subsection.4.7}\protected@file@percent }
 \newlabel{sec:method:hpo}{{\mbox  {IV-G}}{8}{Hyperparameter Selection}{subsection.4.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Hyperparameters of \textsc  {FADO}. Symbols match those used in Sections~III and IV. Values are held fixed across all datasets and drift scenarios unless noted otherwise.}}{8}{table.2}\protected@file@percent }
+\newlabel{tab:hparams}{{II}{8}{Hyperparameters of \textsc {FADO}. Symbols match those used in Sections~III and IV. Values are held fixed across all datasets and drift scenarios unless noted otherwise}{table.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{\numberline {\mbox  {IV-G}0a}Rationale for the non-obvious choices.}{8}{paragraph.4.7.0.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-H}}Evaluation Protocol}{8}{subsection.4.8}\protected@file@percent }
 \newlabel{sec:method:protocol}{{\mbox  {IV-H}}{8}{Evaluation Protocol}{subsection.4.8}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {V}Results and Discussion}{8}{section.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Performance on the Adult Dataset}{8}{subsection.5.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Performance on Folktables: Cross-Year Distributional Shift}{8}{subsection.5.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Experimental results on the Adult dataset across drift scenarios. \textsc  {FADO} maintains superior accuracy while effectively mitigating fairness violations (DP) during drift events.}}{9}{table.2}\protected@file@percent }
-\newlabel{tab:adult-results}{{II}{9}{Experimental results on the Adult dataset across drift scenarios. \textsc {FADO} maintains superior accuracy while effectively mitigating fairness violations (DP) during drift events}{table.2}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Folktables (ACS Income, CA) cross-year results. Models are trained on 2015 and evaluated prequentially on 2017--2018 (split evenly). Mean $\pm $ std over five seeds.}}{9}{table.3}\protected@file@percent }
-\newlabel{tab:folktables}{{III}{9}{Folktables (ACS Income, CA) cross-year results. Models are trained on 2015 and evaluated prequentially on 2017--2018 (split evenly). Mean $\pm $ std over five seeds}{table.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Effect of Drift Type on Fairness Stability (RQ3)}{9}{subsection.5.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}Controller Behaviour in Practice}{9}{subsection.5.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-E}}Limitations and Threats to Validity}{9}{subsection.5.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion and Future Work}{9}{section.6}\protected@file@percent }
-\citation{Small_2024}
 \bibdata{references}
 \bibcite{chowdhury2024enhancing}{1}
 \bibcite{10.1145/2090236.2090255}{2}
@@ -94,13 +89,23 @@
 \bibcite{10.1145/3457607}{8}
 \bibcite{Mishler_2021}{9}
 \bibcite{10.1145/3351095.3372828}{10}
-\bibcite{8474918}{11}
-\bibcite{Small_2024}{12}
-\bibcite{10467221}{13}
-\bibcite{DBLP:journals/corr/WebbHCNP15}{14}
-\bibcite{Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024}{15}
-\bibcite{zeng2024fairrrpreprocessinggroupfairness}{16}
-\bibcite{ijcai2019p205}{17}
+\bibcite{Salazar_2026}{11}
+\bibcite{8474918}{12}
+\bibcite{Small_2024}{13}
+\bibcite{10467221}{14}
+\bibcite{DBLP:journals/corr/WebbHCNP15}{15}
+\bibcite{Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024}{16}
+\bibcite{zeng2024fairrrpreprocessinggroupfairness}{17}
+\bibcite{ijcai2019p205}{18}
 \bibstyle{plain}
-\@writefile{toc}{\contentsline {section}{References}{10}{section*.1}\protected@file@percent }
-\gdef \@abspage@last{10}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Results and Discussion}{9}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Performance on the Adult Dataset}{9}{subsection.5.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Experimental results on the Adult dataset across drift scenarios. \textsc  {FADO} maintains superior accuracy while effectively mitigating fairness violations (DP) during drift events.}}{9}{table.3}\protected@file@percent }
+\newlabel{tab:adult-results}{{III}{9}{Experimental results on the Adult dataset across drift scenarios. \textsc {FADO} maintains superior accuracy while effectively mitigating fairness violations (DP) during drift events}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Performance on Folktables: Cross-Year Distributional Shift}{9}{subsection.5.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces Folktables (ACS Income, CA) cross-year results. Models are trained on 2015 and evaluated prequentially on 2017--2018 (split evenly). Mean $\pm $ std over five seeds.}}{9}{table.4}\protected@file@percent }
+\newlabel{tab:folktables}{{IV}{9}{Folktables (ACS Income, CA) cross-year results. Models are trained on 2015 and evaluated prequentially on 2017--2018 (split evenly). Mean $\pm $ std over five seeds}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Controller Behaviour in Practice}{9}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion and Future Work}{9}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{9}{section*.1}\protected@file@percent }
+\gdef \@abspage@last{9}

@@ -47,6 +47,11 @@ Manish Raghavan, Solon Barocas, Jon Kleinberg, and Karen Levy.
 \newblock Mitigating bias in algorithmic hiring: evaluating claims and practices.
 \newblock In {\em Proceedings of the 2020 Conference on Fairness, Accountability, and Transparency}, FAT* '20, page 469–481, New York, NY, USA, 2020. Association for Computing Machinery.
 
+\bibitem{Salazar_2026}
+Teresa Salazar, João Gama, Helder Araújo, and Pedro~Henriques Abreu.
+\newblock Unveiling group-specific distributed concept drift: A fairness imperative in federated learning.
+\newblock {\em IEEE Transactions on Neural Networks and Learning Systems}, 37(1):161–175, January 2026.
+
 \bibitem{8474918}
 K.~Shailaja, B.~Seetharamulu, and M.~A. Jabbar.
 \newblock Machine learning in healthcare: A review.
