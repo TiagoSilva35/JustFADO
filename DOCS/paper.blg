@@ -5,45 +5,45 @@ The style file: plain.bst
 Database file #1: references.bib
 Warning--string name "june" is undefined
 --line 175 of file references.bib
-You've used 17 entries,
+You've used 18 entries,
             2118 wiz_defined-function locations,
-            606 strings with 8286 characters,
-and the built_in function-call counts, 7686 in all, are:
-= -- 731
-> -- 468
+            615 strings with 8611 characters,
+and the built_in function-call counts, 8088 in all, are:
+= -- 768
+> -- 491
 < -- 8
-+ -- 183
-- -- 165
-* -- 532
-:= -- 1200
-add.period$ -- 53
-call.type$ -- 17
-change.case$ -- 131
++ -- 192
+- -- 173
+* -- 570
+:= -- 1268
+add.period$ -- 56
+call.type$ -- 18
+change.case$ -- 138
 chr.to.int$ -- 0
-cite$ -- 17
-duplicate$ -- 307
-empty$ -- 524
-format.name$ -- 165
-if$ -- 1673
+cite$ -- 18
+duplicate$ -- 318
+empty$ -- 553
+format.name$ -- 173
+if$ -- 1753
 int.to.chr$ -- 0
-int.to.str$ -- 17
-missing$ -- 13
-newline$ -- 84
-num.names$ -- 36
-pop$ -- 161
+int.to.str$ -- 18
+missing$ -- 14
+newline$ -- 89
+num.names$ -- 38
+pop$ -- 166
 preamble$ -- 1
-purify$ -- 114
+purify$ -- 120
 quote$ -- 0
-skip$ -- 281
+skip$ -- 288
 stack$ -- 0
-substring$ -- 338
-swap$ -- 136
+substring$ -- 370
+swap$ -- 137
 text.length$ -- 8
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 68
+type$ -- 72
 warning$ -- 0
-while$ -- 48
-width$ -- 19
-write$ -- 188
+while$ -- 51
+width$ -- 20
+write$ -- 199
 (There was 1 warning)
