@@ -1,0 +1,62 @@
+[
+  {
+    "model": "aranyani",
+    "scenario": "no_drift",
+    "accuracy": 0.8525055818310097,
+    "dp": 0.09054129110051888,
+    "eo": 0.05665315043036904,
+    "stream_final_accuracy": 0.8525055818310097,
+    "stream_final_dp": 0.09054129110051888,
+    "stream_final_eo": 0.05665315043036904,
+    "elapsed_seconds": 1513.2,
+    "error": null
+  },
+  {
+    "model": "aranyani",
+    "scenario": "abrupt_gender",
+    "accuracy": 0.8792881871749829,
+    "dp": 0.11880674511269096,
+    "eo": 0.09542593452859226,
+    "stream_final_accuracy": 0.8792881871749829,
+    "stream_final_dp": 0.11880674511269096,
+    "stream_final_eo": 0.09542593452859226,
+    "elapsed_seconds": 1519.8,
+    "error": null
+  },
+  {
+    "model": "aranyani",
+    "scenario": "gradual_gender",
+    "accuracy": 0.8568322122922404,
+    "dp": 0.06219080700447582,
+    "eo": 0.06805595943218232,
+    "stream_final_accuracy": 0.8568322122922404,
+    "stream_final_dp": 0.06219080700447582,
+    "stream_final_eo": 0.06805595943218232,
+    "elapsed_seconds": 1518.1,
+    "error": null
+  },
+  {
+    "model": "aranyani",
+    "scenario": "gender_relationship_decouple",
+    "accuracy": 0.8494495303484415,
+    "dp": 0.09314243402102346,
+    "eo": 0.06300302707661223,
+    "stream_final_accuracy": 0.8494495303484415,
+    "stream_final_dp": 0.09314243402102346,
+    "stream_final_eo": 0.06300302707661223,
+    "elapsed_seconds": 1513.6,
+    "error": null
+  },
+  {
+    "model": "aranyani",
+    "scenario": "occupation_gender_reversal",
+    "accuracy": 0.8509441661073914,
+    "dp": 0.059127027937151515,
+    "eo": 0.0569642931955888,
+    "stream_final_accuracy": 0.8509441661073914,
+    "stream_final_dp": 0.059127027937151515,
+    "stream_final_eo": 0.0569642931955888,
+    "elapsed_seconds": 1516.8,
+    "error": null
+  }
+]
