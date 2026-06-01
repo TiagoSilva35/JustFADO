@@ -2,13 +2,13 @@
   {
     "model": "aranyani",
     "scenario": "folktables",
-    "accuracy": 0.8219802078214469,
-    "dp": 0.06909949123505592,
-    "eo": 0.049438205102571055,
-    "stream_final_accuracy": 0.8219802078214469,
-    "stream_final_dp": 0.06909949123505592,
-    "stream_final_eo": 0.049438205102571055,
-    "elapsed_seconds": 15138.3,
+    "accuracy": 0.8225006961132065,
+    "dp": 0.06248852852410847,
+    "eo": 0.03898964678049281,
+    "stream_final_accuracy": 0.8225006961132065,
+    "stream_final_dp": 0.06248852852410847,
+    "stream_final_eo": 0.03898964678049281,
+    "elapsed_seconds": 19483.9,
     "error": null
   }
 ]
