@@ -1,0 +1,14 @@
+[
+  {
+    "model": "arf",
+    "scenario": "folktables",
+    "accuracy": 0.7836266371301304,
+    "dp": 0.07852319096894012,
+    "eo": 0.07004747562963305,
+    "stream_final_accuracy": 0.7836266371301304,
+    "stream_final_dp": 0.07852319096894012,
+    "stream_final_eo": 0.07004747562963305,
+    "elapsed_seconds": 4254.1,
+    "error": null
+  }
+]
