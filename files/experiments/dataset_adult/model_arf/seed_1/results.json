@@ -1,0 +1,62 @@
+[
+  {
+    "model": "arf",
+    "scenario": "no_drift",
+    "accuracy": 0.8424620046992978,
+    "dp": 0.09027291879190215,
+    "eo": 0.09791124154374146,
+    "stream_final_accuracy": 0.8424620046992978,
+    "stream_final_dp": 0.09027291879190215,
+    "stream_final_eo": 0.09791124154374146,
+    "elapsed_seconds": 206.4,
+    "error": null
+  },
+  {
+    "model": "arf",
+    "scenario": "abrupt_gender",
+    "accuracy": 0.8637196674175318,
+    "dp": 0.09788859860317095,
+    "eo": 0.09159376231080961,
+    "stream_final_accuracy": 0.8637196674175318,
+    "stream_final_dp": 0.09788859860317095,
+    "stream_final_eo": 0.09159376231080961,
+    "elapsed_seconds": 203.2,
+    "error": null
+  },
+  {
+    "model": "arf",
+    "scenario": "gradual_gender",
+    "accuracy": 0.8464972081189241,
+    "dp": 0.05973548032412228,
+    "eo": 0.06590083413924497,
+    "stream_final_accuracy": 0.8464972081189241,
+    "stream_final_dp": 0.05973548032412228,
+    "stream_final_eo": 0.06590083413924497,
+    "elapsed_seconds": 211.7,
+    "error": null
+  },
+  {
+    "model": "arf",
+    "scenario": "gender_relationship_decouple",
+    "accuracy": 0.8406449644553471,
+    "dp": 0.08885379288325794,
+    "eo": 0.10014422168656238,
+    "stream_final_accuracy": 0.8406449644553471,
+    "stream_final_dp": 0.08885379288325794,
+    "stream_final_eo": 0.10014422168656238,
+    "elapsed_seconds": 213.6,
+    "error": null
+  },
+  {
+    "model": "arf",
+    "scenario": "occupation_gender_reversal",
+    "accuracy": 0.8430137733291203,
+    "dp": 0.058944408240761206,
+    "eo": 0.08322651017161231,
+    "stream_final_accuracy": 0.8430137733291203,
+    "stream_final_dp": 0.058944408240761206,
+    "stream_final_eo": 0.08322651017161231,
+    "elapsed_seconds": 212.2,
+    "error": null
+  }
+]

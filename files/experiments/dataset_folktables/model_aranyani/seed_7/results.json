@@ -1,0 +1,14 @@
+[
+  {
+    "model": "aranyani",
+    "scenario": "folktables",
+    "accuracy": 0.8232862470312863,
+    "dp": 0.06259071232558627,
+    "eo": 0.03960750066716412,
+    "stream_final_accuracy": 0.8232862470312863,
+    "stream_final_dp": 0.06259071232558627,
+    "stream_final_eo": 0.03960750066716412,
+    "elapsed_seconds": 19265.5,
+    "error": null
+  }
+]
