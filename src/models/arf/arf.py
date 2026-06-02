@@ -1,4 +1,5 @@
 import numpy as np
+from numpy.random import RandomState
 from src.helpers.utils import _compute_window_fairness
 from river.ensemble import AdaptiveRandomForestClassifier
 
@@ -16,7 +17,8 @@ def evaluate_arf_over_timesteps(
 ):
     if int(online_batch_size) != 1:
         raise ValueError('ARF in this pipeline is strictly online and requires batch_size=1.')
-    arf = model if model is not None else AdaptiveRandomForestClassifier(seed=seed)
+    # seed = RandomState(seed)
+    arf = model if model is not None else AdaptiveRandomForestClassifier(seed=seed, n_models=4)
 
     accuracies = []
     dps = []
