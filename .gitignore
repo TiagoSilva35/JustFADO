@@ -12,3 +12,4 @@ venv/
 wandb/
 data/acs-folktables/
 /data/
+DOCS/*.pdf

@@ -21,11 +21,10 @@ DEFAULT_SCENARIO_LABELS = {
     'gender_relationship_decouple': 'Decouple',
 }
 
-DEFAULT_MODEL_ORDER = ['arf', 'rfr', 'fermi', 'aranyani']
+DEFAULT_MODEL_ORDER = ['arf', 'rfr', 'aranyani']
 DEFAULT_MODEL_LABELS = {
     'arf': 'ARF',
     'rfr': 'RFR',
-    'fermi': 'FERMI',
     'aranyani': r'\textbf{Aranyani}',
 }
 
@@ -276,7 +275,7 @@ def main():
     parser.add_argument(
         '--models',
         default='',
-        help='Optional comma-separated model filter (e.g., arf,rfr,fermi,aranyani).',
+        help='Optional comma-separated model filter (e.g., arf,rfr,aranyani).',
     )
     parser.add_argument(
         '--scenario-labels',
