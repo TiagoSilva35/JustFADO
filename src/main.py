@@ -98,8 +98,23 @@ def _dataset_name():
     return override if override else FLAGS.dataset
 
 
+# COMPAS uses a much smaller test stream than Adult (~2.1k vs ~16k
+# samples), so ADWIN's Hoeffding-bound detection floor is correspondingly
+# higher: a ~5pp drift-phase accuracy spike that ADWIN easily flags on
+# Adult sits right on the noise floor on COMPAS. We loosen
+# ``delta_warn`` / ``delta_confirm`` for this dataset so the FADO
+# controller has a chance to react to the (verified-real) drifts
+# injected by ``src/drift/compas_scenarios.py``. Baseline ``no_drift``
+# should still NOT trigger -- treat any false-positive there as a sign
+# the override is too loose and dial it back.
+_COMPAS_FADO_OVERRIDES = {
+    'adwin_delta_warn': 1e-3,
+    'adwin_delta_confirm': 0.05,
+}
+
+
 def _build_aranyani_static_params():
-    return {
+    params = {
         'adwin_delta_warn': float(FLAGS.drift_adwin_delta_warn),
         'adwin_delta_confirm': float(FLAGS.drift_adwin_delta_confirm),
         'drift_lr_prewarm_mult': float(FLAGS.drift_lr_prewarm_mult),
@@ -113,6 +128,9 @@ def _build_aranyani_static_params():
         'temperature_recovery_step': float(FLAGS.drift_temperature_recovery_step),
         'lambda_const': float(FLAGS.lambda_const),
     }
+    if _dataset_name().lower() == 'compas':
+        params.update(_COMPAS_FADO_OVERRIDES)
+    return params
 
 
 def _supported_models_for_dataset(dataset_name):

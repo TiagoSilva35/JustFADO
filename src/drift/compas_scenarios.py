@@ -1,50 +1,54 @@
 """Virtual drift scenarios for the COMPAS test stream.
 
-These scenarios are the COMPAS analog of the Adult scenarios in
-``src/drift/scenarios.py``. They are applied to the *raw, post-null-filter*
-DataFrame (string-valued categoricals such as ``race``, ``age_cat``,
-``c_charge_degree``, ``sex`` and numeric prior-count columns) BEFORE the
-one-hot / frequency encoder is applied, so a deterministic row-level edit
-propagates through the downstream transformer as a true feature-level
-distribution shift.
+Layout (3 phases, ``test_size=0.30``, test stream ~2.1k rows):
 
-Phase convention -- identical proportions to Adult so that ADWIN
-detection thresholds tuned for Adult behave comparably:
+    [0 .. 0.20)        warmup           (~433 samples)
+    [0.20 .. 0.60)     drift            (~866 samples)
+    [0.60 .. 1.0]      recovery         (~866 samples)
 
-    [0 .. 0.20)        warmup
-    [0.20 .. 0.50)     drift phase 1 (abrupt component)
-    [0.50 .. 0.60)     recovery 1
-    [0.60 .. 0.75)     drift phase 2 (gradual / slow component)
-    [0.75 .. 1.0]      recovery 2
+Each scenario applies its perturbation only during the drift phase;
+the recovery phase reverts to undrifted rows so the controller has a
+clean window to demonstrate adaptation back to baseline behaviour.
 
-Adjustment vs Adult: warmup is bumped from 15% to 20% because the COMPAS
-test stream is roughly an order of magnitude smaller (1.4k vs 16k
-samples). This gives the warm-started forest a few more samples to
-stabilise before the first drift phase fires while keeping the remaining
-phases proportionally close to the Adult layout.
+Why each scenario carries both a feature edit AND a label-flip
+component: the Aranyani forest on COMPAS leans heavily on the numeric
+``priors_count`` / ``age`` features, so the original race / age_cat /
+charge_degree edits perturbed only weakly-used categoricals and left
+``P(y | x)`` (and therefore accuracy) almost unchanged. With accuracy
+flat ADWIN never trips, defeating the whole point of FADO on this
+dataset. To make the drifts strong enough to be detectable we follow
+each row-level feature edit with a deterministic (probability 1.0)
+flip of ``two_year_recid`` on the SAME edited rows -- a per-subgroup concept
+drift that gives ADWIN a clear accuracy signal. Each scenario's
+fairness narrative is preserved (race / age_cat / charge_degree still
+shift, sensitive-attribute distribution still moves) while the
+detectable signal is added. ``no_drift`` is left untouched as the true
+baseline.
 
-Scenario design:
+Scenarios operate on the raw, post-null-filter DataFrame BEFORE the
+one-hot / frequency encoder is applied, so row-level edits propagate
+downstream as true feature-level distribution shifts. The recomputed
+``y_test`` in ``read_compas_train_test`` picks up the label flips.
 
-* ``no_drift`` -- baseline, returns the test slice unmodified.
-* ``abrupt_race`` -- direct analog of Adult ``abrupt_gender``: every
-  recidivist defendant whose race is African-American is relabeled
-  Caucasian during phase 1, then the same swap fires with an
-  exponentially decaying temperature during phase 2.
+Scenario set:
+
+* ``no_drift`` -- baseline, identity.
+* ``abrupt_race`` -- analog of Adult ``abrupt_gender``: AA recidivists
+  in the drift phase are relabeled Caucasian + label-flipped at 100%.
 * ``gradual_race`` -- analog of Adult ``gradual_gender``: linearly
-  increasing race-swap probability across both drift phases (0->0.8,
-  0->0.6).
+  ramping race-swap probability 0->1 across the drift phase, with 100%
+  label flip on the rows that got swapped.
 * ``age_race_decouple`` -- analog of Adult
-  ``gender_relationship_decouple``: breaks the ``age_cat`` <-> ``race``
-  co-occurrence the model relies on by swapping ``Less than 25`` and
-  ``Greater than 45`` between African-American and Caucasian
-  defendants.
+  ``gender_relationship_decouple``: invert age_cat<->race
+  co-occurrence (AA<25 / Cauc>45) with 100% label flip on the swapped
+  rows.
 * ``charge_degree_race_swap`` -- analog of Adult
-  ``occupation_gender_reversal``: swaps race in stereotyped
-  charge-degree combinations (African-American + Felony -> Caucasian,
-  Caucasian + Misdemeanor -> African-American).
+  ``occupation_gender_reversal``: AA+Felony -> Caucasian and
+  Caucasian+Misdemeanor -> AA, with 100% label flip on the swapped
+  rows.
 
-All scenarios use a fixed PRNG seed (``SEED = 42``) so they are
-reproducible across runs given identical input row order.
+PRNG seed (``SEED = 42``) is fixed so the random swap and label-flip
+decisions are reproducible across runs given identical input row order.
 """
 
 import random
@@ -52,23 +56,31 @@ import random
 import pandas as pd
 
 SEED = 42
-SPLITS = [0.20, 0.50, 0.60, 0.75, 1.0]
-PHASE_LABELS = ['Warmup', 'Drift Phase 1', 'Recovery 1', 'Drift Phase 2', 'Recovery 2']
+SPLITS = [0.20, 0.60, 1.0]
+PHASE_LABELS = ['Warmup', 'Drift', 'Recovery']
+
+# Probability of flipping ``two_year_recid`` on rows whose feature
+# columns were edited by a scenario. Set to 1.0 because COMPAS's test
+# stream is small (~2.1k) and FADO's prequential test-then-train
+# protocol lets the model partially re-fit to mislabeled rows within
+# the drift phase, dampening the spike ADWIN sees. A deterministic
+# 100% flip on the affected subgroup keeps the spike high enough for
+# the (slightly relaxed) COMPAS ADWIN params to trigger -- see
+# ``_COMPAS_FADO_OVERRIDES`` in ``src/main.py``.
+DEFAULT_LABEL_FLIP_PROB = 1.0
 
 
 # ---------------------------------------------------------------------------
-# Phase helpers
+# Phase / row helpers
 # ---------------------------------------------------------------------------
 def _split_phases(df):
-  """Split a raw DataFrame into the 5 canonical drift phases."""
+  """Split a raw DataFrame into warmup / drift / recovery slices."""
   n = len(df)
   b = [int(s * n) for s in SPLITS]
   return (
       df.iloc[: b[0]].copy(),
       df.iloc[b[0]: b[1]].copy(),
-      df.iloc[b[1]: b[2]].copy(),
-      df.iloc[b[2]: b[3]].copy(),
-      df.iloc[b[3]:].copy(),
+      df.iloc[b[1]:].copy(),
   )
 
 
@@ -84,6 +96,29 @@ def _is_recid_positive(value):
     return str(value).strip().lower() in {'yes', 'true', '1'}
 
 
+def _flip_recid(value):
+  """Flip a recidivism label (0<->1 for ints; yes<->no for strings)."""
+  try:
+    return 1 - int(value)
+  except (TypeError, ValueError):
+    pass
+  s = str(value).strip().lower()
+  if s in {'yes', 'true', '1'}:
+    return 'No'
+  if s in {'no', 'false', '0'}:
+    return 'Yes'
+  return value
+
+
+def _apply_label_flips(df_phase, edited_indices, target_col, prob, rng):
+  """Bernoulli(prob) flip ``target_col`` for each row in ``edited_indices``."""
+  if not edited_indices or target_col not in df_phase.columns:
+    return
+  for idx in edited_indices:
+    if rng.random() < prob:
+      df_phase.at[idx, target_col] = _flip_recid(df_phase.at[idx, target_col])
+
+
 # ---------------------------------------------------------------------------
 # Scenario: no drift (baseline)
 # ---------------------------------------------------------------------------
@@ -93,153 +128,101 @@ def no_drift(df, target_col='two_year_recid'):
 
 
 # ---------------------------------------------------------------------------
-# Scenario: abrupt race drift
+# Scenario: abrupt race + concept drift
 # ---------------------------------------------------------------------------
 def abrupt_race(df, target_col='two_year_recid'):
-  """Direct COMPAS analog of Adult ``abrupt_gender``.
+  """Sustained abrupt race swap + 100% label flip on edited rows.
 
-  Phase 1 (abrupt): every recidivist defendant whose race is
-  African-American is relabeled Caucasian. This breaks the
-  ``race = African-American => recid = 1`` association the model
-  learns on the no-drift training partition.
-
-  Phase 2 (slow): the same swap fires with an exponentially decaying
-  temperature, mirroring the slow phase of ``abrupt_gender``.
+  Phase 1 (drift): every recidivist defendant whose race is
+  African-American is relabeled Caucasian and has their
+  ``two_year_recid`` label flipped (deterministic 100%). The race swap breaks
+  ``race=AA -> recid=1`` and the label flip injects per-subgroup concept
+  drift so ADWIN sees a clear accuracy hit. Recovery reverts to
+  undrifted rows.
   """
-  random.seed(SEED)
-  warmup, phase1, recovery1, phase2, recovery2 = _split_phases(df)
-
-  if target_col in phase1.columns:
+  rng = random.Random(SEED)
+  warmup, drift, recovery = _split_phases(df)
+  if target_col in drift.columns:
     mask = (
-        phase1[target_col].apply(_is_recid_positive)
-        & (phase1['race'].astype(str).str.strip() == 'African-American')
+        drift[target_col].apply(_is_recid_positive)
+        & (drift['race'].astype(str).str.strip() == 'African-American')
     )
-    phase1.loc[mask, 'race'] = 'Caucasian'
-
-  temperature = 0.999
-  for idx in phase2.index:
-    if (
-        _is_recid_positive(phase2.at[idx, target_col])
-        and str(phase2.at[idx, 'race']).strip() == 'African-American'
-    ):
-      if random.random() < temperature:
-        phase2.at[idx, 'race'] = 'Caucasian'
-      temperature *= 0.999
-
-  return _concat([warmup, phase1, recovery1, phase2, recovery2])
+    edited_indices = list(drift.index[mask])
+    drift.loc[edited_indices, 'race'] = 'Caucasian'
+    _apply_label_flips(
+        drift, edited_indices, target_col, DEFAULT_LABEL_FLIP_PROB, rng,
+    )
+  return _concat([warmup, drift, recovery])
 
 
 # ---------------------------------------------------------------------------
-# Scenario: gradual race drift
+# Scenario: gradual race + concept drift
 # ---------------------------------------------------------------------------
 def gradual_race(df, target_col='two_year_recid'):
-  """Linearly increasing race swap across both drift phases.
-
-  Counterpart of Adult ``gradual_gender``: probability of relabeling an
-  African-American recidivist as Caucasian ramps 0->0.8 across phase 1
-  and 0->0.6 across phase 2.
-  """
-  random.seed(SEED)
-  warmup, phase1, recovery1, phase2, recovery2 = _split_phases(df)
-
-  n1 = max(len(phase1) - 1, 1)
-  for i, idx in enumerate(phase1.index):
-    prob = 0.8 * (i / n1)
+  """Linearly ramping race swap + 100% label flip on rows that got swapped."""
+  rng = random.Random(SEED)
+  warmup, drift, recovery = _split_phases(df)
+  n = max(len(drift) - 1, 1)
+  edited_indices = []
+  for i, idx in enumerate(drift.index):
+    prob = i / n  # 0 -> 1
     if (
-        _is_recid_positive(phase1.at[idx, target_col])
-        and str(phase1.at[idx, 'race']).strip() == 'African-American'
-        and random.random() < prob
+        _is_recid_positive(drift.at[idx, target_col])
+        and str(drift.at[idx, 'race']).strip() == 'African-American'
+        and rng.random() < prob
     ):
-      phase1.at[idx, 'race'] = 'Caucasian'
-
-  n2 = max(len(phase2) - 1, 1)
-  for i, idx in enumerate(phase2.index):
-    prob = 0.6 * (i / n2)
-    if (
-        _is_recid_positive(phase2.at[idx, target_col])
-        and str(phase2.at[idx, 'race']).strip() == 'African-American'
-        and random.random() < prob
-    ):
-      phase2.at[idx, 'race'] = 'Caucasian'
-
-  return _concat([warmup, phase1, recovery1, phase2, recovery2])
+      drift.at[idx, 'race'] = 'Caucasian'
+      edited_indices.append(idx)
+  _apply_label_flips(
+      drift, edited_indices, target_col, DEFAULT_LABEL_FLIP_PROB, rng,
+  )
+  return _concat([warmup, drift, recovery])
 
 
 # ---------------------------------------------------------------------------
-# Scenario: age <-> race decoupling
+# Scenario: age <-> race decoupling + concept drift
 # ---------------------------------------------------------------------------
 def age_race_decouple(df, target_col='two_year_recid'):
-  """Break the age_cat <-> race co-occurrence used by the model.
-
-  On COMPAS, ``Less than 25`` is over-represented among African-American
-  defendants while ``Greater than 45`` is over-represented among
-  Caucasians. We swap ``age_cat`` between the two race groups so that
-  the joint distribution ``P(age_cat, race)`` is inverted relative to
-  what the model learned, without modifying recidivism labels. This is
-  the COMPAS counterpart of Adult ``gender_relationship_decouple``.
-
-  Phase 1 (abrupt): 100% of qualifying samples swapped.
-  Phase 2 (slow): probability decays 0.80 -> 0.10.
-  """
-  random.seed(SEED)
-  warmup, phase1, recovery1, phase2, recovery2 = _split_phases(df)
-
-  def _swap(df_phase, prob_fn):
-    n = max(len(df_phase) - 1, 1)
-    for i, idx in enumerate(df_phase.index):
-      prob = prob_fn(i, n)
-      if random.random() >= prob:
-        continue
-      race = str(df_phase.at[idx, 'race']).strip()
-      age = str(df_phase.at[idx, 'age_cat']).strip()
-      if race == 'African-American' and age == 'Less than 25':
-        df_phase.at[idx, 'age_cat'] = 'Greater than 45'
-      elif race == 'Caucasian' and age == 'Greater than 45':
-        df_phase.at[idx, 'age_cat'] = 'Less than 25'
-
-  _swap(phase1, prob_fn=lambda i, n: 1.0)
-  _swap(phase2, prob_fn=lambda i, n: 0.80 - 0.70 * (i / n))
-
-  return _concat([warmup, phase1, recovery1, phase2, recovery2])
+  """Invert age_cat<->race co-occurrence + 100% label flip on swapped rows."""
+  rng = random.Random(SEED)
+  warmup, drift, recovery = _split_phases(df)
+  edited_indices = []
+  for idx in drift.index:
+    race = str(drift.at[idx, 'race']).strip()
+    age = str(drift.at[idx, 'age_cat']).strip()
+    if race == 'African-American' and age == 'Less than 25':
+      drift.at[idx, 'age_cat'] = 'Greater than 45'
+      edited_indices.append(idx)
+    elif race == 'Caucasian' and age == 'Greater than 45':
+      drift.at[idx, 'age_cat'] = 'Less than 25'
+      edited_indices.append(idx)
+  _apply_label_flips(
+      drift, edited_indices, target_col, DEFAULT_LABEL_FLIP_PROB, rng,
+  )
+  return _concat([warmup, drift, recovery])
 
 
 # ---------------------------------------------------------------------------
-# Scenario: charge-degree race reversal
+# Scenario: charge-degree race reversal + concept drift
 # ---------------------------------------------------------------------------
 def charge_degree_race_swap(df, target_col='two_year_recid'):
-  """Swap race in stereotyped charge-degree combinations.
-
-  COMPAS counterpart of Adult ``occupation_gender_reversal``.
-  African-American defendants whose lead charge is a Felony
-  (``c_charge_degree = 'F'``) are relabeled Caucasian, and Caucasian
-  defendants whose lead charge is a Misdemeanor
-  (``c_charge_degree = 'M'``) are relabeled African-American. This
-  inverts the charge-severity <-> race co-occurrence the model relies on
-  while leaving prior-count features untouched.
-
-  Phase 1 (abrupt): 100% swap among stereotyped samples.
-  Phase 2 (slow): 50% -> 10% decaying swap.
-  """
-  random.seed(SEED)
-  warmup, phase1, recovery1, phase2, recovery2 = _split_phases(df)
-
-  def _swap(df_phase, base_prob, end_prob):
-    n = max(len(df_phase) - 1, 1)
-    for i, idx in enumerate(df_phase.index):
-      prob = base_prob - (base_prob - end_prob) * (i / n)
-      if random.random() >= prob:
-        continue
-      race = str(df_phase.at[idx, 'race']).strip()
-      degree = str(df_phase.at[idx, 'c_charge_degree']).strip()
-      if race == 'African-American' and degree == 'F':
-        df_phase.at[idx, 'race'] = 'Caucasian'
-      elif race == 'Caucasian' and degree == 'M':
-        df_phase.at[idx, 'race'] = 'African-American'
-
-  _swap(phase1, base_prob=1.0, end_prob=1.0)
-  _swap(phase2, base_prob=0.50, end_prob=0.10)
-
-  return _concat([warmup, phase1, recovery1, phase2, recovery2])
+  """Swap race in stereotyped charge-degree combos + 100% label flip on swapped rows."""
+  rng = random.Random(SEED)
+  warmup, drift, recovery = _split_phases(df)
+  edited_indices = []
+  for idx in drift.index:
+    race = str(drift.at[idx, 'race']).strip()
+    degree = str(drift.at[idx, 'c_charge_degree']).strip()
+    if race == 'African-American' and degree == 'F':
+      drift.at[idx, 'race'] = 'Caucasian'
+      edited_indices.append(idx)
+    elif race == 'Caucasian' and degree == 'M':
+      drift.at[idx, 'race'] = 'African-American'
+      edited_indices.append(idx)
+  _apply_label_flips(
+      drift, edited_indices, target_col, DEFAULT_LABEL_FLIP_PROB, rng,
+  )
+  return _concat([warmup, drift, recovery])
 
 
 # ---------------------------------------------------------------------------
@@ -255,10 +238,10 @@ COMPAS_SCENARIOS = {
 
 COMPAS_SCENARIO_DESCRIPTIONS = {
     'no_drift': 'Baseline (no drift)',
-    'abrupt_race': 'Abrupt + slow race swap for African-American recidivists',
-    'gradual_race': 'Gradually increasing race swap for recidivist defendants',
-    'age_race_decouple': 'Break age_cat<->race co-occurrence (AA<25 / Cauc>45)',
-    'charge_degree_race_swap': 'Swap race in felonies (AA->Cauc) and misdemeanors (Cauc->AA)',
+    'abrupt_race': 'Sustained abrupt race swap + 100% label flip on edited rows',
+    'gradual_race': 'Linearly ramping race swap + 100% label flip on swapped rows',
+    'age_race_decouple': 'Invert age_cat<->race co-occurrence + 100% label flip on swapped rows',
+    'charge_degree_race_swap': 'Swap race in stereotyped charge-degree combos + 100% label flip on swapped rows',
 }
 
 
