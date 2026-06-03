@@ -10,7 +10,17 @@ from sklearn.model_selection import train_test_split
 
 import src.models.forest.aranyani as aranyani
 import src.models.forest.forest as forest
+from src.drift.compas_scenarios import (
+    COMPAS_SCENARIO_DESCRIPTIONS,
+    COMPAS_SCENARIOS,
+)
 from src.drift.scenarios import SCENARIO_DESCRIPTIONS, SCENARIOS
+
+# Unified description map for printing per-scenario headers regardless of dataset.
+ALL_SCENARIO_DESCRIPTIONS = {
+    **SCENARIO_DESCRIPTIONS,
+    **COMPAS_SCENARIO_DESCRIPTIONS,
+}
 from src.helpers.constants import (
     DEFAULT_RANDOM_SEED_MAX,
     DEFAULT_RANDOM_SEED_MIN,
@@ -22,14 +32,14 @@ from src.helpers.data import (
     load_drifted_test_set,
     read_adult,
     read_compas,
+    read_compas_train_test,
     read_diabetes,
     read_folktables,
 )
 from src.models.arf.arf import evaluate_arf_over_timesteps
-from src.models.fermi.fermi import evaluate_fermi_over_timesteps
 from src.models.forest.baseline_evaluator import evaluate_aranyani_baseline_over_timesteps
 from src.models.forest.evaluator import evaluate_over_timesteps
-from src.models.forest.train import FLAGS
+from src.models.forest.train import FLAGS, _set_global_seed
 from src.models.rfr.evaluator import evaluate_rfr_over_timesteps
 
 try:
@@ -43,7 +53,7 @@ FOLKTABLES_PIPELINE_TEST_YEARS = (2017, 2018)
 flags.DEFINE_string(
     'pipeline_model',
     '',
-    'Optional model to run in main pipeline: aranyani, aranyani_base, arf, rfr, or fermi. Empty runs all supported models for the dataset. '
+    'Optional model to run in main pipeline: aranyani, aranyani_base, arf, or rfr. Empty runs all supported models for the dataset. '
     '"aranyani" is the full FADO framework (Aranyani + drift detection + reaction); "aranyani_base" is the pure Aranyani baseline without the controller.',
 )
 flags.DEFINE_string(
@@ -88,8 +98,23 @@ def _dataset_name():
     return override if override else FLAGS.dataset
 
 
+# COMPAS uses a much smaller test stream than Adult (~2.1k vs ~16k
+# samples), so ADWIN's Hoeffding-bound detection floor is correspondingly
+# higher: a ~5pp drift-phase accuracy spike that ADWIN easily flags on
+# Adult sits right on the noise floor on COMPAS. We loosen
+# ``delta_warn`` / ``delta_confirm`` for this dataset so the FADO
+# controller has a chance to react to the (verified-real) drifts
+# injected by ``src/drift/compas_scenarios.py``. Baseline ``no_drift``
+# should still NOT trigger -- treat any false-positive there as a sign
+# the override is too loose and dial it back.
+_COMPAS_FADO_OVERRIDES = {
+    'adwin_delta_warn': 1e-3,
+    'adwin_delta_confirm': 0.05,
+}
+
+
 def _build_aranyani_static_params():
-    return {
+    params = {
         'adwin_delta_warn': float(FLAGS.drift_adwin_delta_warn),
         'adwin_delta_confirm': float(FLAGS.drift_adwin_delta_confirm),
         'drift_lr_prewarm_mult': float(FLAGS.drift_lr_prewarm_mult),
@@ -103,13 +128,16 @@ def _build_aranyani_static_params():
         'temperature_recovery_step': float(FLAGS.drift_temperature_recovery_step),
         'lambda_const': float(FLAGS.lambda_const),
     }
+    if _dataset_name().lower() == 'compas':
+        params.update(_COMPAS_FADO_OVERRIDES)
+    return params
 
 
 def _supported_models_for_dataset(dataset_name):
     dataset_key = str(dataset_name).strip().lower()
     supported = {
-        'adult': ['aranyani', 'aranyani_base', 'arf', 'rfr', 'fermi'],
-        'folktables': ['aranyani', 'aranyani_base', 'arf', 'rfr', 'fermi'],
+        'adult': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
+        'folktables': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
         'diabetes': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
         'compas': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
     }
@@ -277,9 +305,14 @@ def _load_dataset_splits(dataset_key, scenario_name, seed):
         return _ensure_train_test(x_train, x_test, y_train, y_test, a_train, a_test, seed=seed)
 
     if dataset_key == 'compas':
-        x_values, y_values, a_values = read_compas(path=FLAGS.compas_path)
-        return _ensure_train_test(
-            x_values, [], y_values, [], a_values, [], seed=seed
+        # Drift-aware loader: splits raw rows by seed, applies the named
+        # scenario to the test slice only, then fits the encoder on train
+        # so the scenario edit on race / age_cat / c_charge_degree
+        # propagates correctly through the one-hot transformer.
+        return read_compas_train_test(
+            scenario_name=scenario_name,
+            path=FLAGS.compas_path,
+            seed=seed,
         )
 
     raise ValueError(f"Unsupported dataset for pipeline evaluation: '{dataset_key}'.")
@@ -339,6 +372,15 @@ def _run_aranyani_train_then_test(
     component of the FADO reaction controller. This second mode is what we
     report as the ``aranyani_base`` baseline in the paper.
     """
+    # Pin the global RNG (random / numpy / tensorflow) before any model creation
+    # so that two runs that share the same `seed` produce bit-identical forest
+    # initialisations and training trajectories. Without this, the seed plumbed
+    # through the pipeline only controls the data split (via _smart_split) and
+    # the model weights diverge across method comparisons, even when the FADO
+    # controller never fires.
+    if seed is not None:
+        _set_global_seed(int(seed))
+
     x_train_arr = np.asarray(x_train, dtype=np.float32)
     y_train_arr = np.asarray(y_train, dtype=np.int32)
     a_train_arr = np.asarray(a_train, dtype=np.int32)
@@ -494,7 +536,13 @@ def _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, 
     )
 
 
-def _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test):
+def _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, seed=None):
+    # See note in _run_aranyani_train_then_test: RFR also creates models with
+    # untracked RNG draws (np.random.choice for batching, TF default for nets),
+    # so we pin the global seed here to make seeded runs reproducible and to
+    # keep paired comparisons against FADO sharing identical initial conditions.
+    if seed is not None:
+        _set_global_seed(int(seed))
     fairness_window = int(FLAGS.drift_fairness_window)
     _, trained_model = evaluate_rfr_over_timesteps(
         np.asarray(x_train, dtype=np.float32),
@@ -538,24 +586,6 @@ def _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test):
     )
 
 
-def _run_fermi_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test):
-    fairness_window = int(FLAGS.drift_fairness_window)
-    return evaluate_fermi_over_timesteps(
-        np.asarray(x_train, dtype=np.float32),
-        np.asarray(y_train, dtype=np.int32),
-        np.asarray(a_train, dtype=np.int32),
-        np.asarray(x_test, dtype=np.float32),
-        np.asarray(y_test, dtype=np.int32),
-        np.asarray(a_test, dtype=np.int32),
-        batch_size=1,
-        lam=float(FLAGS.lambda_const),
-        epochs=5,
-        initial_epochs=0,
-        accuracy_window=None,
-        fairness_window=fairness_window,
-    )
-
-
 def _evaluate_selected_model(
     model_name,
     dataset_name,
@@ -594,14 +624,7 @@ def _evaluate_selected_model(
     if model_name == 'arf':
         return _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, seed=seed)
     if model_name == 'rfr':
-        return _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test)
-    if model_name == 'fermi':
-        dataset_key = str(dataset_name).lower()
-        if dataset_key not in {'adult', 'folktables'}:
-            raise ValueError(
-                "FERMI pipeline support is currently limited to the adult and folktables datasets."
-            )
-        return _run_fermi_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test)
+        return _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, seed=seed)
     raise ValueError(f'Unsupported model: {model_name}')
 
 
@@ -614,7 +637,7 @@ def _single_scenario(
 ):
     print(f"\n{'#' * 80}")
     print(f"# Evaluating scenario ({model_name}): {scenario_name}")
-    print(f"# {SCENARIO_DESCRIPTIONS.get(scenario_name, '')}")
+    print(f"# {ALL_SCENARIO_DESCRIPTIONS.get(scenario_name, '')}")
     print(f"{'#' * 80}\n")
     start = time.time()
 
@@ -664,8 +687,12 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
         scenarios = ['diabetes']
         print(' Running single Diabetes evaluation')
     elif dataset_key == 'compas':
-        scenarios = ['compas']
-        print(' Running single COMPAS evaluation')
+        # COMPAS now supports the same per-scenario drift sweep as Adult
+        # (see src/drift/compas_scenarios.py). The single 'no_drift'
+        # scenario reproduces the previous behaviour; the additional
+        # virtual drifts test recovery vs the warm-started model.
+        scenarios = list(COMPAS_SCENARIOS.keys())
+        print(f' Running all {len(scenarios)} COMPAS drift scenarios')
     else:
         raise ValueError(
             f"Unsupported dataset for pipeline evaluation: '{dataset_name}'."
@@ -675,15 +702,22 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
     print(f" Output: {os.path.abspath(output_dir)}/")
     print(f"{'=' * 80}\n")
 
+    per_scenario_datasets = {'adult', 'compas'}
     results = []
     for idx, scenario_name in enumerate(scenarios, 1):
-        if dataset_key == 'adult' and scenario_filter is not None and scenario_name != scenario_filter:
+        if (
+            dataset_key in per_scenario_datasets
+            and scenario_filter is not None
+            and scenario_name != scenario_filter
+        ):
             continue
         print(f"\n>>> [{idx}/{len(scenarios)}] {scenario_name}")
         result = _single_scenario(
             model_name=model_name,
             dataset_name=dataset_key,
-            scenario_name=scenario_name if dataset_key == 'adult' else dataset_key,
+            scenario_name=(
+                scenario_name if dataset_key in per_scenario_datasets else dataset_key
+            ),
             output_dir=output_dir,
             seed=seed,
         )

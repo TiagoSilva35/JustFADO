@@ -22,8 +22,11 @@ import numpy as np
 import pandas as pd
 from folktables import ACSDataSource, BasicProblem
 
+from sklearn.model_selection import train_test_split
+
 from src.drift.create_drifted_ds import generate_drifted_dataset
 from src.drift.scenarios import get_scenario, SCENARIOS
+from src.drift.compas_scenarios import COMPAS_SCENARIOS, get_compas_scenario
 
 
 # %%
@@ -516,38 +519,51 @@ def _resolve_compas_files(path):
   return files
 
 
-def read_compas(path="data/compas/*"):
-  target_candidates = [
-      'two_year_recid', 'is_recid', 'recid', 'label', 'target', 'y',
-  ]
-  sensitive_candidates = [
-      'race', 'ethnicity', 'sensitive', 'sensitive_attribute', 'group', 'a',
-  ]
-  legacy_feature_names = [
-      "juv_fel_count",
-      "juv_misd_count",
-      "juv_other_count",
-      "priors_count",
-      "age",
-      "c_charge_degree",
-      "c_charge_desc",
-      "age_cat",
-      "sex",
-      "race",
-      "is_recid",
-  ]
-  preferred_feature_columns = [
-      'juv_fel_count',
-      'juv_misd_count',
-      'juv_other_count',
-      'priors_count',
-      'age',
-      'c_charge_degree',
-      'c_charge_desc',
-      'age_cat',
-      'sex',
-      'race',
-  ]
+_COMPAS_TARGET_CANDIDATES = [
+    'two_year_recid', 'is_recid', 'recid', 'label', 'target', 'y',
+]
+_COMPAS_SENSITIVE_CANDIDATES = [
+    'race', 'ethnicity', 'sensitive', 'sensitive_attribute', 'group', 'a',
+]
+_COMPAS_LEGACY_FEATURE_NAMES = [
+    "juv_fel_count",
+    "juv_misd_count",
+    "juv_other_count",
+    "priors_count",
+    "age",
+    "c_charge_degree",
+    "c_charge_desc",
+    "age_cat",
+    "sex",
+    "race",
+    "is_recid",
+]
+_COMPAS_PREFERRED_FEATURE_COLUMNS = [
+    'juv_fel_count',
+    'juv_misd_count',
+    'juv_other_count',
+    'priors_count',
+    'age',
+    'c_charge_degree',
+    'c_charge_desc',
+    'age_cat',
+    'sex',
+    'race',
+]
+
+
+def _read_compas_work_df(path):
+  """Read raw COMPAS CSV(s) and return a cleaned, un-encoded DataFrame.
+
+  Returns:
+    work_df: pandas DataFrame containing only the columns we use
+      (features + target + sensitive), with rows missing target/sensitive
+      values dropped. Categorical columns are still raw strings so drift
+      scenarios in ``src/drift/compas_scenarios.py`` can manipulate them
+      before encoding.
+    feature_columns: list of feature column names in canonical order.
+    target_col, sensitive_col: resolved column names.
+  """
 
   def _has_any_column(frame, candidates):
     columns = {str(column).strip().lower() for column in frame.columns}
@@ -557,51 +573,93 @@ def read_compas(path="data/compas/*"):
   frames = []
   for file_path in files:
     frame = pd.read_csv(file_path)
-    if not (_has_any_column(frame, target_candidates) and _has_any_column(frame, sensitive_candidates)):
-      frame = pd.read_csv(file_path, names=legacy_feature_names, header=None)
+    if not (
+        _has_any_column(frame, _COMPAS_TARGET_CANDIDATES)
+        and _has_any_column(frame, _COMPAS_SENSITIVE_CANDIDATES)
+    ):
+      frame = pd.read_csv(
+          file_path, names=_COMPAS_LEGACY_FEATURE_NAMES, header=None
+      )
     frames.append(frame)
-
   df = pd.concat(frames, ignore_index=True).copy()
 
-  target_col = _resolve_column_name(df, target_candidates, 'target')
-  sensitive_col = _resolve_column_name(df, sensitive_candidates, 'sensitive attribute')
+  target_col = _resolve_column_name(df, _COMPAS_TARGET_CANDIDATES, 'target')
+  sensitive_col = _resolve_column_name(
+      df, _COMPAS_SENSITIVE_CANDIDATES, 'sensitive attribute'
+  )
 
-  present_preferred = [column for column in preferred_feature_columns if column in df.columns]
+  present_preferred = [
+      column for column in _COMPAS_PREFERRED_FEATURE_COLUMNS if column in df.columns
+  ]
   if len(present_preferred) >= 3:
     feature_columns = list(dict.fromkeys(present_preferred))
   else:
     feature_columns = [
         column for column in df.columns
-        if column != target_col and str(column).strip().lower() not in set(target_candidates)
+        if column != target_col
+        and str(column).strip().lower() not in set(_COMPAS_TARGET_CANDIDATES)
     ]
-
-  required_columns = list(dict.fromkeys(feature_columns + [target_col, sensitive_col]))
-  # length of the feature vector
-  print(f"Using {len(feature_columns)} features: {feature_columns}")
+  required_columns = list(
+      dict.fromkeys(feature_columns + [target_col, sensitive_col])
+  )
   work_df = df[required_columns].copy()
   work_df = work_df.dropna(subset=[target_col, sensitive_col]).copy()
   if work_df.empty:
     raise ValueError(
         "COMPAS data has no usable rows after filtering missing target/sensitive values."
     )
+  return work_df, feature_columns, target_col, sensitive_col
 
-  target_values = work_df[target_col]
-  y = _normalize_binary_series(target_values, 'target')
 
-  sensitive_values = work_df[sensitive_col]
-  if sensitive_values.dtype.kind in {'O', 'U', 'S'}:
-    normalized_sensitive = sensitive_values.astype(str).str.strip().str.lower()
+def _compas_target_to_binary(values):
+  """COMPAS target (``two_year_recid``) -> np.int32 with deterministic 0/1.
+
+  ``_normalize_binary_series`` uses ``pd.factorize`` which assigns code 0
+  to whichever value appears first -- order-dependent, and silently
+  inverts when called on disjoint train/test halves. For COMPAS the
+  target is always int {0, 1} (or a clean yes/no string), so we can map
+  it deterministically without factorize, which lets us re-encode
+  ``y_test`` after a scenario has flipped some labels and stay
+  consistent with the pre-split ``y_full`` encoding.
+  """
+  series = pd.Series(values)
+  if pd.api.types.is_numeric_dtype(series):
+    return np.asarray(
+        pd.to_numeric(series, errors='coerce').fillna(0).astype(np.int32)
+    )
+  normalized = series.astype(str).str.strip().str.lower()
+  if normalized.isin({'0', '1'}).all():
+    return normalized.astype(np.int32).to_numpy()
+  if normalized.isin({'yes', 'no', 'true', 'false', '0', '1'}).any():
+    return normalized.isin({'yes', 'true', '1'}).astype(np.int32).to_numpy()
+  # Last-resort fallback: order-dependent factorize. Caller should
+  # avoid this path on disjoint slices.
+  return np.asarray(_normalize_binary_series(values, 'target'), dtype=np.int32)
+
+
+def _compas_sensitive_to_binary(values):
+  """Encode COMPAS sensitive attribute as binary (1=white/Caucasian, 0=other)."""
+  values = pd.Series(values)
+  if values.dtype.kind in {'O', 'U', 'S'}:
+    normalized = values.astype(str).str.strip().str.lower()
     known_groups = {
         'white', 'caucasian', 'black', 'african-american',
         'other', 'asian', 'hispanic', 'native american',
     }
-    if normalized_sensitive.isin(known_groups).any():
-      a = normalized_sensitive.isin({'white', 'caucasian'}).astype(np.int32).to_numpy()
-    else:
-      a = _normalize_binary_series(normalized_sensitive, 'sensitive attribute')
-  else:
-    a = _normalize_binary_series(sensitive_values, 'sensitive attribute')
+    if normalized.isin(known_groups).any():
+      return normalized.isin({'white', 'caucasian'}).astype(np.int32).to_numpy()
+    return _normalize_binary_series(normalized, 'sensitive attribute')
+  return _normalize_binary_series(values, 'sensitive attribute')
 
+
+def _encode_compas_features(work_df, target_col, feature_transformer=None, fit=False):
+  """Encode only the feature columns of a COMPAS frame and return x + transformer.
+
+  Split out from ``_encode_compas_frame`` so callers that pre-encode the
+  binary target and sensitive labels globally (to avoid order-dependent
+  ``pd.factorize`` between disjoint train/test halves) can reuse the
+  same tabular transformer for features alone.
+  """
   features = work_df.drop(columns=[target_col]).copy()
   if features.empty:
     raise ValueError("COMPAS data has no feature columns after dropping target column.")
@@ -610,13 +668,164 @@ def read_compas(path="data/compas/*"):
       column for column in features.columns
       if not pd.api.types.is_numeric_dtype(features[column])
   ]
-  x, _ = _fit_tabular_transformer(
-      features,
-      categorical_features,
-      frequency_encode_columns=['c_charge_desc'],
-      rare_category_min_count=10,
+  if fit or feature_transformer is None:
+    x, feature_transformer = _fit_tabular_transformer(
+        features,
+        categorical_features,
+        frequency_encode_columns=['c_charge_desc'],
+        rare_category_min_count=10,
+    )
+  else:
+    x = _transform_tabular_features(features, feature_transformer)
+  return np.asarray(x, dtype=np.float32), feature_transformer
+
+
+def _encode_compas_frame(
+    work_df, target_col, sensitive_col,
+    feature_transformer=None, fit=False,
+):
+  """Encode a COMPAS frame end-to-end (x, y, a) using the tabular transformer.
+
+  WARNING: ``y`` and ``a`` are factorised on this frame in isolation, so
+  calling this on disjoint train/test halves can produce inconsistent
+  binary encodings (whichever class appears first in each half gets code
+  0). For drift-aware splits use ``_encode_compas_features`` and
+  pre-encode y / a globally before splitting (see
+  ``read_compas_train_test``).
+  """
+  y = np.asarray(
+      _normalize_binary_series(work_df[target_col], 'target'), dtype=np.int32
   )
-  return x, np.asarray(y, dtype=np.int32), np.asarray(a, dtype=np.int32)
+  a = np.asarray(
+      _compas_sensitive_to_binary(work_df[sensitive_col]), dtype=np.int32
+  )
+  x, feature_transformer = _encode_compas_features(
+      work_df,
+      target_col=target_col,
+      feature_transformer=feature_transformer,
+      fit=fit,
+  )
+  return x, y, a, feature_transformer
+
+
+def read_compas(path="data/compas/*"):
+  """Legacy COMPAS loader: encode the full dataset, return (x, y, a).
+
+  Used by code paths that build train/test via post-hoc array splits
+  (e.g. ``_smart_split`` in ``main.py``). For drift-aware evaluation use
+  ``read_compas_train_test`` instead, which splits raw rows before
+  encoding so per-scenario shifts can be applied to the test slice.
+  """
+  work_df, feature_columns, target_col, sensitive_col = _read_compas_work_df(path)
+  print(f"Using {len(feature_columns)} features: {feature_columns}")
+  x, y, a, _ = _encode_compas_frame(
+      work_df, target_col=target_col, sensitive_col=sensitive_col, fit=True,
+  )
+  return x, y, a
+
+
+def read_compas_train_test(
+    scenario_name=None,
+    path='data/compas/*',
+    seed=42,
+    test_size=0.3,
+):
+  """Read COMPAS, split train/test by seed, apply a drift scenario to test.
+
+  The training slice is always kept drift-free (matching the Adult
+  pipeline). The drift scenario is applied to the test slice in its raw
+  string form, then the tabular transformer is fitted on the train slice
+  alone and reused to encode the test slice -- this both avoids
+  train/test leakage and ensures the scenario edit on ``race`` /
+  ``age_cat`` / ``c_charge_degree`` propagates correctly through the
+  one-hot encoder.
+
+  ``test_size`` defaults to 0.30 (~2.1k test samples on COMPAS), giving
+  each of the 3 drift phases declared in ``compas_scenarios.py`` enough
+  rows (warmup ~430, drift ~865, recovery ~865) to stay above ADWIN's
+  reliability floor. Training still has ~5k rows, which is comfortably
+  more than enough for the 64-parameter Aranyani forest.
+
+  Stratification matches ``_smart_split``: joint ``(y, a)`` when valid,
+  otherwise plain ``y``, otherwise unstratified shuffle. The same
+  ``random_state=seed`` is used so seeded paired comparisons share
+  identical train/test row partitions across scenarios. The target
+  encoding ``y`` is fit on the *full* DataFrame before the split to
+  avoid ``pd.factorize`` order-dependence flipping labels between train
+  and test (see ``_encode_compas_frame`` docstring).
+  """
+  work_df, feature_columns, target_col, sensitive_col = _read_compas_work_df(path)
+  print(f"Using {len(feature_columns)} features: {feature_columns}")
+
+  # Deterministic target encoding so y_full and the post-scenario
+  # y_test recomputation share the same 0/1 mapping (factorize would
+  # be order-dependent on disjoint slices -- see _compas_target_to_binary).
+  y_full = _compas_target_to_binary(work_df[target_col])
+  a_full = _compas_sensitive_to_binary(work_df[sensitive_col])
+
+  joint = np.asarray([f'{int(y)}_{int(a)}' for y, a in zip(y_full, a_full)])
+  uniques, counts = np.unique(joint, return_counts=True)
+  if len(uniques) >= 2 and np.all(counts >= 2):
+    stratify = joint
+  else:
+    y_uniques, y_counts = np.unique(y_full, return_counts=True)
+    stratify = y_full if len(y_uniques) >= 2 and np.all(y_counts >= 2) else None
+
+  indices = np.arange(len(work_df))
+  try:
+    train_idx, test_idx = train_test_split(
+        indices,
+        test_size=float(test_size),
+        random_state=int(seed),
+        shuffle=True,
+        stratify=stratify,
+    )
+  except ValueError:
+    train_idx, test_idx = train_test_split(
+        indices,
+        test_size=float(test_size),
+        random_state=int(seed),
+        shuffle=True,
+        stratify=None,
+    )
+
+  train_df = work_df.iloc[train_idx].reset_index(drop=True)
+  test_df = work_df.iloc[test_idx].reset_index(drop=True)
+
+  scenario = (scenario_name or '').strip()
+  if scenario and scenario != 'no_drift' and scenario in COMPAS_SCENARIOS:
+    scenario_fn = get_compas_scenario(scenario)
+    print(f"Applying COMPAS drift scenario: {scenario}")
+    test_df = scenario_fn(test_df, target_col=target_col)
+  else:
+    print("COMPAS: no drift applied (baseline)")
+
+  # y_train is sliced from the pre-split deterministic encoding (train
+  # is never edited). y_test is RE-encoded from the post-scenario
+  # ``test_df`` so concept-drift label flips inside scenarios are
+  # honoured; the same deterministic mapping keeps it consistent with
+  # y_train / y_full.
+  y_train = np.asarray(y_full[train_idx], dtype=np.int32)
+  y_test = _compas_target_to_binary(test_df[target_col])
+
+  # a_train is sliced from the pre-split encoding; a_test is recomputed
+  # from the (possibly drift-modified) race column so that swaps like
+  # African-American -> Caucasian flip the sensitive bit accordingly.
+  # _compas_sensitive_to_binary uses a deterministic isin check on known
+  # race strings, so it stays consistent with a_full.
+  a_train = np.asarray(a_full[train_idx], dtype=np.int32)
+  a_test = np.asarray(
+      _compas_sensitive_to_binary(test_df[sensitive_col]), dtype=np.int32
+  )
+
+  x_train, transformer = _encode_compas_features(
+      train_df, target_col=target_col, fit=True,
+  )
+  x_test, _ = _encode_compas_features(
+      test_df, target_col=target_col,
+      feature_transformer=transformer, fit=False,
+  )
+  return x_train, x_test, y_train, y_test, a_train, a_test
 
 
 # CelebA
