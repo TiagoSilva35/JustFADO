@@ -39,6 +39,7 @@
 \citation{ijcai2019p205}
 \citation{chowdhury2024enhancing}
 \citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
 \@writefile{toc}{\contentsline {section}{\numberline {III}Problem Statement}{4}{section.3}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Online Learning Setting}{4}{subsection.3.1}\protected@file@percent }
 \newlabel{sec:problem:online}{{\mbox  {III-A}}{4}{Online Learning Setting}{subsection.3.1}{}}
@@ -55,16 +56,15 @@
 \newlabel{sec:method:model}{{\mbox  {IV-A}}{5}{Fair Oblique Decision Forest}{subsection.4.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Fairness-Aware Online Updates}{5}{subsection.4.2}\protected@file@percent }
 \newlabel{sec:method:updates}{{\mbox  {IV-B}}{5}{Fairness-Aware Online Updates}{subsection.4.2}{}}
-\citation{chowdhury2024enhancing}
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces End-to-end overview of \textsc  {FADO}. At each step $t$ the model emits a prediction $\hat  {y}_t$; the prequential evaluator updates rolling accuracy, demographic parity, and equalized odds; the dual ADWIN detector monitors the online error stream and triggers the reaction controller, which modulates the learning rate $\eta _t$ and the soft-routing temperature $\tau _t$; finally, the test-then-train branch performs a fairness-aware gradient step over the forest parameters. The forest itself is the \textsc  {Aranyani} base learner of~\cite  {chowdhury2024enhancing}.}}{6}{figure.1}\protected@file@percent }
 \newlabel{fig:drift-pipeline}{{1}{6}{End-to-end overview of \textsc {FADO}. At each step $t$ the model emits a prediction $\hat {y}_t$; the prequential evaluator updates rolling accuracy, demographic parity, and equalized odds; the dual ADWIN detector monitors the online error stream and triggers the reaction controller, which modulates the learning rate $\eta _t$ and the soft-routing temperature $\tau _t$; finally, the test-then-train branch performs a fairness-aware gradient step over the forest parameters. The forest itself is the \textsc {Aranyani} base learner of~\cite {chowdhury2024enhancing}}{figure.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Drift Detection and Reaction Controller}{6}{subsection.4.3}\protected@file@percent }
 \newlabel{sec:method:drift}{{\mbox  {IV-C}}{6}{Drift Detection and Reaction Controller}{subsection.4.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Datasets and Preprocessing}{6}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:method:data}{{\mbox  {IV-D}}{6}{Datasets and Preprocessing}{subsection.4.4}{}}
 \citation{10.1007/s10994-017-5642-8}
 \citation{jiang2023chasingfairnessdistributionshift}
 \citation{chowdhury2024enhancing}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Datasets and Preprocessing}{7}{subsection.4.4}\protected@file@percent }
-\newlabel{sec:method:data}{{\mbox  {IV-D}}{7}{Datasets and Preprocessing}{subsection.4.4}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Datasets used in the experiments.}}{7}{table.1}\protected@file@percent }
 \newlabel{tab:datasets}{{I}{7}{Datasets used in the experiments}{table.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Drift Scenarios}{7}{subsection.4.5}\protected@file@percent }
@@ -84,14 +84,14 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Performance on Folktables: Cross-Year Distributional Shift}{8}{subsection.5.1}\protected@file@percent }
 \newlabel{sec:results:folktables}{{\mbox  {V-A}}{8}{Performance on Folktables: Cross-Year Distributional Shift}{subsection.5.1}{}}
 \citation{Small_2024}
+\bibdata{references}
+\bibcite{chowdhury2024enhancing}{1}
 \@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Folktables (ACS Income, CA) cross-year results. Models are trained on 2015 and evaluated prequentially on 2017--2018 (split evenly). Mean $\pm $ std over $30$ seeds. \textbf  {Bold} marks the best mean per metric; superscripts denote paired Wilcoxon signed-rank tests of \textsc  {FADO} against each baseline, Holm-corrected ($^{***}\,p<0.001$). \textsc  {FADO} optimises only the DP regulariser (Section~\ref {sec:method:updates}); EO is reported as a diagnostic.}}{9}{table.3}\protected@file@percent }
 \newlabel{tab:folktables}{{III}{9}{Folktables (ACS Income, CA) cross-year results. Models are trained on 2015 and evaluated prequentially on 2017--2018 (split evenly). Mean $\pm $ std over $30$ seeds. \textbf {Bold} marks the best mean per metric; superscripts denote paired Wilcoxon signed-rank tests of \textsc {FADO} against each baseline, Holm-corrected ($^{***}\,p<0.001$). \textsc {FADO} optimises only the DP regulariser (Section~\ref {sec:method:updates}); EO is reported as a diagnostic}{table.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Performance on the Adult Dataset}{9}{subsection.5.2}\protected@file@percent }
 \newlabel{sec:results:adult}{{\mbox  {V-B}}{9}{Performance on the Adult Dataset}{subsection.5.2}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion and Future Work}{9}{section.6}\protected@file@percent }
 \newlabel{sec:conclusion}{{VI}{9}{Conclusion and Future Work}{section.6}{}}
-\bibdata{references}
-\bibcite{chowdhury2024enhancing}{1}
 \bibcite{8474918}{2}
 \bibcite{10467221}{3}
 \bibcite{10.1145/3351095.3372828}{4}
@@ -110,9 +110,9 @@
 \bibcite{Mishler_2021}{17}
 \bibcite{Small_2024}{18}
 \bibcite{ijcai2019p205}{19}
+\bibcite{demsar2006statistical}{20}
+\bibstyle{IEEEtran}
 \@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces Adult dataset across the four drift scenarios. Mean $\pm $ std over $30$ seeds. \textbf  {Bold} marks the best mean per (scenario, metric) cell. Superscripts denote paired Wilcoxon signed-rank tests of \textsc  {FADO} against each streaming baseline, Holm-corrected within each cell: $^{*}\,p<0.05$, $^{**}\,p<0.01$, $^{***}\,p<0.001$; markers on \textsc  {FADO} indicate significance against \emph  {both} baselines, markers on a baseline ($\dagger $) indicate that the baseline significantly outperforms \textsc  {FADO}. Unmarked best-in-cell entries are not statistically separable from \textsc  {FADO}. \textsc  {FADO} optimises only the DP regulariser (Section~\ref {sec:method:updates}); EO is reported as a diagnostic.}}{10}{table.4}\protected@file@percent }
 \newlabel{tab:adult-results}{{IV}{10}{Adult dataset across the four drift scenarios. Mean $\pm $ std over $30$ seeds. \textbf {Bold} marks the best mean per (scenario, metric) cell. Superscripts denote paired Wilcoxon signed-rank tests of \textsc {FADO} against each streaming baseline, Holm-corrected within each cell: $^{*}\,p<0.05$, $^{**}\,p<0.01$, $^{***}\,p<0.001$; markers on \textsc {FADO} indicate significance against \emph {both} baselines, markers on a baseline ($\dagger $) indicate that the baseline significantly outperforms \textsc {FADO}. Unmarked best-in-cell entries are not statistically separable from \textsc {FADO}. \textsc {FADO} optimises only the DP regulariser (Section~\ref {sec:method:updates}); EO is reported as a diagnostic}{table.4}{}}
 \@writefile{toc}{\contentsline {section}{References}{10}{section*.1}\protected@file@percent }
-\bibcite{demsar2006statistical}{20}
-\bibstyle{IEEEtran}
-\gdef \@abspage@last{11}
+\gdef \@abspage@last{10}

@@ -34,13 +34,12 @@
 \begin{abstract}
 Online learning systems deployed in non-stationary environments must remain both predictive and fair as the data distribution evolves. Existing fairness-aware
 online learners optimise a fixed regulariser and do not adapt to concept drift, whereas drift-adaptive streaming methods react to drift but enforce no fairness
-constraints. We propose \textsc{FADO}, a framework that couples the \textsc{Aranyani} fair oblique decision forest~\cite{chowdhury2024enhancing} with a
+constraints. We propose Fairness-Aware Drift-Aware Online Learning (\textsc{FADO}), a framework that couples the \textsc{Aranyani} fair oblique decision forest~\cite{chowdhury2024enhancing} with a
 dual-threshold ADWIN drift detector and a reaction controller that modulates the optimiser learning rate and the soft-routing temperature in response to
 detected drift, and anneals both back to baseline during recovery. We evaluate \textsc{FADO} under a prequential test-then-train protocol on \textsc{Adult}
 (four controlled drift scenarios) and \textsc{Folktables} ACS Income (CA; natural 2015 $\to$ 2017--2018 cross-year shift), comparing against the \textsc{ARF}
 and \textsc{RFR} baselines. \textsc{FADO} attains the highest prequential top-$1$ accuracy in every scenario, with gains over the strongest streaming
-baseline ranging from $+0.1$ percentage points on the closest Adult regime to $+3.3$ percentage points on the natural cross-year shift (and up to $+3.8$
-percentage points over \textsc{ARF}), while reducing demographic-parity violation by $13$--$21\%$ and equalized-odds violation by $26$--$42\%$ relative to the
+baseline up to $+3.8$, while reducing demographic-parity violation up to $21\%$ and equalized-odds violation by $26$--$42\%$ relative to the
 baselines on the cross-year shift. All reported comparisons are aggregated over $30$ seeds with Holm-corrected paired Wilcoxon signed-rank tests.
 \end{abstract}
 
@@ -69,7 +68,7 @@ and causing tangible harm to affected groups. These limitations highlight an imp
 \item \textbf{RQ2:} Can adaptive drift detection and response mechanisms preserve fairness guarantees while maintaining predictive performance over time?
 \item \textbf{RQ3:} How do different types of concept drift influence the stability and robustness of fairness-aware learning models?
 \end{itemize}
-Based on these research questions, this work investigates fairness-aware online learning under concept drift. We introduce \textsc{FADO} (Fairness-Aware Drift-aware Online learning),
+Based on these research questions, this work investigates fairness-aware online learning under concept drift. We introduce Fairness-Aware Drift-Aware Online Learning (\textsc{FADO}),
 a framework that wraps an existing fair oblique decision forest—\textsc{Aranyani}~\cite{chowdhury2024enhancing}—with a dual-threshold drift detector and a reaction controller that
 modulates the optimizer learning rate and the soft-routing temperature in response to detected change. We emphasize that \textsc{Aranyani} is not contributed by this paper:
 it serves as the in-processing base learner around which \textsc{FADO} builds its drift-detection and response machinery. Our central hypothesis is that fairness degradation under
@@ -85,8 +84,8 @@ improves fairness stability over time while maintaining competitive predictive p
 drift, reinforcing the importance of adaptive fairness-aware mechanisms in dynamic environments. The main contributions of this work are:
 \begin{itemize}
 \item \textsc{FADO}, a fairness-aware online learning framework that wraps a fair oblique decision forest with a dual-threshold ADWIN drift detector and a reaction controller acting on the learning rate and the soft-routing temperature;
-\item An empirical analysis, across four synthetic drift scenarios on \textsc{Adult} and one natural cross-year shift on \textsc{Folktables}, of how different forms of concept drift affect group fairness metrics over time;
-\item A comparison against two streaming baselines (\textsc{ARF}, \textsc{RFR}) showing that adaptive fairness mechanisms can preserve fairness guarantees while maintaining predictive performance in non-stationary environments.
+\item An empirical analysis, across four synthetic drift scenarios on \textsc{Adult} and one natural cross-year shift on \textsc{Folktables}, of how different forms of concept drift affect group fairness metrics over time, 
+and the corresponding performance results of \textsc{FADO} compared to the \textsc{ARF} and \textsc{RFR} baselines, demonstrating substantial improvements in fairness stability with competitive predictive performance.
 \end{itemize}
 The remainder of this paper is organized as follows: Section~2 reviews the literature on fairness-aware machine learning and concept drift adaptation; Section~3 defines the 
 problem statement, notation, fairness metrics, online evaluation, and drift; Section~4 describes the methodology and experimental design; Section~5 discusses results; and 
@@ -294,14 +293,12 @@ change (Section~\ref{sec:method:drift}). Components (i) and (ii) are inherited f
 (iii), in the rolling-window fairness monitor that drives both the metrics and the regulariser, and in the way these pieces are wired together into a single prequential
 loop. Figure~\ref{fig:drift-pipeline} provides an end-to-end overview of that loop; Sections~\ref{sec:method:data}--\ref{sec:method:protocol} then describe datasets,
 drift scenarios, baselines, hyperparameter selection, and the evaluation protocol.
-
 \begin{figure*}[t]
 \centering
 \includegraphics[width=0.8\textwidth]{1846ea20-2f1d-415b-9b62-cb781adbf1f6.png}
 \caption{End-to-end overview of \textsc{FADO}. At each step $t$ the model emits a prediction $\hat{y}_t$; the prequential evaluator updates rolling accuracy, demographic parity, and equalized odds; the dual ADWIN detector monitors the online error stream and triggers the reaction controller, which modulates the learning rate $\eta_t$ and the soft-routing temperature $\tau_t$; finally, the test-then-train branch performs a fairness-aware gradient step over the forest parameters. The forest itself is the \textsc{Aranyani} base learner of~\cite{chowdhury2024enhancing}.}
 \label{fig:drift-pipeline}
 \end{figure*}
-
 All experiments were run in Python 3.9.\footnote{Hardware: Intel i5-8500 CPU, NVIDIA GTX 1060 (6\,GB) GPU, and 16\,GB RAM.} Source code, configuration files, and seed manifests are released for reproducibility.
 
 \subsection{Fair Oblique Decision Forest}
@@ -334,7 +331,6 @@ the experiments reported in Section~\ref{sec:results} optimise the DP regularise
 required for the EO gradient (one set of accumulators per class per node) doubles the memory footprint of the fairness state and was not feasible on the hardware
 available for this work. EO is therefore monitored online and reported in Section~\ref{sec:results} as a diagnostic metric, but is not directly optimised by the
 gradient update. Symbols and concrete values for $\lambda$, $\delta$, and the remaining hyperparameters are listed in Table~\ref{tab:hparams}.
-
 To keep the update memory-efficient, the fairness gradient state is maintained as five running tensors—per-node weight and bias gradient accumulators, a per-class
 output accumulator, a subgroup count, and a per-class subgroup count—initialised once at the start of the stream and updated in place via an exponential moving average
 on every observed sample. The fairness contribution to the gradient is then assembled in closed form from these running statistics and added to the predictive gradient
