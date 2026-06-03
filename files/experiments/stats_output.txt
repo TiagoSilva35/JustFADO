@@ -1,0 +1,208 @@
+Loaded 568 rows.
+Datasets: ['adult', 'compas', 'diabetes', 'folktables']
+Models:   ['aranyani', 'arf', 'rfr']
+Seeds counts per (dataset, model, scenario):
+dataset     model_raw  scenario                    
+adult       aranyani   abrupt_gender                   30
+                       gender_relationship_decouple    30
+                       gradual_gender                  30
+                       no_drift                        30
+                       occupation_gender_reversal      30
+            arf        abrupt_gender                   30
+                       gender_relationship_decouple    30
+                       gradual_gender                  30
+                       no_drift                        30
+                       occupation_gender_reversal      30
+            rfr        abrupt_gender                   30
+                       gender_relationship_decouple    30
+                       gradual_gender                  30
+                       no_drift                        30
+                       occupation_gender_reversal      30
+compas      aranyani   compas                           7
+            arf        compas                           8
+            rfr        compas                           7
+diabetes    aranyani   diabetes                         2
+            arf        diabetes                         2
+            rfr        diabetes                         2
+folktables  aranyani   folktables                      30
+            arf        folktables                      30
+            rfr        folktables                      30
+
+================ Adult: paired FADO-vs-baseline tests ================
+
+  >>> No Drift / ACCURACY
+      FADO: 0.8515 +/- 0.0012  (n=30)
+      vs   ARF: 0.8344 +/- 0.0044 | diff=+0.0170 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=+1.000 (large) | FADO better
+      vs   RFR: 0.8400 +/- 0.0021 | diff=+0.0114 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=+1.000 (large) | FADO better
+
+  >>> No Drift / DP
+      FADO: 0.0908 +/- 0.0025  (n=30)
+      vs   ARF: 0.0894 +/- 0.0039 | diff=+0.0014 | W=144.0 | p_raw=6.99e-02 | p_holm=6.99e-02 (ns) | delta=+0.333 (medium) | baseline better
+      vs   RFR: 0.0999 +/- 0.0029 | diff=-0.0090 | W=2.0 | p_raw=5.59e-09 | p_holm=1.12e-08  *** | delta=-0.933 (large) | FADO better
+
+  >>> No Drift / EO
+      FADO: 0.0606 +/- 0.0061  (n=30)
+      vs   ARF: 0.0925 +/- 0.0118 | diff=-0.0320 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=-1.000 (large) | FADO better
+      vs   RFR: 0.0826 +/- 0.0081 | diff=-0.0220 | W=1.0 | p_raw=3.73e-09 | p_holm=3.73e-09  *** | delta=-0.933 (large) | FADO better
+
+  >>> Abrupt / ACCURACY
+      FADO: 0.8811 +/- 0.0019  (n=30)
+      vs   ARF: 0.8541 +/- 0.0068 | diff=+0.0271 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=+1.000 (large) | FADO better
+      vs   RFR: 0.8801 +/- 0.0019 | diff=+0.0010 | W=120.0 | p_raw=1.97e-02 | p_holm=1.97e-02    * | delta=+0.467 (medium) | FADO better
+
+  >>> Abrupt / DP
+      FADO: 0.1209 +/- 0.0029  (n=30)
+      vs   ARF: 0.0945 +/- 0.0073 | diff=+0.0264 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=+1.000 (large) | baseline better
+      vs   RFR: 0.1304 +/- 0.0028 | diff=-0.0096 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=-1.000 (large) | FADO better
+
+  >>> Abrupt / EO
+      FADO: 0.0924 +/- 0.0048  (n=30)
+      vs   ARF: 0.0842 +/- 0.0119 | diff=+0.0082 | W=83.0 | p_raw=1.46e-03 | p_holm=1.46e-03   ** | delta=+0.533 (large) | baseline better
+      vs   RFR: 0.1030 +/- 0.0059 | diff=-0.0106 | W=16.0 | p_raw=3.15e-07 | p_holm=6.30e-07  *** | delta=-0.733 (large) | FADO better
+
+  >>> Gradual / ACCURACY
+      FADO: 0.8554 +/- 0.0016  (n=30)
+      vs   ARF: 0.8374 +/- 0.0049 | diff=+0.0180 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=+1.000 (large) | FADO better
+      vs   RFR: 0.8467 +/- 0.0024 | diff=+0.0086 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=+1.000 (large) | FADO better
+
+  >>> Gradual / DP
+      FADO: 0.0647 +/- 0.0030  (n=30)
+      vs   ARF: 0.0590 +/- 0.0024 | diff=+0.0057 | W=7.0 | p_raw=3.54e-08 | p_holm=3.54e-08  *** | delta=+0.867 (large) | baseline better
+      vs   RFR: 0.0754 +/- 0.0027 | diff=-0.0106 | W=1.0 | p_raw=3.73e-09 | p_holm=7.45e-09  *** | delta=-0.933 (large) | FADO better
+
+  >>> Gradual / EO
+      FADO: 0.0632 +/- 0.0058  (n=30)
+      vs   ARF: 0.0688 +/- 0.0075 | diff=-0.0056 | W=100.0 | p_raw=5.38e-03 | p_holm=5.38e-03   ** | delta=-0.267 (small) | FADO better
+      vs   RFR: 0.0887 +/- 0.0061 | diff=-0.0254 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=-1.000 (large) | FADO better
+
+  >>> Decouple / ACCURACY
+      FADO: 0.8503 +/- 0.0016  (n=30)
+      vs   ARF: 0.8317 +/- 0.0048 | diff=+0.0186 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=+1.000 (large) | FADO better
+      vs   RFR: 0.8399 +/- 0.0022 | diff=+0.0104 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=+1.000 (large) | FADO better
+
+  >>> Decouple / DP
+      FADO: 0.0947 +/- 0.0052  (n=30)
+      vs   ARF: 0.0889 +/- 0.0034 | diff=+0.0057 | W=22.0 | p_raw=9.98e-07 | p_holm=2.00e-06  *** | delta=+0.667 (large) | baseline better
+      vs   RFR: 0.1032 +/- 0.0038 | diff=-0.0085 | W=30.0 | p_raw=3.79e-06 | p_holm=3.79e-06  *** | delta=-0.867 (large) | FADO better
+
+  >>> Decouple / EO
+      FADO: 0.0708 +/- 0.0075  (n=30)
+      vs   ARF: 0.0942 +/- 0.0124 | diff=-0.0234 | W=1.0 | p_raw=3.73e-09 | p_holm=3.73e-09  *** | delta=-0.933 (large) | FADO better
+      vs   RFR: 0.0918 +/- 0.0071 | diff=-0.0210 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=-1.000 (large) | FADO better
+
+  >>> Reversal / ACCURACY
+      FADO: 0.8503 +/- 0.0017  (n=30)
+      vs   ARF: 0.8332 +/- 0.0046 | diff=+0.0171 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=+1.000 (large) | FADO better
+      vs   RFR: 0.8394 +/- 0.0022 | diff=+0.0109 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=+1.000 (large) | FADO better
+
+  >>> Reversal / DP
+      FADO: 0.0603 +/- 0.0042  (n=30)
+      vs   ARF: 0.0592 +/- 0.0030 | diff=+0.0011 | W=171.0 | p_raw=2.13e-01 | p_holm=2.13e-01 (ns) | delta=+0.400 (medium) | baseline better
+      vs   RFR: 0.0676 +/- 0.0029 | diff=-0.0073 | W=24.0 | p_raw=1.42e-06 | p_holm=2.84e-06  *** | delta=-0.933 (large) | FADO better
+
+  >>> Reversal / EO
+      FADO: 0.0537 +/- 0.0075  (n=30)
+      vs   ARF: 0.0756 +/- 0.0104 | diff=-0.0219 | W=1.0 | p_raw=3.73e-09 | p_holm=7.45e-09  *** | delta=-0.933 (large) | FADO better
+      vs   RFR: 0.0665 +/- 0.0063 | diff=-0.0128 | W=21.0 | p_raw=8.33e-07 | p_holm=8.33e-07  *** | delta=-0.800 (large) | FADO better
+
+================ Folktables: paired FADO-vs-baseline tests ================
+
+  >>> Folktables / ACCURACY
+      FADO: 0.8217 +/- 0.0025  (n=30)
+      vs   ARF: 0.7833 +/- 0.0018 | diff=+0.0385 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=+1.000 (large) | FADO better
+      vs   RFR: 0.7887 +/- 0.0008 | diff=+0.0330 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=+1.000 (large) | FADO better
+
+  >>> Folktables / DP
+      FADO: 0.0635 +/- 0.0019  (n=30)
+      vs   ARF: 0.0799 +/- 0.0043 | diff=-0.0164 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=-1.000 (large) | FADO better
+      vs   RFR: 0.0734 +/- 0.0010 | diff=-0.0099 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=-1.000 (large) | FADO better
+
+  >>> Folktables / EO
+      FADO: 0.0412 +/- 0.0020  (n=30)
+      vs   ARF: 0.0715 +/- 0.0055 | diff=-0.0302 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=-1.000 (large) | FADO better
+      vs   RFR: 0.0555 +/- 0.0013 | diff=-0.0143 | W=0.0 | p_raw=1.86e-09 | p_holm=3.73e-09  *** | delta=-1.000 (large) | FADO better
+
+--- Brown-Forsythe (Levene, median-centred) variance test on Folktables DP ---
+   sigma_DP(FADO) = 0.00187
+   sigma_DP(ARF) = 0.00427
+   sigma_DP(RFR) = 0.00102
+   statistic = 18.445    p = 2.098e-07
+   -> variances differ significantly (p < 0.05)
+
+================ LaTeX rows (ready to paste) ================
+
+----- Adult: full table including 'Decouple' scenario, 3 metrics -----
+% --- Adult results table (auto-generated) ---
+\begin{tabular}{llccc}
+\toprule
+\textbf{Scenario} & \textbf{Model} & \textbf{ACCURACY $\uparrow$} & \textbf{DP $\downarrow$} & \textbf{EO $\downarrow$} \\
+\midrule
+\textbf{No Drift} & ARF & $0.8344 \pm 0.0044$ & $\mathbf{0.0894 \pm 0.0039}$ & $0.0925 \pm 0.0118$ \\
+ & RFR & $0.8400 \pm 0.0021$ & $0.0999 \pm 0.0029$ & $0.0826 \pm 0.0081$ \\
+ & \textbf{FADO} & $\mathbf{0.8515 \pm 0.0012}^{***}$ & $0.0908 \pm 0.0025$ & $\mathbf{0.0606 \pm 0.0061}^{***}$ \\
+\addlinespace
+\textbf{Abrupt} & ARF & $0.8541 \pm 0.0068$ & $\mathbf{0.0945 \pm 0.0073}^{\dagger}$ & $\mathbf{0.0842 \pm 0.0119}^{\dagger}$ \\
+ & RFR & $0.8801 \pm 0.0019$ & $0.1304 \pm 0.0028$ & $0.1030 \pm 0.0059$ \\
+ & \textbf{FADO} & $\mathbf{0.8811 \pm 0.0019}^{*}$ & $0.1209 \pm 0.0029$ & $0.0924 \pm 0.0048$ \\
+\addlinespace
+\textbf{Gradual} & ARF & $0.8374 \pm 0.0049$ & $\mathbf{0.0590 \pm 0.0024}^{\dagger}$ & $0.0688 \pm 0.0075$ \\
+ & RFR & $0.8467 \pm 0.0024$ & $0.0754 \pm 0.0027$ & $0.0887 \pm 0.0061$ \\
+ & \textbf{FADO} & $\mathbf{0.8554 \pm 0.0016}^{***}$ & $0.0647 \pm 0.0030$ & $\mathbf{0.0632 \pm 0.0058}^{**}$ \\
+\addlinespace
+\textbf{Decouple} & ARF & $0.8317 \pm 0.0048$ & $\mathbf{0.0889 \pm 0.0034}^{\dagger}$ & $0.0942 \pm 0.0124$ \\
+ & RFR & $0.8399 \pm 0.0022$ & $0.1032 \pm 0.0038$ & $0.0918 \pm 0.0071$ \\
+ & \textbf{FADO} & $\mathbf{0.8503 \pm 0.0016}^{***}$ & $0.0947 \pm 0.0052$ & $\mathbf{0.0708 \pm 0.0075}^{***}$ \\
+\addlinespace
+\textbf{Reversal} & ARF & $0.8332 \pm 0.0046$ & $\mathbf{0.0592 \pm 0.0030}$ & $0.0756 \pm 0.0104$ \\
+ & RFR & $0.8394 \pm 0.0022$ & $0.0676 \pm 0.0029$ & $0.0665 \pm 0.0063$ \\
+ & \textbf{FADO} & $\mathbf{0.8503 \pm 0.0017}^{***}$ & $0.0603 \pm 0.0042$ & $\mathbf{0.0537 \pm 0.0075}^{***}$ \\
+\bottomrule
+\end{tabular}
+
+----- Adult: paper subset (4 scenarios, Acc + DP only) -----
+% --- Adult results table (auto-generated) ---
+\begin{tabular}{llcc}
+\toprule
+\textbf{Scenario} & \textbf{Model} & \textbf{ACCURACY $\uparrow$} & \textbf{DP $\downarrow$} \\
+\midrule
+\textbf{No Drift} & ARF & $0.8344 \pm 0.0044$ & $\mathbf{0.0894 \pm 0.0039}$ \\
+ & RFR & $0.8400 \pm 0.0021$ & $0.0999 \pm 0.0029$ \\
+ & \textbf{FADO} & $\mathbf{0.8515 \pm 0.0012}^{***}$ & $0.0908 \pm 0.0025$ \\
+\addlinespace
+\textbf{Abrupt} & ARF & $0.8541 \pm 0.0068$ & $\mathbf{0.0945 \pm 0.0073}^{\dagger}$ \\
+ & RFR & $0.8801 \pm 0.0019$ & $0.1304 \pm 0.0028$ \\
+ & \textbf{FADO} & $\mathbf{0.8811 \pm 0.0019}^{*}$ & $0.1209 \pm 0.0029$ \\
+\addlinespace
+\textbf{Gradual} & ARF & $0.8374 \pm 0.0049$ & $\mathbf{0.0590 \pm 0.0024}^{\dagger}$ \\
+ & RFR & $0.8467 \pm 0.0024$ & $0.0754 \pm 0.0027$ \\
+ & \textbf{FADO} & $\mathbf{0.8554 \pm 0.0016}^{***}$ & $0.0647 \pm 0.0030$ \\
+\addlinespace
+\textbf{Reversal} & ARF & $0.8332 \pm 0.0046$ & $\mathbf{0.0592 \pm 0.0030}$ \\
+ & RFR & $0.8394 \pm 0.0022$ & $0.0676 \pm 0.0029$ \\
+ & \textbf{FADO} & $\mathbf{0.8503 \pm 0.0017}^{***}$ & $0.0603 \pm 0.0042$ \\
+\bottomrule
+\end{tabular}
+
+----- Folktables: full (3 metrics) -----
+% --- Folktables results table (auto-generated) ---
+\begin{tabular}{lccc}
+\toprule
+Model & ACCURACY $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
+\midrule
+\textbf{FADO} & $\mathbf{0.8217 \pm 0.0025}^{***}$ & $\mathbf{0.0635 \pm 0.0019}^{***}$ & $\mathbf{0.0412 \pm 0.0020}^{***}$ \\
+ARF & $0.7833 \pm 0.0018$ & $0.0799 \pm 0.0043$ & $0.0715 \pm 0.0055$ \\
+RFR & $0.7887 \pm 0.0008$ & $0.0734 \pm 0.0010$ & $0.0555 \pm 0.0013$ \\
+\bottomrule
+\end{tabular}
+
+----- Folktables: paper subset (Acc + DP) -----
+% --- Folktables results table (auto-generated) ---
+\begin{tabular}{lcc}
+\toprule
+Model & ACCURACY $\uparrow$ & DP $\downarrow$ \\
+\midrule
+\textbf{FADO} & $\mathbf{0.8217 \pm 0.0025}^{***}$ & $\mathbf{0.0635 \pm 0.0019}^{***}$ \\
+ARF & $0.7833 \pm 0.0018$ & $0.0799 \pm 0.0043$ \\
+RFR & $0.7887 \pm 0.0008$ & $0.0734 \pm 0.0010$ \\
+\bottomrule
+\end{tabular}

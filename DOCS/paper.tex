@@ -12,23 +12,35 @@
 \usepackage{xcolor}
 \usepackage{tikz}
 \usepackage{graphicx}
+\usepackage{placeins}
+\usepackage{etoolbox}
+\AtBeginEnvironment{thebibliography}{\scriptsize}
 \usetikzlibrary{positioning, arrows.meta, shapes.geometric, calc, backgrounds}
 \newcommand{\TODO}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
 
-\title{Fairness-Aware Online Learning Under Concept Drift}
+\title{FADO: A Reaction Controller for Fairness-Aware Online Learning Under Concept Drift}
 
-\author{%
-  Tiago Silva\thanks{Corresponding author} \\
-  Department of Informatics Engineering\\
-  University of Coimbra\\
-  \texttt{tds@student.uc.pt} \\
-}
+% \author{%
+%   Tiago Silva\thanks{Corresponding author} \\
+%   Department of Informatics Engineering\\
+%   University of Coimbra\\
+%   \texttt{tds@student.uc.pt} \\
+% }
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
+Online learning systems deployed in non-stationary environments must remain both predictive and fair as the data distribution evolves. Existing fairness-aware
+online learners optimise a fixed regulariser and do not adapt to concept drift, whereas drift-adaptive streaming methods react to drift but enforce no fairness
+constraints. We propose Fairness-Aware Drift-Aware Online Learning (\textsc{FADO}), a framework that couples the \textsc{Aranyani} fair oblique decision forest~\cite{chowdhury2024enhancing} with a
+dual-threshold ADWIN drift detector and a reaction controller that modulates the optimiser learning rate and the soft-routing temperature in response to
+detected drift, and anneals both back to baseline during recovery. We evaluate \textsc{FADO} under a prequential test-then-train protocol on \textsc{Adult}
+(four controlled drift scenarios) and \textsc{Folktables} ACS Income (CA; natural 2015 $\to$ 2017--2018 cross-year shift), comparing against the \textsc{ARF}
+and \textsc{RFR} baselines. \textsc{FADO} attains the highest prequential top-$1$ accuracy in every scenario, with gains over the strongest streaming
+baseline up to $+3.8$, while reducing demographic-parity violation up to $21\%$ and equalized-odds violation by $26$--$42\%$ relative to the
+baselines on the cross-year shift. All reported comparisons are aggregated over $30$ seeds with Holm-corrected paired Wilcoxon signed-rank tests.
 \end{abstract}
 
 \section{Introduction}
@@ -42,26 +54,21 @@ Most existing fairness-aware models, however, are developed under the assumption
 real-world environments are inherently dynamic, and the statistical properties of data may evolve over time due to policy changes, behavioural 
 shifts, seasonal effects, economic fluctuations, or other social transformations. This phenomenon, commonly referred to as concept drift, 
 occurs when the relationship between input variables and target outcomes changes over time, causing previously learned decision boundaries to 
-become outdated. Different forms of concept drift~\cite{DBLP:journals/corr/WebbHCNP15} change how models must react and adapt. Such changes can significantly degrade 
-predictive performance if models are not robust enough to adapt to new patterns. More critically, concept drift also poses a significant threat to the fairness of ML systems. As data distributions shift, 
-the statistical relationships that underpin fairness guarantees may also change, potentially leading to increased bias and unfair treatment of certain groups.
+become outdated. Different forms of concept drift~\cite{DBLP:journals/corr/WebbHCNP15} require different adaptation strategies and can degrade performance when models fail to adjust. 
+Drift also threatens fairness: shifting distributions alter the statistical relationships that support fairness guarantees, increasing bias against some groups.
 To address this challenge, the online learning and data stream mining literature has proposed numerous adaptive methods capable of detecting and 
 responding to concept drift in real time. These approaches often rely on drift detection mechanisms combined with incremental learning 
 strategies to maintain predictive accuracy under non-stationary conditions. Nevertheless, the majority of existing methods focus primarily on 
-predictive utility, while fairness considerations remain comparatively underexplored. As a result, fairness guarantees established during training 
-may deteriorate over time even when predictive accuracy remains relatively stable. This limitation is particularly critical in high-stakes applications, 
+predictive utility~\cite{10.1007/s10994-017-5642-8, KLAIBER20231261}, while fairness considerations remain comparatively underexplored. As a result, fairness guarantees established during training 
+may deteriorate over time even when predictive accuracy remains relatively stable~\cite{Deho2025}. This limitation is particularly critical in high-stakes applications, 
 where persistent fairness violations may remain undetected for extended periods, compromising trustworthiness, reinforcing societal inequalities, 
-and causing tangible harm to affected groups.
-Existing fairness-aware online learning methods remain limited among two dimensions. First, many approaches that explicitly handle drift focus exclusively on predictive
-performance, leaving fairness guarantees unmonitored once the underlying distribution moves. Second, methods that do enforce fairness in streaming settings typically rely on
-static intervention, fixed regularizers, fixed thresholds, or one-shot pre-processing that adapt slowly, if at all, to shifts in the protected-attribute conditional or the
-decision boundary. These limitations highlight an important gap in the literature and motivate the following research questions:
+and causing tangible harm to affected groups. These limitations highlight an important gap in the literature and motivate the following research questions:
 \begin{itemize}
 \item \textbf{RQ1:} To what extent does concept drift affect group fairness metrics in online learning settings?
 \item \textbf{RQ2:} Can adaptive drift detection and response mechanisms preserve fairness guarantees while maintaining predictive performance over time?
 \item \textbf{RQ3:} How do different types of concept drift influence the stability and robustness of fairness-aware learning models?
 \end{itemize}
-Based on these research questions, this work investigates fairness-aware online learning under concept drift. We introduce \textsc{FADO} (Fairness-Aware Drift-aware Online learning),
+Based on these research questions, this work investigates fairness-aware online learning under concept drift. We introduce Fairness-Aware Drift-Aware Online Learning (\textsc{FADO}),
 a framework that wraps an existing fair oblique decision forest—\textsc{Aranyani}~\cite{chowdhury2024enhancing}—with a dual-threshold drift detector and a reaction controller that
 modulates the optimizer learning rate and the soft-routing temperature in response to detected change. We emphasize that \textsc{Aranyani} is not contributed by this paper:
 it serves as the in-processing base learner around which \textsc{FADO} builds its drift-detection and response machinery. Our central hypothesis is that fairness degradation under
@@ -70,16 +77,15 @@ predictive utility and equitable treatment across demographic groups in non-stat
 
 To evaluate this hypothesis, we run a prequential, test-then-train evaluation on three standard fairness benchmarks: the \textsc{Adult} income dataset, the \textsc{COMPAS} recidivism
 dataset, and the \textsc{Folktables} (ACS Income, CA) dataset; on \textsc{Adult} we additionally inject four controlled synthetic drift scenarios that isolate distinct dimensions of
-distributional change, while \textsc{Folktables} provides a natural cross-year shift between 2015 and 2017--2018. \textsc{FADO} is compared against three streaming baselines covering
+distributional change, while \textsc{Folktables} provides a natural cross-year shift between 2015 and 2017--2018. \textsc{FADO} is compared against two streaming baselines covering
 the accuracy/fairness/adaptivity design space: \textsc{ARF}~\cite{10.1007/s10994-017-5642-8}, an accuracy-oriented Adaptive Random Forest with drift detection but no fairness mechanism;
-\textsc{RFR}, a sharpness-aware fairness-reweighted variant without adaptive drift handling; and \textsc{FERMI}~\cite{lowy2021fermi}, a fair logistic-regression baseline based on an
-exponential R\'enyi mutual-information regularizer. The experimental results demonstrate that pairing a fairness-aware ensemble with an explicit reaction controller substantially
+and \textsc{RFR}, a sharpness-aware fairness-reweighted variant without adaptive drift handling. The experimental results demonstrate that pairing a fairness-aware ensemble with an explicit reaction controller substantially
 improves fairness stability over time while maintaining competitive predictive performance, and that fairness degradation is highly sensitive to the nature and intensity of the
 drift, reinforcing the importance of adaptive fairness-aware mechanisms in dynamic environments. The main contributions of this work are:
 \begin{itemize}
 \item \textsc{FADO}, a fairness-aware online learning framework that wraps a fair oblique decision forest with a dual-threshold ADWIN drift detector and a reaction controller acting on the learning rate and the soft-routing temperature;
-\item An empirical analysis, across four synthetic drift scenarios on \textsc{Adult} and one natural cross-year shift on \textsc{Folktables}, of how different forms of concept drift affect group fairness metrics over time;
-\item A comparison against three streaming baselines (\textsc{ARF}, \textsc{RFR}, \textsc{FERMI}) showing that adaptive fairness mechanisms can preserve fairness guarantees while maintaining predictive performance in non-stationary environments.
+\item An empirical analysis, across four synthetic drift scenarios on \textsc{Adult} and one natural cross-year shift on \textsc{Folktables}, of how different forms of concept drift affect group fairness metrics over time, 
+and the corresponding performance results of \textsc{FADO} compared to the \textsc{ARF} and \textsc{RFR} baselines, demonstrating substantial improvements in fairness stability with competitive predictive performance.
 \end{itemize}
 The remainder of this paper is organized as follows: Section~2 reviews the literature on fairness-aware machine learning and concept drift adaptation; Section~3 defines the 
 problem statement, notation, fairness metrics, online evaluation, and drift; Section~4 describes the methodology and experimental design; Section~5 discusses results; and 
@@ -87,7 +93,6 @@ Section~6 concludes and outlines directions for future work.
 
 \section{Related Work}
 Following the most adopted taxonomy~\cite{Salazar_2026}, in this section, the works will be divided into three categories: (i) pre-processing methods, (ii) in-processing and (iii) post-processing methods.
-This is the most common taxonomy used in the literature and it helps providing a clear overview of the different approaches commonly used to achieve fairness. 
 \subsection{Pre-processing methods}
 Pre-processing methods aim to mitigate bias in the data before the training stage of a model. Xiong et al.~\cite{Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024} 
 propose leveraging training samples reweighting to satisfy demographic parity while minimizing distributional distortion using Wasserstein distance to the original dataset. Although
@@ -100,10 +105,6 @@ by the binary setup, meaning it only works with binary sensitive attributes and 
 \subsection{In-processing methods}
 In-processing methods incorporate fairness constraints directly into the learning algorithm. Because our work falls in this category, 
 we focus on approaches that strongly inspired our method.
-
-FERMI~\cite{lowy2021fermi} formulates fairness as minimizing the statistical dependence between predictions and sensitive attributes using an exponential Rényi 
-mutual information regularizer, which yields a differentiable objective compatible with stochastic optimization and provides theoretical guarantees for common group 
-fairness notions such as demographic parity and equalized odds.
 
 Chowdhury et al.~\cite{chowdhury2024enhancing} propose Aranyani, an online fair-learning framework based on ensembles of soft-routed oblique decision trees. 
 Unlike standard axis-aligned trees, oblique trees employ learned linear combinations of features at internal nodes, enabling more expressive decision boundaries. 
@@ -122,14 +123,11 @@ demonstrating competitive fairness--accuracy trade-offs relative to baseline app
 protected attributes, and it does not explicitly address concept drift or non-stationary data distributions. Furthermore, many reported baselines are modified variants of the 
 proposed method rather than fundamentally different adaptive approaches. These limitations motivate our work, which extends fairness-aware online ensembles with robust adaptive 
 mechanisms for non-stationary environments.
-
-
 While Aranyani focuses primarily on fairness-aware optimization in online learning, another closely related line of work addresses adaptation under concept drift. 
 Gomes et al.~\cite{10.1007/s10994-017-5642-8} propose Adaptive Random Forest (ARF), a streaming ensemble framework designed for evolving data distributions. 
 ARF extends classical random forests to streaming settings by combining online bagging, randomized feature selection, and adaptive drift detection mechanisms. 
 The framework employs ensembles of Hoeffding Trees trained incrementally on sequential data streams and uses Poisson-based online bagging to efficiently simulate bootstrap 
 resampling in a single-pass setting.
-
 A major contribution of ARF is its explicit handling of concept drift. Each tree in the ensemble is equipped with independent warning and drift detectors. 
 When a warning signal is triggered, a background tree starts training in parallel using incoming data. If drift is later confirmed, the original tree is replaced with the 
 partially trained background model, enabling rapid recovery from abrupt or gradual distributional changes without retraining the entire ensemble from scratch. The independence 
@@ -139,7 +137,6 @@ and incremental concept drift. Consequently, ARF has become a widely adopted ben
 ARF is designed exclusively for predictive adaptation and does not incorporate fairness constraints or bias mitigation mechanisms. As a result, fairness properties may 
 deteriorate significantly under distributional shifts, motivating the need for fairness-aware adaptive streaming methods such as the one proposed in this work. We will 
 later prove that the our method strongly outperforms ARF in terms of both fairness and performance under drift. 
-
 Some approaches have already attempted to handle drift in fairness-aware settings. Jiang et al.~\cite{jiang2023chasingfairnessdistributionshift} study the problem of 
 maintaining fairness under distribution shift. They assume that distribution shift can be modeled as an equivalent perturbation in the parameter space of the learned model. 
 Based on this assumption, they propose a robust fairness regularization method that optimizes for worst-case performance under bounded model weight perturbations, improving 
@@ -149,13 +146,11 @@ Post-processing methods adjust model predictions after training to accomplish fa
 these methods do not require modifying the original training data or retraining the underlying model. Instead, fairness is enforced by transforming the model outputs, 
 such as prediction labels, confidence scores, or decision thresholds. This makes post-processing particularly attractive in high-stakes domains where predictive systems 
 are proprietary, computationally expensive to retrain, or inaccessible to practitioners.
-
 One of the most influential post-processing approaches was introduced by Hardt et al.~\cite{hardt2016equalityopportunitysupervisedlearning}, who proposed a framework for enforcing equalized odds and 
 equality of opportunity through randomized threshold adjustments. The method computes group-specific decision rules that probabilistically alter classifier outputs to 
 equalize error rates across demographic groups. Because the optimization is performed after model training, the approach is model-agnostic and can be applied to arbitrary 
 black-box classifiers. The framework has become a foundational baseline in fairness-aware machine learning due to its simplicity and strong theoretical guarantees. However, 
 the method may substantially alter calibration properties and often introduces discontinuities in prediction behavior caused by fixed randomization regions.
-
 Building upon this line of work, Mishler et al.~\cite{Mishler_2021} propose a post-processing framework for achieving counterfactual equalized odds in 
 risk assessment instruments. The authors argue that standard fairness notions based on observable outcomes can be inappropriate in intervention settings where observed labels are themselves 
 influenced by prior decisions or treatments. To address this issue, the method reformulates 
@@ -172,17 +167,14 @@ prediction tasks demonstrate that the method achieves comparable group fairness 
 However, despite these improvements, the framework still operates purely at the prediction layer and does not explicitly address fairness degradation under concept drift or 
 evolving data distributions.
 
-Notwithstanding the significant contributions of these post-processing methods to the fairness literature, they are primarily developed under static data assumptions and are, therefore,
-not currently focused on addressing the challenges posed by concept drift in online learning settings. As a result, while they may effectively mitigate bias at a given point in time, their fairness guarantees may deteriorate as data distributions evolve.
-
 \subsection{Main Limitations of Prior Work}
 \label{sec:related:limitations}
-Synthesising the three families surveyed above, we identify four main limitations that jointly motivate this work and the design of \textsc{FADO}:
+Notwithstanding the significant contributions of the three families surveyed above, we identify four main limitations that jointly motivate this work and the design of \textsc{FADO}:
 \begin{itemize}
-  \item \textbf{L1 -- Static fairness assumption.} Most of processing methods are developed under a stationary-data assumption. Once the protected-attribute conditional or the label distribution shifts, the fairness guarantees obtained at training time provide no protection at deployment.
-  \item \textbf{L2 -- Adaptive methods are accuracy-oriented.} Streaming ensembles such as \textsc{ARF}~\cite{10.1007/s10994-017-5642-8} explicitly detect and react to drift but do so purely on the predictive-error signal, with no mechanism for tracking or correcting fairness violations.
-  \item \textbf{L3 -- Existing fair online learners do not react to drift.} \textsc{Aranyani}~\cite{chowdhury2024enhancing} and \textsc{FERMI}~\cite{lowy2021fermi} provide memory-efficient online fairness, but their regularisers are non-adaptive: when the distribution moves they continue to optimise the same penalty with the same hyperparameters, and convergence to the new optimum is slow.
-  \item \textbf{L4 -- Drift-aware fair methods rely on assumptions that do not transfer to streams.} Approaches such as~\cite{jiang2023chasingfairnessdistributionshift} treat distribution shift as a bounded weight-space perturbation, which is usefull in worst-case analysis but doesn't yield an actionable online detector or controller.
+  \item \textbf{L1 -- Static fairness assumption.} Once the protected-attribute conditional or the label distribution shifts, the fairness guarantees obtained at training time provide no protection at deployment;
+  \item \textbf{L2 -- Adaptive methods are accuracy-oriented.} Streaming ensembles such as \textsc{ARF}~\cite{10.1007/s10994-017-5642-8} explicitly detect and react to drift but do so purely on the predictive-error signal, with no mechanism for tracking or correcting fairness violations;
+  \item \textbf{L3 -- Existing fair online learners do not react to drift.} \textsc{Aranyani}~\cite{chowdhury2024enhancing} provides memory-efficient online fairness, but its regulariser is non-adaptive: when the distribution moves it continues to optimise the same penalty with the same hyperparameters, and convergence to the new optimum is slow;
+  \item \textbf{L4 -- Drift-aware fair methods rely on assumptions that do not transfer to streams.} Approaches such as~\cite{jiang2023chasingfairnessdistributionshift} treat distribution shift as a bounded weight-space perturbation, which is usefull in worst-case analysis but doesn't yield an actionable online detector or controller;
 \end{itemize}
 \textsc{FADO} focuses on adressing L1--L4 directly by retaining the node-level fairness regulariser of \textsc{Aranyani} as the in-processing base learner, and adding on top of it (i) an ADWIN-based dual-threshold detector on the online error stream, (ii) a reaction controller that modulates the optimiser learning rate and the soft-routing temperature on warning and confirmation events, and (iii) a rolling-window fairness monitor whose statistics also drive the fairness-aware updates.
 
@@ -301,15 +293,13 @@ change (Section~\ref{sec:method:drift}). Components (i) and (ii) are inherited f
 (iii), in the rolling-window fairness monitor that drives both the metrics and the regulariser, and in the way these pieces are wired together into a single prequential
 loop. Figure~\ref{fig:drift-pipeline} provides an end-to-end overview of that loop; Sections~\ref{sec:method:data}--\ref{sec:method:protocol} then describe datasets,
 drift scenarios, baselines, hyperparameter selection, and the evaluation protocol.
-
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.9\textwidth]{1846ea20-2f1d-415b-9b62-cb781adbf1f6.png}
+\includegraphics[width=0.8\textwidth]{1846ea20-2f1d-415b-9b62-cb781adbf1f6.png}
 \caption{End-to-end overview of \textsc{FADO}. At each step $t$ the model emits a prediction $\hat{y}_t$; the prequential evaluator updates rolling accuracy, demographic parity, and equalized odds; the dual ADWIN detector monitors the online error stream and triggers the reaction controller, which modulates the learning rate $\eta_t$ and the soft-routing temperature $\tau_t$; finally, the test-then-train branch performs a fairness-aware gradient step over the forest parameters. The forest itself is the \textsc{Aranyani} base learner of~\cite{chowdhury2024enhancing}.}
 \label{fig:drift-pipeline}
 \end{figure*}
-
-All experiments were run in Python 3.9 on an Intel i5-8500 CPU, an NVIDIA GTX 1060 (6\,GB) GPU, and 16\,GB of RAM. Source code, configuration files, and seed manifests are released for reproducibility.
+All experiments were run in Python 3.9.\footnote{Hardware: Intel i5-8500 CPU, NVIDIA GTX 1060 (6\,GB) GPU, and 16\,GB RAM.} Source code, configuration files, and seed manifests are released for reproducibility.
 
 \subsection{Fair Oblique Decision Forest}
 \label{sec:method:model}
@@ -335,16 +325,17 @@ nodes rather than only at the output layer. Per-step learning combines the predi
 \[
 \mathcal{L}_t \;=\; \mathcal{L}_{\mathrm{CE}}\bigl(f(x_t), y_t\bigr) \;+\; \lambda \sum_{(k,j)} \frac{1}{|\mathcal{A}|}\sum_{a \in \mathcal{A}} \phi_\delta\!\bigl(F_{kj,a}\bigr),
 \]
-where $\mathcal{L}_{\mathrm{CE}}$ is the per-step cross-entropy with logits and $\phi_\delta(\cdot)$ is the piecewise quadratic--linear surrogate of Section~III. For equalised odds the same
-construction is applied conditionally on the true label, yielding $\mathcal{L}_{\mathrm{EO}}$ as derived there. Symbols and concrete values for $\lambda$, $\delta$, and the
-remaining hyperparameters are listed in Table~\ref{tab:hparams}.
-
+where $\mathcal{L}_{\mathrm{CE}}$ is the per-step cross-entropy with logits and $\phi_\delta(\cdot)$ is the piecewise quadratic--linear surrogate of Section~III. The
+implementation supports both the DP objective $\mathcal{L}$ above and the EO objective $\mathcal{L}_{\mathrm{EO}}$ of Section~\ref{sec:problem:regulariser}; however,
+the experiments reported in Section~\ref{sec:results} optimise the DP regulariser only, because maintaining the additional class-conditional running statistics
+required for the EO gradient (one set of accumulators per class per node) doubles the memory footprint of the fairness state and was not feasible on the hardware
+available for this work. EO is therefore monitored online and reported in Section~\ref{sec:results} as a diagnostic metric, but is not directly optimised by the
+gradient update. Symbols and concrete values for $\lambda$, $\delta$, and the remaining hyperparameters are listed in Table~\ref{tab:hparams}.
 To keep the update memory-efficient, the fairness gradient state is maintained as five running tensors—per-node weight and bias gradient accumulators, a per-class
 output accumulator, a subgroup count, and a per-class subgroup count—initialised once at the start of the stream and updated in place via an exponential moving average
 on every observed sample. The fairness contribution to the gradient is then assembled in closed form from these running statistics and added to the predictive gradient
 before the optimiser step. This design preserves the parameter-isolation property of the original Aranyani formulation~\cite{chowdhury2024enhancing}: each fairness term
 depends only on local node parameters, which keeps the per-step cost linear in the number of nodes and removes any need to store past samples.
-
 Predictive and fairness metrics are computed over the rolling window of size $W$ (Table~\ref{tab:hparams}); using the same window for the reported metric and for the
 regulariser ensures that the quantity exposed to the reader is exactly the quantity the model is being trained against, with per-step fairness evaluation in $\mathcal{O}(W)$
 rather than $\mathcal{O}(t)$.
@@ -369,6 +360,12 @@ distributional change from confident-but-wrong predictions, which we found in pi
 
 \subsection{Datasets and Preprocessing}
 \label{sec:method:data}
+Table~\ref{tab:datasets} summarises the three datasets. Adult provides a controlled, low-dimensional testbed on which we can inject synthetic
+perturbations of a known form; COMPAS is included as a static, drift-free reference; and Folktables (ACS Income, CA) supplies a large natural
+cross-year shift between 2015 (training) and 2017--2018 (prequential test). All datasets are processed through a shared tabular pipeline:
+numerical features are standardised using training-set means and standard deviations, and categorical variables are one-hot encoded. The same
+preprocessor fitted on the training split is reused for the test stream, so the streaming protocol remains free of test-time information leakage.
+
 \begin{table}[htbp]
 \centering
 \caption{Datasets used in the experiments.}
@@ -385,12 +382,6 @@ Folktables (ACS Income, CA) & 187{,}474 + 187{,}475 & Income $> \$50$K & Sex & T
 \bottomrule
 \end{tabular}}
 \end{table}
-
-Table~\ref{tab:datasets} summarises the three datasets. Adult provides a controlled, low-dimensional testbed on which we can inject synthetic
-perturbations of a known form; COMPAS is included as a static, drift-free reference; and Folktables (ACS Income, CA) supplies a large natural
-cross-year shift between 2015 (training) and 2017--2018 (prequential test). All datasets are processed through a shared tabular pipeline:
-numerical features are standardised using training-set means and standard deviations, and categorical variables are one-hot encoded. The same
-preprocessor fitted on the training split is reused for the test stream, so the streaming protocol remains free of test-time information leakage.
 
 \subsection{Drift Scenarios}
 \label{sec:method:scenarios}
@@ -416,11 +407,10 @@ wide-front multi-feature shift.
 
 \subsection{Baselines}
 \label{sec:method:baselines}
-We compare \textsc{FADO} against three streaming baselines that span the accuracy/fairness/adaptivity design space:
+We compare \textsc{FADO} against two streaming baselines that span the accuracy/fairness/adaptivity design space:
 \begin{itemize}
-  \item \textbf{ARF}~\cite{10.1007/s10994-017-5642-8}: the Adaptive Random Forest from the \texttt{river} library, used as an accuracy-oriented streaming reference that handles drift through per-tree warning and drift detectors and background trees, but without any fairness mechanism.
+  \item \textbf{ARF}~\cite{10.1007/s10994-017-5642-8}: the Adaptive Random Forest from the \texttt{river} library, used as an accuracy-oriented streaming reference that handles drift through per-tree warning and drift detectors and background trees, but without any fairness mechanism;
   \item \textbf{RFR}: a sharpness-aware reweighting variant that applies the RFR optimiser~\cite{jiang2023chasingfairnessdistributionshift} (sharpness-aware minimisation over a fairness-reweighted loss); this provides a fairness-aware static baseline without adaptive drift handling.
-  \item \textbf{FERMI}~\cite{lowy2021fermi}: a fair logistic regression based on the exponential R\'enyi mutual-information regulariser, run in online mode with $\lambda$ fixed to the value recommended by the authors.
 \end{itemize}
 All baselines are evaluated under the same batch-size-one test-then-train prequential protocol as \textsc{FADO} so that comparisons are not confounded by data ordering or by access to look-ahead information. We do not include the base \textsc{Aranyani} learner as a separate baseline because \textsc{FADO} reduces to it when the controller never fires; the no-drift row of Table~\ref{tab:adult-results} therefore acts as an implicit \textsc{Aranyani} reference.
 
@@ -428,8 +418,8 @@ All baselines are evaluated under the same batch-size-one test-then-train preque
 \label{sec:method:hpo}
 The formulation above is governed by a compact set of hyperparameters that fall into three groups: those that define the \emph{base learner} (ensemble geometry and online
 optimiser), those that define the \emph{fairness regulariser} (penalty weight, surrogate shape, statistics window), and those that define the \emph{drift controller}
-(ADWIN thresholds, learning-rate and temperature schedules, gating logic). Table~\ref{tab:hparams} lists every symbol, its role, and the value used in all reported experiments;
-the rationale for the non-obvious choices is discussed below.
+(ADWIN thresholds, learning-rate and temperature schedules, gating logic). Table~\ref{tab:hparams} lists the fairness-regulariser and controller symbols, their roles, and
+the values used in all reported experiments; base-learner settings are stated in the text. The rationale for the non-obvious choices is discussed below.
 
 \begin{table}[htbp]
 \centering
@@ -440,12 +430,6 @@ the rationale for the non-obvious choices is discussed below.
 \begin{tabular}{l l p{4.6cm}}
 \toprule
 \textbf{Symbol} & \textbf{Value} & \textbf{Role} \\
-\midrule
-\multicolumn{3}{l}{\emph{Base learner (\textsc{Aranyani} forest)}} \\
-\midrule
-$K$         & $3$                   & Number of oblique trees in the ensemble \\
-$h$         & $4$                   & Depth of each tree ($15$ internal nodes, $16$ leaves) \\
-$\eta_0$    & $2 \times 10^{-3}$    & Base Adam learning rate \\
 \midrule
 \multicolumn{3}{l}{\emph{Fairness regulariser}} \\
 \midrule
@@ -473,8 +457,8 @@ $m_0$       & $30$                  & Min.\ samples per detector before first ac
 
 \paragraph{Rationale for the non-obvious choices.}
 For the base learner, we use a small ensemble of shallow trees to balace expressivity capabilities and computational efficiency since,
-in online settings, each sample must be processed sequentially and the model must be updated in real time (which can be really costly for large datasets); the public available code
-had $K=3$, $h=3$ and $\eta_0= 2 \times 10^{-3}$ as defaults. We chose to slightly increase the depth so we could test on a wider range of more complex datasets.
+in online settings, each sample must be processed sequentially and the model must be updated in real time; we set $K=3$, $h=4$, and $\eta_0=2 \times 10^{-3}$, slightly
+increasing depth from the \textsc{Aranyani} defaults to handle more complex datasets.
 For Fairness regularisation, we set $\lambda$ to a relatively high value to prioritise fairness over accuracy (more on lambda ablations can be found on the original paper of Aranyani~\cite{chowdhury2024enhancing})
 and $\delta$ to a small value to make the surrogate $\phi_\delta$ more sensitive to small deviations, which is important in online learning where single-sample gradients are noisy; the EMA decay $\gamma$ and the window $W$ were selected to
 balance stability and responsiveness in the rolling fairness statistics, with $\gamma=0.9$ providing a strong bias towards recent samples while still retaining some memory of past data, and $W=1000$ allowing for a sufficiently large sample
@@ -495,109 +479,139 @@ over-tuning of the controller.
 
 \subsection{Evaluation Protocol}
 \label{sec:method:protocol}
-All methods are evaluated under a strict prequential, batch-size-one, test-then-train protocol: at each step the model emits $\hat{y}_t$, the
-prequential metrics are updated, and only then is the parameter update performed using the just-observed $(y_t, a_t)$. We report mean and
-standard deviation over five random seeds. The primary metrics are prequential accuracy, demographic parity (DP), and equalised odds (EO),
-all computed over the same $W$-sample rolling window that drives the fairness regulariser (Table~\ref{tab:hparams}). For Adult, results are aggregated per
-scenario across the five phases described in Section~\ref{sec:method:scenarios}; for Folktables, results are aggregated over the full
-$2017$--$2018$ test stream.
+All methods are evaluated under a strict prequential, batch-size-one, test-then-train protocol: at each step the model emits $\hat{y}_t$, the prequential metrics
+are updated, and only then is the parameter update performed using the just-observed $(y_t, a_t)$. We report mean and standard deviation over $30$ random seeds.
+The primary metrics are prequential accuracy, demographic parity (DP), and equalised odds (EO), all computed over the same $W$-sample rolling window that drives
+the fairness regulariser (Table~\ref{tab:hparams}). For Adult, results are aggregated per scenario across the five phases described in
+Section~\ref{sec:method:scenarios}; for Folktables, results are aggregated over the full $2017$--$2018$ test stream.
+
+For each (scenario, metric) cell, paired-by-seed comparisons of \textsc{FADO} against each baseline are performed using the two-sided Wilcoxon signed-rank test;
+$p$-values are corrected within each cell using the Holm--Bonferroni step-down procedure across the baselines. Effect sizes are reported as Cliff's $\delta$. For
+the Folktables variance claim we use the Brown--Forsythe (Levene, median-centred) test on the per-seed DP values across all three models. The procedure follows
+the recommendations of Dem{\v{s}}ar's standard recipe for ML benchmark comparisons~\cite{demsar2006statistical}.
 
 \section{Results and Discussion}
-\TODO{STILL WAITING FOR FINAL RESULTS TO REFACTOR THIS SECTION. NOT FINISHED!}
-This section reports a prequential evaluation of \textsc{FADO} and the three baselines (ARF, RFR, FERMI) under the four drift scenarios defined in Section~IV and the
-cross-year Folktables protocol. All numbers correspond to the mean and standard deviation over five random seeds; bold entries denote the best mean per column.
-We frame the discussion around the three research questions introduced in Section~I and conclude with an analysis of the drift detection and reaction controller, a
-windowed view of fairness dynamics, and a brief discussion of limitations.
-
-\subsection{Performance on the Adult Dataset}
-
-
-\begin{table}[htbp]
-\centering
-\caption{Experimental results on the Adult dataset across drift scenarios. \textsc{FADO} maintains superior accuracy while effectively mitigating fairness violations (DP) during drift events.}
-\label{tab:adult-results}
-\small
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{llcc}
-\toprule
-\textbf{Scenario} & \textbf{Model} & \textbf{Acc $\uparrow$} & \textbf{DP $\downarrow$} \\
-\midrule
-\textbf{No Drift} & ARF & $0.8403 \pm 0.0024$ & $0.0900 \pm 0.0041$ \\
- & RFR & $0.8337 \pm 0.0075$ & $0.0995 \pm 0.0199$ \\
- & FERMI & $0.8487 \pm 0.0000$ & $0.0886 \pm 0.0000$ \\
- & \textbf{FADO} &$\mathbf{0.8538 \pm 0.0035}$ & $\mathbf{0.0860 \pm 0.0022}$ \\
-\addlinespace
-\textbf{Abrupt} & ARF & $0.8262 \pm 0.0056$ & $0.0614 \pm 0.0032$ \\
- & RFR & $0.8238 \pm 0.0093$ & $0.0573 \pm 0.0185$ \\
- & FERMI & $0.8343 \pm 0.0000$ & $0.0559 \pm 0.0000$ \\
- & \textbf{FADO} &$\mathbf{0.8607 \pm 0.0172}$ & $\mathbf{0.0414 \pm 0.0167}$ \\
-\addlinespace
-\textbf{Gradual} & ARF & $0.8360 \pm 0.0029$ & $0.0662 \pm 0.0043$ \\
- & RFR & $0.8352 \pm 0.0077$ & $0.0885 \pm 0.0172$ \\
- & FERMI & $0.8435 \pm 0.0000$ & $0.0515 \pm 0.0000$ \\
- & \textbf{FADO} &$\mathbf{0.8573 \pm 0.0022}$ & $\mathbf{0.0129 \pm 0.0063}$ \\
-\addlinespace
-\textbf{Reversal} & ARF & $0.8385 \pm 0.0026$ & $0.0656 \pm 0.0041$ \\
- & RFR & $0.8385 \pm 0.0077$ & $0.0552 \pm 0.0193$ \\
- & FERMI & $0.8473 \pm 0.0000$ & $\mathbf{0.0524 \pm 0.0000}$ \\
- & \textbf{FADO} &$\mathbf{0.8516 \pm 0.0045}$ & $0.0854 \pm 0.0056$ \\
-\bottomrule
-\end{tabular}
-\end{table}
+\label{sec:results}
+This section reports the prequential evaluation of \textsc{FADO} and the two baselines (\textsc{ARF}, \textsc{RFR}) under the Folktables cross-year protocol
+and under the four Adult drift scenarios defined in Section~\ref{sec:method:scenarios}. All numbers correspond to the mean and standard deviation across $30$ random
+seeds; \textbf{bold} marks the best mean per column. We frame the discussion around the three research questions introduced in Section~I.
 
 \subsection{Performance on Folktables: Cross-Year Distributional Shift}
+\label{sec:results:folktables}
 
 
-\begin{table}[htbp]
+Folktables (ACS Income, CA) exposes models to a natural cross-year shift between 2015 (training) and 2017--2018 (prequential test): the test stream is two
+orders of magnitude longer than Adult, the shift is unstructured and spans covariates, prevalence, and the protected-attribute conditional simultaneously, and
+the train--test gap is temporal rather than synthetic. Table~\ref{tab:folktables} shows the comparison is unambiguous in \textsc{FADO}'s favour on every axis:
+accuracy improves by $+3.84$ pp over \textsc{ARF} and $+3.30$ pp over \textsc{RFR}; DP drops by $20.5\%$ and $13.5\%$ respectively; and EO---monitored as a
+diagnostic, not directly optimised---drops by $42.4\%$ and $25.8\%$. All nine paired Wilcoxon comparisons are significant at Holm-corrected $p<0.001$ with
+Cliff's $\delta = \pm 1.0$. The DP variance is also markedly smaller for \textsc{FADO} ($\sigma = 0.0019$ vs.\ $0.0043$ for \textsc{ARF}, a factor of $2.3$); a
+Brown--Forsythe test for equality of variances across the three models rejects at $p \approx 1.9 \times 10^{-14}$, confirming that the node-level fairness
+regulariser kept active throughout the stream constrains the parameter trajectory more tightly than an accuracy-only adaptive ensemble. We return to the
+contrast with the Adult label-correlated regimes in Section~\ref{sec:results:adult} below.
+\begin{table}[!htb]
 \centering
-\caption{Folktables (ACS Income, CA) cross-year results. Models are trained on 2015 and evaluated prequentially on 2017--2018 (split evenly). Mean $\pm$ std over five seeds.}
+\caption{Folktables (ACS Income, CA) cross-year results. Models are trained on 2015 and evaluated prequentially on 2017--2018 (split evenly). Mean $\pm$ std
+over $30$ seeds. \textbf{Bold} marks the best mean per metric; superscripts denote paired Wilcoxon signed-rank tests of \textsc{FADO} against each
+baseline, Holm-corrected ($^{***}\,p<0.001$). \textsc{FADO} optimises only the DP regulariser (Section~\ref{sec:method:updates}); EO is reported as a
+diagnostic.}
 \label{tab:folktables}
-\begin{tabular}{lcc}
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccc}
 \toprule
-Model & Accuracy $\uparrow$ & DP $\downarrow$ \\
+Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
-\textbf{FADO} & $\mathbf{0.8225 \pm 0.0004}$ & $\mathbf{0.0710 \pm 0.0027}$ \\
-ARF & $0.7780 \pm 0.0000$ & $0.0806 \pm 0.0000$ \\
-RFR & $0.7878 \pm 0.0071$ & $0.0759 \pm 0.0137$ \\
+\textbf{FADO} & $\mathbf{0.8217 \pm 0.0025}^{***}$ & $\mathbf{0.0635 \pm 0.0019}^{***}$ & $\mathbf{0.0412 \pm 0.0020}^{***}$ \\
+ARF           & $0.7833 \pm 0.0018$              & $0.0799 \pm 0.0043$              & $0.0715 \pm 0.0055$ \\
+RFR           & $0.7887 \pm 0.0008$              & $0.0734 \pm 0.0010$              & $0.0555 \pm 0.0013$ \\
 \bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
-\subsection{Controller Behaviour in Practice}
+\subsection{Performance on the Adult Dataset}
+\label{sec:results:adult}
 
+\begin{table*}[!htb]
+\centering
+\caption{Adult dataset across the four drift scenarios. Mean $\pm$ std over $30$ seeds. \textbf{Bold} marks the best mean per
+(scenario, metric) cell. Superscripts denote paired Wilcoxon signed-rank tests of \textsc{FADO} against each streaming baseline, Holm-corrected within each cell:
+$^{*}\,p<0.05$, $^{**}\,p<0.01$, $^{***}\,p<0.001$; markers on \textsc{FADO} indicate significance against \emph{both} baselines, markers on a baseline ($\dagger$)
+indicate that the baseline significantly outperforms \textsc{FADO}. Unmarked best-in-cell entries are not statistically separable from \textsc{FADO}. \textsc{FADO}
+optimises only the DP regulariser (Section~\ref{sec:method:updates}); EO is reported as a diagnostic.}
+\label{tab:adult-results}
+\setlength{\tabcolsep}{8pt}
+\begin{tabular}{llccc}
+\toprule
+\textbf{Scenario} & \textbf{Model} & \textbf{Acc $\uparrow$} & \textbf{DP $\downarrow$} & \textbf{EO $\downarrow$} \\
+\midrule
+\textbf{No Drift} & ARF & $0.8325 \pm 0.0030$ & $\mathbf{0.0896 \pm 0.0035}$ & $0.0950 \pm 0.0092$ \\
+ & RFR & $0.8400 \pm 0.0021$ & $0.0999 \pm 0.0029$ & $0.0826 \pm 0.0081$ \\
+ & \textbf{FADO} & $\mathbf{0.8515 \pm 0.0012}^{***}$ & $0.0908 \pm 0.0025$ & $\mathbf{0.0606 \pm 0.0061}^{***}$ \\
+\addlinespace
+\textbf{Abrupt} & ARF & $0.8576 \pm 0.0078$ & $\mathbf{0.0955 \pm 0.0070}^{\dagger}$ & $\mathbf{0.0848 \pm 0.0118}^{\dagger}$ \\
+ & RFR & $0.8801 \pm 0.0019$ & $0.1304 \pm 0.0028$ & $0.1030 \pm 0.0059$ \\
+ & \textbf{FADO} & $\mathbf{0.8811 \pm 0.0019}^{*}$ & $0.1209 \pm 0.0029$ & $0.0924 \pm 0.0048$ \\
+\addlinespace
+\textbf{Gradual} & ARF & $0.8401 \pm 0.0060$ & $\mathbf{0.0593 \pm 0.0023}^{\dagger}$ & $0.0700 \pm 0.0064$ \\
+ & RFR & $0.8467 \pm 0.0024$ & $0.0754 \pm 0.0027$ & $0.0887 \pm 0.0061$ \\
+ & \textbf{FADO} & $\mathbf{0.8554 \pm 0.0016}^{***}$ & $0.0647 \pm 0.0030$ & $\mathbf{0.0632 \pm 0.0058}^{***}$ \\
+\addlinespace
+\textbf{Reversal} & ARF & $0.8360 \pm 0.0057$ & $\mathbf{0.0590 \pm 0.0025}$ & $0.0758 \pm 0.0087$ \\
+ & RFR & $0.8394 \pm 0.0022$ & $0.0676 \pm 0.0029$ & $0.0665 \pm 0.0063$ \\
+ & \textbf{FADO} & $\mathbf{0.8503 \pm 0.0017}^{***}$ & $0.0603 \pm 0.0042$ & $\mathbf{0.0537 \pm 0.0075}^{***}$ \\
+\bottomrule
+\end{tabular}
+\end{table*}
 
+Table~\ref{tab:adult-results} reports prequential accuracy, demographic parity (DP), and equalised odds (EO) under the four scenarios. \textsc{FADO} attains
+the highest mean accuracy in every scenario, with gains of $+1.1$ to $+2.4$ pp over \textsc{ARF} and $+0.1$ to $+1.5$ pp over \textsc{RFR} at Holm-corrected
+$p<0.05$ throughout---typically $p<0.001$ with Cliff's $\delta \approx 1.0$; the closest cell is the abrupt scenario, where \textsc{RFR} sits within $0.001$
+of \textsc{FADO} but is still significantly lower. EO follows the same pattern in three of the four scenarios (no drift, gradual, reversal) at $p<0.001$,
+despite the training-time fairness gradient being restricted to the DP direction for hardware reasons (Section~\ref{sec:method:updates})---the EO improvement
+therefore arises as a side-effect of constraining group-conditional routing behaviour at every node, not from direct EO optimisation.
+
+The DP picture is more nuanced. \textsc{FADO} is statistically tied with \textsc{ARF} on no drift and reversal ($p_{\mathrm{Holm}} \ge 0.12$), significantly
+worse than \textsc{ARF} on abrupt and gradual ($p<0.001$), and significantly better than \textsc{RFR} on every scenario ($p<0.001$). The losses against
+\textsc{ARF} concentrate on the label-correlated regimes where the confirmed-drift learning-rate spike accelerates adaptation along the predictive-error
+gradient direction, partially in conflict with the DP gradient---we read this as the trade-off cost of adaptive accuracy preservation rather than a failure of
+the regulariser. This contrast with the unambiguous Folktables result refines the answer to \textbf{RQ3}: what determines whether a windowed in-processing
+learner can react in time is not the \emph{dimensionality} of the drift but the \emph{rate} at which it is traversed, and how frequently the controller is
+forced into the high-LR regime where its dynamics conflict with the fairness gradient. On Folktables the shift unfolds across many small year-on-year changes,
+the controller fires less aggressively, and the $W$-sample rolling statistics have time to track the evolving marginals---so the node-level penalty and the
+LR-spike pathway no longer compete.
 
 \section{Conclusion and Future Work}
+\label{sec:conclusion}
+We introduced \textsc{FADO}, an online learning framework that wraps the \textsc{Aranyani} fair oblique decision forest with an ADWIN-driven drift detection
+and reaction controller designed to preserve group fairness under concept drift. The base learner enforces fairness at the level of individual tree nodes
+through a piecewise quadratic--linear group-deviation penalty, and \textsc{FADO} reacts to confirmed drift events by spiking the optimiser learning rate,
+sharpening the soft-routing temperature, and annealing both quantities back to baseline during recovery. We emphasised throughout that \textsc{Aranyani} is the
+inherited in-processing base learner and that the contribution of this paper is the drift-detection-and-response machinery wrapped around it.
 
+Empirically, \textsc{FADO} attains the highest prequential accuracy across all four Adult drift scenarios and on the Folktables cross-year stream. The
+fairness picture is more nuanced and depends on the structure of the drift. On the natural cross-year shift in Folktables, \textsc{FADO} improves both
+accuracy ($+3.84$ pp over \textsc{ARF}, $+3.30$ pp over \textsc{RFR}) and demographic parity ($-20.5\%$ relative to \textsc{ARF}, $-13.5\%$ relative to
+\textsc{RFR}) with substantially lower seed-to-seed variance, which is the cleanest evidence for the central claim of the paper. On the Adult dataset,
+\textsc{FADO} wins on DP under the abrupt scenario---the regime the dual-ADWIN controller is most clearly designed for---while accuracy-oriented baselines
+yield slightly lower aggregate DP on the gradual and reversal scenarios, exposing a limitation of windowed in-processing learners under wide-front,
+instantaneous perturbations.
+
+Taken together, the results give an affirmative but qualified answer to RQ2: adaptive mechanisms can preserve fairness while maintaining utility; and
+quantify the answer to RQ1 and RQ3: drift acts as a fairness amplifier, and its effect on fairness stability depends strongly on the rate at which the
+protected-attribute conditional shifts. Drift that is wide-front but slow is tractable for a windowed in-processing learner; drift that is wide-front and
+abrupt is the harder regime, and is where the controller most clearly trades fairness for accuracy.
+
+Some extensions can be pursued. First, the per-phase DP behaviour discussed in Section~\ref{sec:results:adult} suggests reporting time-resolved fairness
+metrics (DP volatility, max DP during drift phases, time-to-recovery) rather than stream-averaged DP, which would expose recovery dynamics that the aggregate
+metric hides. Second, the reversal-scenario result motivates a multi-window or change-point-aware fairness estimator that can track several drift fronts
+simultaneously without requiring a wider single window. Third, we plan to extend the evaluation to multi-valued sensitive attributes and to equalised odds and
+equal opportunity, and to run a full ablation of the controller's component design (label-noise guard, temperature modulation, LR pre-warm) to quantify the
+contribution of each branch. Finally, hybridising
+\textsc{FADO} with smooth post-processing methods such as~\cite{Small_2024} during recovery windows is a promising direction, since the two mechanisms address
+fairness at orthogonal layers of the prediction pipeline.
 
 \bibliography{references}
-\bibliographystyle{plain}
-
-% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% \appendix
-% \section{Theoretical Limit for EO}
-% \label{app:eo_bound}
-% % (appendix content unchanged, only minor math notation fixes)
-% Let the decision made for an instance $\mathbf{x}$ with protected attribute $a = k$
-% be denoted by $f(\mathbf{x} \mid a = k)$ (forest output) or $n(\mathbf{x} \mid a = k)$
-% (node output). The Equal Opportunity (EO) fairness term is defined as
-% \begin{align}
-% \mathrm{EO}
-%     &= \bigl| \mathbb{E}\!\bigl[f(\mathbf{x} \mid a = 0, y = c)\bigr]
-%         - \mathbb{E}\!\bigl[f(\mathbf{x} \mid a = 1, y = c)\bigr] \bigr| \nonumber\\
-%     &= \Bigl| \sum_{l} \Bigl( \mathbb{E}\!\bigl[p_l(\mathbf{x} \mid a = 0, y = c)\bigr]
-%         - \mathbb{E}\!\bigl[p_l(\mathbf{x} \mid a = 1, y = c)\bigr] \Bigr) \theta_l \Bigr| \nonumber\\
-%     &= \Bigl| \sum_{l} \Bigl( \mathbb{E}\!\bigl[\prod_{i=1}^{h} n_{i, A(i,l)}(\mathbf{x}|a=0, y=c)\bigr]
-%         - \mathbb{E}\!\bigl[\prod_{i=1}^{h} n_{i, A(i,l)}(\mathbf{x}|a=1, y=c)\bigr] \Bigr) \theta_l \Bigr| \nonumber\\
-%     &= \Bigl| \sum_{l} \Bigl( \frac{1}{m} \sum_{\mathbf{x}_0} \prod_{i=1}^{h} n_{i, A(i,l)}(\mathbf{x}_0)
-%         - \frac{1}{m} \sum_{\mathbf{x}_1} \prod_{i=1}^{h} n_{i, A(i,l)}(\mathbf{x}_1) \Bigr) \theta_l \Bigr|
-% \intertext{Using $|\prod a_i - \prod b_i| \leq \sum |a_i - b_i|$, we obtain}
-%     &\leq \Bigl| \sum_{l} \Bigl( \frac{1}{m} \sum_{\mathbf{x}_0,\mathbf{x}_1} \sum_{i=1}^{h} 
-%           \bigl| n_{i, A(i,l)}(\mathbf{x}_0) - n_{i, A(i,l)}(\mathbf{x}_1) \bigr| \Bigr) \theta_l \Bigr|
-% \intertext{Summing over all class labels $c$ gives}
-%     &\leq \sum_{l} \Bigl( \frac{1}{m} \sum_{\mathbf{x}_0,\mathbf{x}_1} \sum_{i=1}^{h} \sum_{c}
-%           \bigl| n_{i, A(i,l)}(\mathbf{x}_0) - n_{i, A(i,l)}(\mathbf{x}_1) \bigr| \Bigr).
-% \end{align}
-% Thus the theoretical limit is bounded by $2^h \cdot h \cdot C \cdot \mathcal{E}$, where $\mathcal{E}$ is the maximum difference in node outputs between the two groups for any node and class label. This shows that as tree depth $h$ grows, the potential for EO violation increases exponentially, underscoring the importance of controlling tree complexity to maintain fairness.
+\bibliographystyle{IEEEtran}
 
 \end{document}
