@@ -10,7 +10,17 @@ from sklearn.model_selection import train_test_split
 
 import src.models.forest.aranyani as aranyani
 import src.models.forest.forest as forest
+from src.drift.compas_scenarios import (
+    COMPAS_SCENARIO_DESCRIPTIONS,
+    COMPAS_SCENARIOS,
+)
 from src.drift.scenarios import SCENARIO_DESCRIPTIONS, SCENARIOS
+
+# Unified description map for printing per-scenario headers regardless of dataset.
+ALL_SCENARIO_DESCRIPTIONS = {
+    **SCENARIO_DESCRIPTIONS,
+    **COMPAS_SCENARIO_DESCRIPTIONS,
+}
 from src.helpers.constants import (
     DEFAULT_RANDOM_SEED_MAX,
     DEFAULT_RANDOM_SEED_MIN,
@@ -22,6 +32,7 @@ from src.helpers.data import (
     load_drifted_test_set,
     read_adult,
     read_compas,
+    read_compas_train_test,
     read_diabetes,
     read_folktables,
 )
@@ -276,9 +287,14 @@ def _load_dataset_splits(dataset_key, scenario_name, seed):
         return _ensure_train_test(x_train, x_test, y_train, y_test, a_train, a_test, seed=seed)
 
     if dataset_key == 'compas':
-        x_values, y_values, a_values = read_compas(path=FLAGS.compas_path)
-        return _ensure_train_test(
-            x_values, [], y_values, [], a_values, [], seed=seed
+        # Drift-aware loader: splits raw rows by seed, applies the named
+        # scenario to the test slice only, then fits the encoder on train
+        # so the scenario edit on race / age_cat / c_charge_degree
+        # propagates correctly through the one-hot transformer.
+        return read_compas_train_test(
+            scenario_name=scenario_name,
+            path=FLAGS.compas_path,
+            seed=seed,
         )
 
     raise ValueError(f"Unsupported dataset for pipeline evaluation: '{dataset_key}'.")
@@ -603,7 +619,7 @@ def _single_scenario(
 ):
     print(f"\n{'#' * 80}")
     print(f"# Evaluating scenario ({model_name}): {scenario_name}")
-    print(f"# {SCENARIO_DESCRIPTIONS.get(scenario_name, '')}")
+    print(f"# {ALL_SCENARIO_DESCRIPTIONS.get(scenario_name, '')}")
     print(f"{'#' * 80}\n")
     start = time.time()
 
@@ -653,8 +669,12 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
         scenarios = ['diabetes']
         print(' Running single Diabetes evaluation')
     elif dataset_key == 'compas':
-        scenarios = ['compas']
-        print(' Running single COMPAS evaluation')
+        # COMPAS now supports the same per-scenario drift sweep as Adult
+        # (see src/drift/compas_scenarios.py). The single 'no_drift'
+        # scenario reproduces the previous behaviour; the additional
+        # virtual drifts test recovery vs the warm-started model.
+        scenarios = list(COMPAS_SCENARIOS.keys())
+        print(f' Running all {len(scenarios)} COMPAS drift scenarios')
     else:
         raise ValueError(
             f"Unsupported dataset for pipeline evaluation: '{dataset_name}'."
@@ -664,15 +684,22 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
     print(f" Output: {os.path.abspath(output_dir)}/")
     print(f"{'=' * 80}\n")
 
+    per_scenario_datasets = {'adult', 'compas'}
     results = []
     for idx, scenario_name in enumerate(scenarios, 1):
-        if dataset_key == 'adult' and scenario_filter is not None and scenario_name != scenario_filter:
+        if (
+            dataset_key in per_scenario_datasets
+            and scenario_filter is not None
+            and scenario_name != scenario_filter
+        ):
             continue
         print(f"\n>>> [{idx}/{len(scenarios)}] {scenario_name}")
         result = _single_scenario(
             model_name=model_name,
             dataset_name=dataset_key,
-            scenario_name=scenario_name if dataset_key == 'adult' else dataset_key,
+            scenario_name=(
+                scenario_name if dataset_key in per_scenario_datasets else dataset_key
+            ),
             output_dir=output_dir,
             seed=seed,
         )
