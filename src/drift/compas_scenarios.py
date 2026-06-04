@@ -86,7 +86,7 @@ SEED = 42
 #        more opportunity to fire and demonstrate its reaction pathway;
 #   (iii) the warmup and recovery slices each stay above ADWIN's ~200-
 #         sample reliability floor (~430 each).
-SPLITS = [0.20, 0.80, 1.0]
+SPLITS = [0.20, 0.5, 1.0]
 PHASE_LABELS = ['Warmup', 'Drift', 'Recovery']
 
 # Probability of flipping ``two_year_recid`` on rows whose feature
