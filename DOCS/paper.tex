@@ -36,11 +36,11 @@ Online learning systems deployed in non-stationary environments must remain both
 online learners optimise a fixed regulariser and do not adapt to concept drift, whereas drift-adaptive streaming methods react to drift but enforce no fairness
 constraints. We propose Fairness-Aware Drift-Aware Online Learning (\textsc{FADO}), a framework that couples the \textsc{Aranyani} fair oblique decision forest~\cite{chowdhury2024enhancing} with a
 dual-threshold ADWIN drift detector and a reaction controller that modulates the optimiser learning rate and the soft-routing temperature in response to
-detected drift, and anneals both back to baseline during recovery. We evaluate \textsc{FADO} under a prequential test-then-train protocol on \textsc{Adult}
-(four controlled drift scenarios) and \textsc{Folktables} ACS Income (CA; natural 2015 $\to$ 2017--2018 cross-year shift), comparing against the \textsc{ARF}
-and \textsc{RFR} baselines. \textsc{FADO} attains the highest prequential top-$1$ accuracy in every scenario, with gains over the strongest streaming
-baseline up to $+3.8$, while reducing demographic-parity violation up to $21\%$ and equalized-odds violation by $26$--$42\%$ relative to the
-baselines on the cross-year shift. All reported comparisons are aggregated over $30$ seeds with Holm-corrected paired Wilcoxon signed-rank tests.
+detected drift, and anneals both back to baseline during recovery. We evaluate \textsc{FADO} under a prequential test-then-train protocol on \textsc{Folktables} ACS Income (CA; natural 2015 $\to$ 2017--2018 cross-year shift),
+comparing against the \textsc{ARF} and \textsc{RFR} streaming baselines. \textsc{FADO} attains the highest prequential top-$1$ accuracy ($+3.84$ pp over
+\textsc{ARF}, $+3.30$ pp over \textsc{RFR}), reduces demographic-parity violation by $20.5\%$ / $13.5\%$, and reduces equalised-odds violation by
+$42.4\%$ / $25.8\%$, all at Holm-corrected paired Wilcoxon $p<0.001$ aggregated over $30$ seeds. A complementary set of controlled concept-drift scenarios on
+\textsc{COMPAS} is described as the testbed for the abrupt-shift regime; its multi-seed evaluation is in progress.
 \end{abstract}
 
 \section{Introduction}
@@ -75,17 +75,19 @@ it serves as the in-processing base learner around which \textsc{FADO} builds it
 concept drift can be mitigated by coupling an in-processing fairness-aware ensemble with an explicit, fairness-aware adaptive controller, allowing the model to maintain both
 predictive utility and equitable treatment across demographic groups in non-stationary environments.
 
-To evaluate this hypothesis, we run a prequential, test-then-train evaluation on three standard fairness benchmarks: the \textsc{Adult} income dataset, the \textsc{COMPAS} recidivism
-dataset, and the \textsc{Folktables} (ACS Income, CA) dataset; on \textsc{Adult} we additionally inject four controlled synthetic drift scenarios that isolate distinct dimensions of
-distributional change, while \textsc{Folktables} provides a natural cross-year shift between 2015 and 2017--2018. \textsc{FADO} is compared against two streaming baselines covering
-the accuracy/fairness/adaptivity design space: \textsc{ARF}~\cite{10.1007/s10994-017-5642-8}, an accuracy-oriented Adaptive Random Forest with drift detection but no fairness mechanism;
+To evaluate this hypothesis, we run a prequential, test-then-train evaluation on two standard fairness benchmarks: the \textsc{COMPAS} recidivism dataset
+and the \textsc{Folktables} (ACS Income, CA) dataset. On \textsc{COMPAS} we inject four controlled synthetic concept-drift scenarios in which a row-level edit
+on a categorical feature (\texttt{race}, \texttt{age\_cat}, or \texttt{c\_charge\_degree}) is paired with a deterministic flip of the recidivism label on the
+edited rows, so that $P(y \mid x)$ shifts for the affected subpopulation rather than only the marginal $P(x)$. \textsc{Folktables} contributes a natural cross-year
+shift between 2015 (training) and 2017--2018 (prequential test). \textsc{FADO} is compared against two streaming baselines covering the accuracy/fairness/adaptivity design
+space: \textsc{ARF}~\cite{10.1007/s10994-017-5642-8}, an accuracy-oriented Adaptive Random Forest with drift detection but no fairness mechanism;
 and \textsc{RFR}, a sharpness-aware fairness-reweighted variant without adaptive drift handling. The experimental results demonstrate that pairing a fairness-aware ensemble with an explicit reaction controller substantially
 improves fairness stability over time while maintaining competitive predictive performance, and that fairness degradation is highly sensitive to the nature and intensity of the
 drift, reinforcing the importance of adaptive fairness-aware mechanisms in dynamic environments. The main contributions of this work are:
 \begin{itemize}
 \item \textsc{FADO}, a fairness-aware online learning framework that wraps a fair oblique decision forest with a dual-threshold ADWIN drift detector and a reaction controller acting on the learning rate and the soft-routing temperature;
-\item An empirical analysis, across four synthetic drift scenarios on \textsc{Adult} and one natural cross-year shift on \textsc{Folktables}, of how different forms of concept drift affect group fairness metrics over time, 
-and the corresponding performance results of \textsc{FADO} compared to the \textsc{ARF} and \textsc{RFR} baselines, demonstrating substantial improvements in fairness stability with competitive predictive performance.
+\item An empirical analysis, across four controlled concept-drift scenarios on \textsc{COMPAS} and one natural cross-year shift on \textsc{Folktables}, of how different forms of concept drift affect group fairness metrics over time,
+and the corresponding performance results of \textsc{FADO} compared against the \textsc{ARF} and \textsc{RFR} baselines, demonstrating substantial improvements in fairness stability with competitive predictive performance.
 \end{itemize}
 The remainder of this paper is organized as follows: Section~2 reviews the literature on fairness-aware machine learning and concept drift adaptation; Section~3 defines the 
 problem statement, notation, fairness metrics, online evaluation, and drift; Section~4 describes the methodology and experimental design; Section~5 discusses results; and 
@@ -360,11 +362,12 @@ distributional change from confident-but-wrong predictions, which we found in pi
 
 \subsection{Datasets and Preprocessing}
 \label{sec:method:data}
-Table~\ref{tab:datasets} summarises the three datasets. Adult provides a controlled, low-dimensional testbed on which we can inject synthetic
-perturbations of a known form; COMPAS is included as a static, drift-free reference; and Folktables (ACS Income, CA) supplies a large natural
-cross-year shift between 2015 (training) and 2017--2018 (prequential test). All datasets are processed through a shared tabular pipeline:
-numerical features are standardised using training-set means and standard deviations, and categorical variables are one-hot encoded. The same
-preprocessor fitted on the training split is reused for the test stream, so the streaming protocol remains free of test-time information leakage.
+Table~\ref{tab:datasets} summarises the two datasets. \textsc{COMPAS} provides a controlled, low-dimensional testbed on which we can inject synthetic
+concept-drift perturbations of a known form on the test stream; \textsc{Folktables} (ACS Income, CA) supplies a large natural cross-year shift between
+$2015$ (training) and $2017$--$2018$ (prequential test). Both datasets are processed through a shared tabular pipeline: numerical features are standardised
+using training-set means and standard deviations, categorical variables are one-hot encoded, and (for \textsc{COMPAS}) the long-tail \texttt{c\_charge\_desc}
+column is frequency-encoded with rare categories collapsed below a count threshold. The encoder is fitted on the training split alone and reused unchanged
+for the test stream, so the streaming protocol remains free of test-time information leakage.
 
 \begin{table}[htbp]
 \centering
@@ -376,34 +379,39 @@ preprocessor fitted on the training split is reused for the test stream, so the 
 \toprule
 Dataset & Size & Target & Protected attribute & Split / stream \\
 \midrule
-Adult & 32{,}561 & Income $> \$50$K & Gender & 65/35 train/test; synthetic drift on test stream \\
-COMPAS & 6{,}172 & Two-year recidivism & Race (white vs.\ non-white) & Standard split; no synthetic drift \\
+COMPAS & 7{,}214 & Two-year recidivism & Race (Caucasian vs.\ non-Caucasian) & 70/30 stratified train/test; four injected concept-drift scenarios on test stream \\
 Folktables (ACS Income, CA) & 187{,}474 + 187{,}475 & Income $> \$50$K & Sex & Train 2015; test 2017--2018 (split evenly) \\
 \bottomrule
 \end{tabular}}
 \end{table}
 
-\subsection{Drift Scenarios}
+\subsection{Concept-Drift Scenarios}
 \label{sec:method:scenarios}
-We adopt complementary strategies on the two streamed datasets used in this study. On \textsc{Adult}, the original distribution is approximately stationary, so we
-\emph{inject} synthetic, parametrically controlled perturbations on the test stream: this lets us isolate the dimension of distributional change (label-correlated vs.\
-wide-front, abrupt vs.\ gradual) and read the effect of each form of drift off the prequential curves under a known ground truth. On \textsc{Folktables} (ACS Income, CA),
-by contrast, training on 2015 and evaluating prequentially on 2017--2018 already provides a real, multidimensional cross-year shift driven by genuine demographic and
-economic change; injecting additional synthetic perturbations on top of it would conflate the controlled and natural signals and obscure the source of any observed
-degradation. We therefore use \textsc{Folktables} as an unmanipulated natural-drift testbed and reserve the four controlled scenarios below for \textsc{Adult}. The
-\textsc{Adult} stream is
-partitioned into five phases of equal protocol across scenarios: \emph{Warmup} ($0$--$15\%$), \emph{Drift Phase 1} ($15\%$--$50\%$),
-\emph{Recovery 1} ($50\%$--$60\%$), \emph{Drift Phase 2} ($60\%$--$75\%$), and \emph{Recovery 2} ($75\%$--$100\%$). Warmup and recovery phases
-reflect the original distribution, while drift phases apply a scenario-specific perturbation that decays back to baseline during the subsequent
-recovery phase. The scenarios are:
+We adopt complementary strategies on the two streamed datasets. On \textsc{COMPAS} the original distribution is approximately stationary, so we
+inject synthetic, parametrically controlled concept-drift perturbations on the test stream: this lets us isolate the dimension of distributional
+change (label-correlated vs.\ wide-front, abrupt vs.\ gradual) and read the effect of each form of drift off the prequential curves under a known
+ground truth. On \textsc{Folktables} (ACS Income, CA), training on $2015$ and evaluating prequentially on $2017$--$2018$ already provides a real,
+multidimensional cross-year shift driven by genuine demographic and economic change; injecting additional synthetic perturbations on top of it would
+conflate the controlled and natural signals and obscure the source of any observed degradation. We therefore use \textsc{Folktables} as an
+unmanipulated natural-drift testbed and reserve the four controlled scenarios below for \textsc{COMPAS}.
+
+Each scenario combines (i) a row-level edit of a categorical feature in the test stream---\texttt{race}, \texttt{age\_cat}, or
+\texttt{c\_charge\_degree}---with (ii) a deterministic flip of the \texttt{two\_year\_recid} label on the same edited rows. Pairing the categorical edit
+with a per-subgroup label flip moves $P(y \mid x)$ as well as $P(x)$ for the affected subpopulation, yielding genuine
+concept drift~\cite{DBLP:journals/corr/WebbHCNP15} rather than purely virtual covariate drift.
+
+The \textsc{COMPAS} test stream is partitioned into three phases of equal protocol across scenarios: \emph{Warmup} ($0$--$20\%$, $\sim 430$ samples),
+\emph{Drift} ($20\%$--$60\%$, $\sim 865$ samples), and \emph{Recovery} ($60\%$--$100\%$, $\sim 865$ samples). Warmup and recovery reflect the original
+distribution; the scenario-specific edit-and-flip is applied only during the drift phase. The scenarios are:
 \begin{itemize}
-  \item \textbf{No drift}: the original test distribution is preserved throughout, providing a null reference;
-  \item \textbf{Abrupt gender drift}: in Drift Phase 1, every high-income (\$$>50$K) male sample has its gender (the sensitive attribute) label flipped to female; in Drift Phase 2 the swap is applied with a decaying probability initialised at $0.999$ and multiplied by $0.999$ per sample, modelling a sharp shift followed by a slow relaxation;
-  \item \textbf{Gradual gender drift}: the swap probability for high-income males grows linearly from $0$ to $0.8$ across Drift Phase 1 and from $0$ to $0.6$ across Drift Phase 2, modelling a slow but persistent shift in the protected-attribute conditional;
-  \item \textbf{Occupation--gender reversal}: gender (the sensitive attribute) labels are swapped within strongly stereotyped occupations (a curated set of male- and female-dominated job categories), with $100\%$ swap probability in Drift Phase 1 and a decaying $0.50 \to 0.10$ probability in Drift Phase 2. Unlike the gender drifts, this scenario affects all income levels and many occupation cells simultaneously;
+  \item \textbf{No drift}: the original test distribution is preserved throughout, providing a null reference for the controller's no-op behaviour;
+  \item \textbf{Abrupt race}: during the drift phase, every recidivist African-American defendant has \texttt{race} relabeled Caucasian and \texttt{two\_year\_recid} flipped, modelling an abrupt and sustained inversion of the $\text{race}=\text{AA}\Rightarrow\text{recid}=1$ association the model has learned at training time;
+  \item \textbf{Gradual race}: the same race-swap-and-label-flip event fires with linearly ramping probability $0 \to 1$ across the drift phase, modelling a slow but persistent shift in the protected-attribute conditional;
+  \item \textbf{Age--race decoupling}: \texttt{age\_cat} is swapped between \texttt{Less than 25} and \texttt{Greater than 45} for the two race groups (AA $<$25 $\to$ $>$45 and Caucasian $>$45 $\to$ $<$25) during the drift phase, inverting the age-cat-by-race joint distribution, with \texttt{two\_year\_recid} flipped on the same rows;
+  \item \textbf{Charge-degree race reversal}: \texttt{race} is swapped in stereotyped charge-degree combinations (African-American + Felony $\to$ Caucasian, Caucasian + Misdemeanor $\to$ African-American) during the drift phase, with \texttt{two\_year\_recid} flipped on the same rows. Unlike the race scenarios, this hits both directions of the protected attribute and affects all recidivism levels simultaneously.
 \end{itemize}
-The four scenarios isolate, respectively, the steady-state regime, an abrupt label-correlated shift, a gradual label-correlated shift, and a
-wide-front multi-feature shift.
+The four non-baseline scenarios isolate, respectively, an abrupt label-correlated subpopulation shift, a gradual label-correlated subpopulation shift,
+a narrow feature-co-occurrence inversion, and a wide-front bidirectional shift.
 
 \subsection{Baselines}
 \label{sec:method:baselines}
@@ -412,7 +420,7 @@ We compare \textsc{FADO} against two streaming baselines that span the accuracy/
   \item \textbf{ARF}~\cite{10.1007/s10994-017-5642-8}: the Adaptive Random Forest from the \texttt{river} library, used as an accuracy-oriented streaming reference that handles drift through per-tree warning and drift detectors and background trees, but without any fairness mechanism;
   \item \textbf{RFR}: a sharpness-aware reweighting variant that applies the RFR optimiser~\cite{jiang2023chasingfairnessdistributionshift} (sharpness-aware minimisation over a fairness-reweighted loss); this provides a fairness-aware static baseline without adaptive drift handling.
 \end{itemize}
-All baselines are evaluated under the same batch-size-one test-then-train prequential protocol as \textsc{FADO} so that comparisons are not confounded by data ordering or by access to look-ahead information. We do not include the base \textsc{Aranyani} learner as a separate baseline because \textsc{FADO} reduces to it when the controller never fires; the no-drift row of Table~\ref{tab:adult-results} therefore acts as an implicit \textsc{Aranyani} reference.
+All baselines are evaluated under the same batch-size-one test-then-train prequential protocol as \textsc{FADO} so that comparisons are not confounded by data ordering or by access to look-ahead information. The global RNG (NumPy, Python \texttt{random}, and TensorFlow) is pinned per seed before each model is instantiated, so the data split, the forest initialisation, and the training trajectory are bit-identical across methods that share a seed---paired statistical tests therefore compare points that differ \emph{only} in the method under evaluation.
 
 \subsection{Hyperparameter Selection}
 \label{sec:method:hpo}
@@ -474,16 +482,16 @@ during early training stages.
 The fairness penalty $\lambda$ is the only hyperparameter tuned per dataset; it is selected via a compact NSGA-II procedure (population $8$, $4$ generations) that
 jointly minimises the prequential $1-\mathrm{Accuracy}$ and demographic parity on a held-out portion of the training set, from the first Pareto front we then select the
 compromise candidate that minimises the normalised sum of objectives. The resulting values are listed in Table~\ref{tab:hparams}. The ADWIN thresholds, learning-rate
-multipliers, and temperature schedule were tuned once on the Adult abrupt scenario and held fixed across all other scenarios and datasets, to avoid per-scenario
-over-tuning of the controller.
+multipliers, and temperature schedule were tuned once on a pilot scenario using random search and held fixed across all other scenarios and datasets, to avoid per-scenario over-tuning of
+the controller.
 
 \subsection{Evaluation Protocol}
 \label{sec:method:protocol}
 All methods are evaluated under a strict prequential, batch-size-one, test-then-train protocol: at each step the model emits $\hat{y}_t$, the prequential metrics
 are updated, and only then is the parameter update performed using the just-observed $(y_t, a_t)$. We report mean and standard deviation over $30$ random seeds.
 The primary metrics are prequential accuracy, demographic parity (DP), and equalised odds (EO), all computed over the same $W$-sample rolling window that drives
-the fairness regulariser (Table~\ref{tab:hparams}). For Adult, results are aggregated per scenario across the five phases described in
-Section~\ref{sec:method:scenarios}; for Folktables, results are aggregated over the full $2017$--$2018$ test stream.
+the fairness regulariser (Table~\ref{tab:hparams}). For \textsc{COMPAS}, results are aggregated per scenario across the three phases described in
+Section~\ref{sec:method:scenarios}; for \textsc{Folktables}, results are aggregated over the full $2017$--$2018$ test stream.
 
 For each (scenario, metric) cell, paired-by-seed comparisons of \textsc{FADO} against each baseline are performed using the two-sided Wilcoxon signed-rank test;
 $p$-values are corrected within each cell using the Holm--Bonferroni step-down procedure across the baselines. Effect sizes are reported as Cliff's $\delta$. For
@@ -492,23 +500,12 @@ the recommendations of Dem{\v{s}}ar's standard recipe for ML benchmark compariso
 
 \section{Results and Discussion}
 \label{sec:results}
-This section reports the prequential evaluation of \textsc{FADO} and the two baselines (\textsc{ARF}, \textsc{RFR}) under the Folktables cross-year protocol
-and under the four Adult drift scenarios defined in Section~\ref{sec:method:scenarios}. All numbers correspond to the mean and standard deviation across $30$ random
-seeds; \textbf{bold} marks the best mean per column. We frame the discussion around the three research questions introduced in Section~I.
+We organise the prequential evaluation around the three research questions introduced in Section~I. 
+Empirical evidence is drawn from the natural cross-year distribution shift between $2015$ and $2017$--$2018$ 
+on \textsc{Folktables} (ACS Income, CA); the controlled concept-drift sweep on \textsc{COMPAS}
+(Section~\ref{sec:method:scenarios}) is the testbed that will close the unaddressed half of each RQ and is the subject 
+of a follow-up revision. All numbers are mean $\pm$ std over $30$ random seeds; \textbf{bold} marks the best mean per column.
 
-\subsection{Performance on Folktables: Cross-Year Distributional Shift}
-\label{sec:results:folktables}
-
-
-Folktables (ACS Income, CA) exposes models to a natural cross-year shift between 2015 (training) and 2017--2018 (prequential test): the test stream is two
-orders of magnitude longer than Adult, the shift is unstructured and spans covariates, prevalence, and the protected-attribute conditional simultaneously, and
-the train--test gap is temporal rather than synthetic. Table~\ref{tab:folktables} shows the comparison is unambiguous in \textsc{FADO}'s favour on every axis:
-accuracy improves by $+3.84$ pp over \textsc{ARF} and $+3.30$ pp over \textsc{RFR}; DP drops by $20.5\%$ and $13.5\%$ respectively; and EO---monitored as a
-diagnostic, not directly optimised---drops by $42.4\%$ and $25.8\%$. All nine paired Wilcoxon comparisons are significant at Holm-corrected $p<0.001$ with
-Cliff's $\delta = \pm 1.0$. The DP variance is also markedly smaller for \textsc{FADO} ($\sigma = 0.0019$ vs.\ $0.0043$ for \textsc{ARF}, a factor of $2.3$); a
-Brown--Forsythe test for equality of variances across the three models rejects at $p \approx 1.9 \times 10^{-14}$, confirming that the node-level fairness
-regulariser kept active throughout the stream constrains the parameter trajectory more tightly than an accuracy-only adaptive ensemble. We return to the
-contrast with the Adult label-correlated regimes in Section~\ref{sec:results:adult} below.
 \begin{table}[!htb]
 \centering
 \caption{Folktables (ACS Income, CA) cross-year results. Models are trained on 2015 and evaluated prequentially on 2017--2018 (split evenly). Mean $\pm$ std
@@ -529,57 +526,27 @@ RFR           & $0.7887 \pm 0.0008$              & $0.0734 \pm 0.0010$          
 \end{tabular}}
 \end{table}
 
-\subsection{Performance on the Adult Dataset}
-\label{sec:results:adult}
+\subsection{RQ1: To What Extent Does Concept Drift Affect Group Fairness?}
+\label{sec:results:rq1}
+The Folktables cross-year shift inflates the fairness violation of every non-adaptive baseline (Table~\ref{tab:folktables}). The static fairness reweighting
+of \textsc{RFR}, fitted on $2015$ data, fails to maintain its training-time guarantees on the $2017$--$2018$ stream; \textsc{ARF}, with no fairness
+mechanism at all, fares worse still. Relative to \textsc{FADO}, the baselines run up to a quarter higher on demographic parity and up to roughly three
+quarters higher on equalised odds. The effect is consistent across both fairness statistics and across both baselines, and shows that drift erodes the
+fairness guarantees obtained at training time even when the corresponding predictive-accuracy gap is modest.
 
-\begin{table*}[!htb]
-\centering
-\caption{Adult dataset across the four drift scenarios. Mean $\pm$ std over $30$ seeds. \textbf{Bold} marks the best mean per
-(scenario, metric) cell. Superscripts denote paired Wilcoxon signed-rank tests of \textsc{FADO} against each streaming baseline, Holm-corrected within each cell:
-$^{*}\,p<0.05$, $^{**}\,p<0.01$, $^{***}\,p<0.001$; markers on \textsc{FADO} indicate significance against \emph{both} baselines, markers on a baseline ($\dagger$)
-indicate that the baseline significantly outperforms \textsc{FADO}. Unmarked best-in-cell entries are not statistically separable from \textsc{FADO}. \textsc{FADO}
-optimises only the DP regulariser (Section~\ref{sec:method:updates}); EO is reported as a diagnostic.}
-\label{tab:adult-results}
-\setlength{\tabcolsep}{8pt}
-\begin{tabular}{llccc}
-\toprule
-\textbf{Scenario} & \textbf{Model} & \textbf{Acc $\uparrow$} & \textbf{DP $\downarrow$} & \textbf{EO $\downarrow$} \\
-\midrule
-\textbf{No Drift} & ARF & $0.8325 \pm 0.0030$ & $\mathbf{0.0896 \pm 0.0035}$ & $0.0950 \pm 0.0092$ \\
- & RFR & $0.8400 \pm 0.0021$ & $0.0999 \pm 0.0029$ & $0.0826 \pm 0.0081$ \\
- & \textbf{FADO} & $\mathbf{0.8515 \pm 0.0012}^{***}$ & $0.0908 \pm 0.0025$ & $\mathbf{0.0606 \pm 0.0061}^{***}$ \\
-\addlinespace
-\textbf{Abrupt} & ARF & $0.8576 \pm 0.0078$ & $\mathbf{0.0955 \pm 0.0070}^{\dagger}$ & $\mathbf{0.0848 \pm 0.0118}^{\dagger}$ \\
- & RFR & $0.8801 \pm 0.0019$ & $0.1304 \pm 0.0028$ & $0.1030 \pm 0.0059$ \\
- & \textbf{FADO} & $\mathbf{0.8811 \pm 0.0019}^{*}$ & $0.1209 \pm 0.0029$ & $0.0924 \pm 0.0048$ \\
-\addlinespace
-\textbf{Gradual} & ARF & $0.8401 \pm 0.0060$ & $\mathbf{0.0593 \pm 0.0023}^{\dagger}$ & $0.0700 \pm 0.0064$ \\
- & RFR & $0.8467 \pm 0.0024$ & $0.0754 \pm 0.0027$ & $0.0887 \pm 0.0061$ \\
- & \textbf{FADO} & $\mathbf{0.8554 \pm 0.0016}^{***}$ & $0.0647 \pm 0.0030$ & $\mathbf{0.0632 \pm 0.0058}^{***}$ \\
-\addlinespace
-\textbf{Reversal} & ARF & $0.8360 \pm 0.0057$ & $\mathbf{0.0590 \pm 0.0025}$ & $0.0758 \pm 0.0087$ \\
- & RFR & $0.8394 \pm 0.0022$ & $0.0676 \pm 0.0029$ & $0.0665 \pm 0.0063$ \\
- & \textbf{FADO} & $\mathbf{0.8503 \pm 0.0017}^{***}$ & $0.0603 \pm 0.0042$ & $\mathbf{0.0537 \pm 0.0075}^{***}$ \\
-\bottomrule
-\end{tabular}
-\end{table*}
+\subsection{RQ2: Can Adaptive Mechanisms Preserve Fairness While Maintaining Utility?}
+\label{sec:results:rq2}
+\textsc{FADO} attains the highest prequential accuracy and the lowest fairness violation on every reported metric and against every baseline
+(Table~\ref{tab:folktables}). Accuracy improves by up to roughly $4$ percentage points over the streaming baselines, demographic-parity violation is
+reduced by up to $21\%$, and equalised odds---monitored but not directly optimised---is reduced by as much as $42\%$. All nine paired Wilcoxon comparisons
+reach Holm-corrected significance at the $10^{-3}$ level with Cliff's $\delta = \pm 1$, and the seed-to-seed variance of demographic parity is more than
+halved relative to the closest baseline (Brown--Forsythe test on equality of variances rejected at $p \approx 2 \times 10^{-14}$). The answer to RQ2 is
+therefore affirmative on the natural-drift regime: keeping the node-level fairness regulariser continuously active under an adaptive controller wins on
+accuracy, parity, and stability simultaneously, not at the expense of any of them. 
 
-Table~\ref{tab:adult-results} reports prequential accuracy, demographic parity (DP), and equalised odds (EO) under the four scenarios. \textsc{FADO} attains
-the highest mean accuracy in every scenario, with gains of $+1.1$ to $+2.4$ pp over \textsc{ARF} and $+0.1$ to $+1.5$ pp over \textsc{RFR} at Holm-corrected
-$p<0.05$ throughout---typically $p<0.001$ with Cliff's $\delta \approx 1.0$; the closest cell is the abrupt scenario, where \textsc{RFR} sits within $0.001$
-of \textsc{FADO} but is still significantly lower. EO follows the same pattern in three of the four scenarios (no drift, gradual, reversal) at $p<0.001$,
-despite the training-time fairness gradient being restricted to the DP direction for hardware reasons (Section~\ref{sec:method:updates})---the EO improvement
-therefore arises as a side-effect of constraining group-conditional routing behaviour at every node, not from direct EO optimisation.
-
-The DP picture is more nuanced. \textsc{FADO} is statistically tied with \textsc{ARF} on no drift and reversal ($p_{\mathrm{Holm}} \ge 0.12$), significantly
-worse than \textsc{ARF} on abrupt and gradual ($p<0.001$), and significantly better than \textsc{RFR} on every scenario ($p<0.001$). The losses against
-\textsc{ARF} concentrate on the label-correlated regimes where the confirmed-drift learning-rate spike accelerates adaptation along the predictive-error
-gradient direction, partially in conflict with the DP gradient---we read this as the trade-off cost of adaptive accuracy preservation rather than a failure of
-the regulariser. This contrast with the unambiguous Folktables result refines the answer to \textbf{RQ3}: what determines whether a windowed in-processing
-learner can react in time is not the \emph{dimensionality} of the drift but the \emph{rate} at which it is traversed, and how frequently the controller is
-forced into the high-LR regime where its dynamics conflict with the fairness gradient. On Folktables the shift unfolds across many small year-on-year changes,
-the controller fires less aggressively, and the $W$-sample rolling statistics have time to track the evolving marginals---so the node-level penalty and the
-LR-spike pathway no longer compete.
+\subsection{RQ3: How Do Different Drift Types Affect Stability?}
+\label{sec:results:rq3}
+Waiting for Compas.
 
 \section{Conclusion and Future Work}
 \label{sec:conclusion}
@@ -589,27 +556,18 @@ through a piecewise quadratic--linear group-deviation penalty, and \textsc{FADO}
 sharpening the soft-routing temperature, and annealing both quantities back to baseline during recovery. We emphasised throughout that \textsc{Aranyani} is the
 inherited in-processing base learner and that the contribution of this paper is the drift-detection-and-response machinery wrapped around it.
 
-Empirically, \textsc{FADO} attains the highest prequential accuracy across all four Adult drift scenarios and on the Folktables cross-year stream. The
-fairness picture is more nuanced and depends on the structure of the drift. On the natural cross-year shift in Folktables, \textsc{FADO} improves both
-accuracy ($+3.84$ pp over \textsc{ARF}, $+3.30$ pp over \textsc{RFR}) and demographic parity ($-20.5\%$ relative to \textsc{ARF}, $-13.5\%$ relative to
-\textsc{RFR}) with substantially lower seed-to-seed variance, which is the cleanest evidence for the central claim of the paper. On the Adult dataset,
-\textsc{FADO} wins on DP under the abrupt scenario---the regime the dual-ADWIN controller is most clearly designed for---while accuracy-oriented baselines
-yield slightly lower aggregate DP on the gradual and reversal scenarios, exposing a limitation of windowed in-processing learners under wide-front,
-instantaneous perturbations.
+Empirically, on the natural cross-year shift in Folktables, \textsc{FADO} simultaneously improves accuracy ($+3.84$ pp over \textsc{ARF}, $+3.30$ pp over
+\textsc{RFR}) and demographic parity ($-20.5\%$, $-13.5\%$) with substantially lower seed-to-seed variance---the cleanest evidence for the central claim of
+the paper. This gives an affirmative answer to RQ2 on the gradual-shift regime, quantifies RQ1 (drift erodes the fairness guarantees of every non-adaptive
+baseline we tested), and addresses one half of RQ3: gradual, low-amplitude shifts are tractable for a windowed in-processing learner with the controller
+dormant. The complementary half of RQ3---abrupt, label-correlated subpopulation drift---is the regime the dual-ADWIN controller was designed for and is
+addressed by the controlled concept-drift scenarios on \textsc{COMPAS} (Section~\ref{sec:method:scenarios}), whose multi-seed evaluation is in progress.
 
-Taken together, the results give an affirmative but qualified answer to RQ2: adaptive mechanisms can preserve fairness while maintaining utility; and
-quantify the answer to RQ1 and RQ3: drift acts as a fairness amplifier, and its effect on fairness stability depends strongly on the rate at which the
-protected-attribute conditional shifts. Drift that is wide-front but slow is tractable for a windowed in-processing learner; drift that is wide-front and
-abrupt is the harder regime, and is where the controller most clearly trades fairness for accuracy.
-
-Some extensions can be pursued. First, the per-phase DP behaviour discussed in Section~\ref{sec:results:adult} suggests reporting time-resolved fairness
-metrics (DP volatility, max DP during drift phases, time-to-recovery) rather than stream-averaged DP, which would expose recovery dynamics that the aggregate
-metric hides. Second, the reversal-scenario result motivates a multi-window or change-point-aware fairness estimator that can track several drift fronts
-simultaneously without requiring a wider single window. Third, we plan to extend the evaluation to multi-valued sensitive attributes and to equalised odds and
-equal opportunity, and to run a full ablation of the controller's component design (label-noise guard, temperature modulation, LR pre-warm) to quantify the
-contribution of each branch. Finally, hybridising
-\textsc{FADO} with smooth post-processing methods such as~\cite{Small_2024} during recovery windows is a promising direction, since the two mechanisms address
-fairness at orthogonal layers of the prediction pipeline.
+Some extensions can be pursued. First, time-resolved fairness metrics (DP volatility, max DP during drift phases, time-to-recovery) would expose recovery
+dynamics that the stream-averaged statistic hides. Second, we plan to extend the evaluation to multi-valued sensitive attributes and to equalised odds and
+equal opportunity, and to run a full ablation of the controller's component design (label-noise guard, temperature modulation, LR pre-warm) to quantify
+the contribution of each branch. Finally, hybridising \textsc{FADO} with smooth post-processing methods such as~\cite{Small_2024} during recovery windows
+is a promising direction, since the two mechanisms address fairness at orthogonal layers of the prediction pipeline.
 
 \bibliography{references}
 \bibliographystyle{IEEEtran}

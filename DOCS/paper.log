@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Homebrew) (preloaded format=pdflatex 2026.3.4)  2 JUN 2026 16:51
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Homebrew) (preloaded format=pdflatex 2026.3.4)  3 JUN 2026 23:04
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -647,58 +647,64 @@ LaTeX Warning: No \author given.
 (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/microtype/mt-cmr.cfg
 File: mt-cmr.cfg 2013/05/19 v2.2 microtype config. file: Computer Modern Roman (RS)
 )
-LaTeX Font Info:    Trying to load font information for U+msa on input line 40.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 39.
  (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 ) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/microtype/mt-msa.cfg
 File: mt-msa.cfg 2006/02/04 v1.1 microtype config. file: AMS symbols (a) (RS)
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 40.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 39.
  (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 ) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/microtype/mt-msb.cfg
 File: mt-msb.cfg 2005/06/01 v1.0 microtype config. file: AMS symbols (b) (RS)
-) [1{/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/pdftex/updmap/pdftex.map}{/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/base/8r.enc}
-
-
-] [2] [3] [4]
-<1846ea20-2f1d-415b-9b62-cb781adbf1f6.png, id=197, 1678.27pt x 944.52875pt>
-File: 1846ea20-2f1d-415b-9b62-cb781adbf1f6.png Graphic file (type png)
-<use 1846ea20-2f1d-415b-9b62-cb781adbf1f6.png>
-Package pdftex.def Info: 1846ea20-2f1d-415b-9b62-cb781adbf1f6.png  used on input line 298.
-(pdftex.def)             Requested size: 412.80157pt x 232.31233pt.
- [5] [6 <./1846ea20-2f1d-415b-9b62-cb781adbf1f6.png (PNG copy)>]
-Underfull \hbox (badness 10000) in paragraph at lines 383--383
-[]\T1/ptm/m/n/8 (+20) Two-year
- []
-
-
-Underfull \hbox (badness 10000) in paragraph at lines 383--383
-[]\T1/ptm/m/n/8 (+20) 187,474 +
- []
-
-
-Underfull \hbox (badness 2608) in paragraph at lines 383--383
-[]\T1/ptm/m/n/8 (+20) Train 2015; test 2017--
- []
-
-LaTeX Font Info:    Trying to load font information for T1+pcr on input line 412.
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/psnfss/t1pcr.fd
+)
+LaTeX Font Info:    Trying to load font information for T1+pcr on input line 80.
+ (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/psnfss/t1pcr.fd
 File: t1pcr.fd 2001/06/04 font definitions for T1/pcr.
 )
 Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `pcr' (encoding: T1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
- [7]
-Underfull \vbox (badness 1117) has occurred while \output is active []
+ [1{/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/pdftex/updmap/pdftex.map}{/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/base/8r.enc}
 
- [8]
 
-LaTeX Font Warning: Font shape `T1/ptm/m/scit' undefined
-(Font)              using `T1/ptm/m/it' instead on input line 541.
+] [2] [3] [4]
+<1846ea20-2f1d-415b-9b62-cb781adbf1f6.png, id=202, 1678.27pt x 944.52875pt>
+File: 1846ea20-2f1d-415b-9b62-cb781adbf1f6.png Graphic file (type png)
+<use 1846ea20-2f1d-415b-9b62-cb781adbf1f6.png>
+Package pdftex.def Info: 1846ea20-2f1d-415b-9b62-cb781adbf1f6.png  used on input line 300.
+(pdftex.def)             Requested size: 412.80157pt x 232.31233pt.
+ [5]
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
-(./paper.bbl [9])
+ [6 <./1846ea20-2f1d-415b-9b62-cb781adbf1f6.png (PNG copy)>]
+Underfull \hbox (badness 10000) in paragraph at lines 385--385
+[]\T1/ptm/m/n/8 (+20) Two-year
+ []
+
+
+Underfull \hbox (badness 3579) in paragraph at lines 385--385
+[]\T1/ptm/m/n/8 (+20) Race (Cau-casian vs.
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 385--385
+[]\T1/ptm/m/n/8 (+20) 187,474 +
+ []
+
+
+Underfull \hbox (badness 2608) in paragraph at lines 385--385
+[]\T1/ptm/m/n/8 (+20) Train 2015; test 2017--
+ []
+
+
+Underfull \hbox (badness 1490) in paragraph at lines 411--412
+\OMS/cmsy/m/n/10 !$ \T1/ptm/m/n/10 (+20) African-American) dur-ing the drift phase, with
+ []
+
+[7] [8] (./paper.bbl [9])
 
 ** Conference Paper **
 Before submitting the final camera ready copy, remember to:
@@ -716,21 +722,21 @@ LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
 Package rerunfilecheck Info: File `paper.out' has not changed.
-(rerunfilecheck)             Checksum: 53F7D8484898180DB7CA386CE5572972;4349.
+(rerunfilecheck)             Checksum: C750416C32E00920F04FBF522CB67BBE;4967.
  ) 
 Here is how much of TeX's memory you used:
- 24608 strings out of 467525
- 467173 string characters out of 5408440
- 915234 words of memory out of 5000000
- 52612 multiletter control sequences out of 15000+600000
- 778899 words of font info for 452 fonts, out of 8000000 for 9000
+ 24612 strings out of 467525
+ 467166 string characters out of 5408440
+ 909997 words of memory out of 5000000
+ 52611 multiletter control sequences out of 15000+600000
+ 779005 words of font info for 456 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  102i,13n,107p,1047b,610s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx8.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr9.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
-Output written on paper.pdf (10 pages, 1696825 bytes).
+Output written on paper.pdf (10 pages, 1697034 bytes).
 PDF statistics:
  423 PDF objects out of 1000 (max. 8388607)
  351 compressed objects within 4 object streams
  62 named destinations out of 1000 (max. 500000)
- 71890 words of extra memory for PDF output out of 74296 (max. 10000000)
+ 71898 words of extra memory for PDF output out of 74296 (max. 10000000)
 
