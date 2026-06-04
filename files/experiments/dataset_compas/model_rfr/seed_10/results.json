@@ -1,0 +1,62 @@
+[
+  {
+    "model": "rfr",
+    "scenario": "no_drift",
+    "accuracy": 0.6707734154852525,
+    "dp": 0.08100157171244532,
+    "eo": 0.11315871291137856,
+    "stream_final_accuracy": 0.6707734154852525,
+    "stream_final_dp": 0.08100157171244532,
+    "stream_final_eo": 0.11315871291137856,
+    "elapsed_seconds": 3.8,
+    "error": null
+  },
+  {
+    "model": "rfr",
+    "scenario": "abrupt_race",
+    "accuracy": 0.6805417952611876,
+    "dp": 0.03313382076244975,
+    "eo": 0.08458782913582791,
+    "stream_final_accuracy": 0.6805417952611876,
+    "stream_final_dp": 0.03313382076244975,
+    "stream_final_eo": 0.08458782913582791,
+    "elapsed_seconds": 3.8,
+    "error": null
+  },
+  {
+    "model": "rfr",
+    "scenario": "gradual_race",
+    "accuracy": 0.6658321372759403,
+    "dp": 0.0339988324840147,
+    "eo": 0.0835818637722706,
+    "stream_final_accuracy": 0.6658321372759403,
+    "stream_final_dp": 0.0339988324840147,
+    "stream_final_eo": 0.0835818637722706,
+    "elapsed_seconds": 3.8,
+    "error": null
+  },
+  {
+    "model": "rfr",
+    "scenario": "age_race_decouple",
+    "accuracy": 0.644946293235644,
+    "dp": 0.03859308393912567,
+    "eo": 0.0840469203999223,
+    "stream_final_accuracy": 0.644946293235644,
+    "stream_final_dp": 0.03859308393912567,
+    "stream_final_eo": 0.0840469203999223,
+    "elapsed_seconds": 3.8,
+    "error": null
+  },
+  {
+    "model": "rfr",
+    "scenario": "charge_degree_race_swap",
+    "accuracy": 0.5873931770910659,
+    "dp": 0.0412681682271101,
+    "eo": 0.10292740417482724,
+    "stream_final_accuracy": 0.5873931770910659,
+    "stream_final_dp": 0.0412681682271101,
+    "stream_final_eo": 0.10292740417482724,
+    "elapsed_seconds": 3.8,
+    "error": null
+  }
+]
