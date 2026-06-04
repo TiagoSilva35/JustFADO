@@ -1,14 +1,62 @@
 [
   {
     "model": "arf",
-    "scenario": "compas",
-    "accuracy": 0.6812244663894381,
-    "dp": 0.10102677547940254,
-    "eo": 0.1217416936240628,
-    "stream_final_accuracy": 0.6812244663894381,
-    "stream_final_dp": 0.10102677547940254,
-    "stream_final_eo": 0.1217416936240628,
-    "elapsed_seconds": 12.0,
+    "scenario": "no_drift",
+    "accuracy": 0.6621429621256114,
+    "dp": 0.1274900080169167,
+    "eo": 0.14902653288968684,
+    "stream_final_accuracy": 0.6621429621256114,
+    "stream_final_dp": 0.1274900080169167,
+    "stream_final_eo": 0.14902653288968684,
+    "elapsed_seconds": 2.9,
+    "error": null
+  },
+  {
+    "model": "arf",
+    "scenario": "abrupt_race",
+    "accuracy": 0.6550270077025151,
+    "dp": 0.09633618118310983,
+    "eo": 0.1629023999682512,
+    "stream_final_accuracy": 0.6550270077025151,
+    "stream_final_dp": 0.09633618118310983,
+    "stream_final_eo": 0.1629023999682512,
+    "elapsed_seconds": 2.9,
+    "error": null
+  },
+  {
+    "model": "arf",
+    "scenario": "gradual_race",
+    "accuracy": 0.6600716274090894,
+    "dp": 0.1172002832195167,
+    "eo": 0.16315219475733855,
+    "stream_final_accuracy": 0.6600716274090894,
+    "stream_final_dp": 0.1172002832195167,
+    "stream_final_eo": 0.16315219475733855,
+    "elapsed_seconds": 3.0,
+    "error": null
+  },
+  {
+    "model": "arf",
+    "scenario": "age_race_decouple",
+    "accuracy": 0.6449561472847344,
+    "dp": 0.07225616949664507,
+    "eo": 0.10155035048089088,
+    "stream_final_accuracy": 0.6449561472847344,
+    "stream_final_dp": 0.07225616949664507,
+    "stream_final_eo": 0.10155035048089088,
+    "elapsed_seconds": 2.9,
+    "error": null
+  },
+  {
+    "model": "arf",
+    "scenario": "charge_degree_race_swap",
+    "accuracy": 0.6071884219193965,
+    "dp": 0.0979798627904123,
+    "eo": 0.1471180017478345,
+    "stream_final_accuracy": 0.6071884219193965,
+    "stream_final_dp": 0.0979798627904123,
+    "stream_final_eo": 0.1471180017478345,
+    "elapsed_seconds": 2.9,
     "error": null
   }
 ]
