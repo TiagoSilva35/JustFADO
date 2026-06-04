@@ -1,7 +1,6 @@
 [
   {
     "model": "rfr",
-<<<<<<< HEAD
     "scenario": "no_drift",
     "accuracy": 0.6547110238910082,
     "dp": 0.1235269463575309,
@@ -57,15 +56,6 @@
     "stream_final_accuracy": 0.6046260530927219,
     "stream_final_dp": 0.055241093760320575,
     "stream_final_eo": 0.12123959283899534,
-=======
-    "scenario": "compas",
-    "accuracy": 0.6549828981461825,
-    "dp": 0.14241301243920484,
-    "eo": 0.17954682037795908,
-    "stream_final_accuracy": 0.6549828981461825,
-    "stream_final_dp": 0.14241301243920484,
-    "stream_final_eo": 0.17954682037795908,
->>>>>>> 87d3668 (COMPAS runs MSI)
     "elapsed_seconds": 21.1,
     "error": null
   }

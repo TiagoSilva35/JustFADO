@@ -1,7 +1,6 @@
 [
   {
     "model": "arf",
-<<<<<<< HEAD
     "scenario": "no_drift",
     "accuracy": 0.6732100221580419,
     "dp": 0.09036410988111705,
@@ -59,16 +58,5 @@
     "stream_final_eo": 0.0954423168049932,
     "elapsed_seconds": 11.9,
     "error": null
-=======
-    "scenario": "compas",
-    "accuracy": 0.6442368027834035,
-    "dp": 0.10746920049145424,
-    "eo": 0.12502619054680258,
-    "stream_final_accuracy": 0.6442368027834035,
-    "stream_final_dp": 0.10746920049145424,
-    "stream_final_eo": 0.12502619054680258,
-    "elapsed_seconds": 10.6,
-    "error": null
->>>>>>> 87d3668 (COMPAS runs MSI)
   }
 ]

@@ -1,7 +1,6 @@
 [
   {
     "model": "aranyani_base",
-<<<<<<< HEAD
     "scenario": "no_drift",
     "accuracy": 0.6744319801523709,
     "dp": 0.1259570113147084,
@@ -58,16 +57,6 @@
     "stream_final_dp": 0.0684031407108816,
     "stream_final_eo": 0.10598408424175335,
     "elapsed_seconds": 212.3,
-=======
-    "scenario": "compas",
-    "accuracy": 0.6737268982173473,
-    "dp": 0.09293089886162828,
-    "eo": 0.11487061867313154,
-    "stream_final_accuracy": 0.6737268982173473,
-    "stream_final_dp": 0.09293089886162828,
-    "stream_final_eo": 0.11487061867313154,
-    "elapsed_seconds": 202.3,
->>>>>>> 87d3668 (COMPAS runs MSI)
     "error": null
   }
 ]
