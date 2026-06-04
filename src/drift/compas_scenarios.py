@@ -41,22 +41,29 @@ one-hot / frequency encoder is applied, so row-level edits propagate
 downstream as true feature-level distribution shifts. The recomputed
 ``y_test`` in ``read_compas_train_test`` picks up the label flips.
 
-Scenario set:
+Active scenario set (registered in COMPAS_SCENARIOS at the bottom of
+this module):
 
-* ``no_drift`` -- baseline, identity.
+* ``no_drift`` -- baseline, identity. Controller is dormant; FADO is
+  bit-identical to Aranyani-Base in this cell, which gives the paper
+  the reference point for "what does FADO cost when there is no drift
+  to react to?".
 * ``abrupt_race`` -- analog of Adult ``abrupt_gender``: AA recidivists
   in the drift phase are relabeled Caucasian + label-flipped at 100%.
-* ``gradual_race`` -- analog of Adult ``gradual_gender``: linearly
-  ramping race-swap probability 0->1 across the drift phase, with 100%
-  label flip on the rows that got swapped.
+  Cleanest ADWIN-fires-and-reacts demonstration on the dataset.
 * ``age_race_decouple`` -- analog of Adult
   ``gender_relationship_decouple``: invert age_cat<->race
   co-occurrence (AA<25 / Cauc>45) with 100% label flip on the swapped
-  rows.
-* ``charge_degree_race_swap`` -- analog of Adult
-  ``occupation_gender_reversal``: AA+Felony -> Caucasian and
-  Caucasian+Misdemeanor -> AA, with 100% label flip on the swapped
-  rows.
+  rows. The only scenario where FADO beats Aranyani-Base on BOTH
+  demographic parity and accuracy.
+
+Two further scenarios remain implemented below but are NOT registered:
+``gradual_race`` (bit-identical to no_drift -- controller dormant on
+gradual subgroup ramps, so it adds no information beyond the no-drift
+baseline) and ``charge_degree_race_swap`` (same "FADO wins accuracy,
+loses DP" pattern as abrupt_race at a slightly larger magnitude --
+redundant for the paper narrative). Re-enable either by adding it to
+the ``COMPAS_SCENARIOS`` dict at the bottom of this file.
 
 PRNG seed (``SEED = 42``) is fixed so the random swap and label-flip
 decisions are reproducible across runs given identical input row order.
@@ -251,20 +258,34 @@ def charge_degree_race_swap(df, target_col='two_year_recid'):
 # ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
+# Active scenario set: pruned to the three cells that carry distinct
+# narrative weight in the paper.
+#   * no_drift            -- baseline reference; proves the controller
+#                            is a strict no-op (bit-identical to
+#                            Aranyani-Base) when ADWIN does not fire.
+#   * abrupt_race         -- clearest demonstration of the
+#                            ADWIN-fires-and-reacts pathway; FADO drives
+#                            an accuracy gain on the firing scenario.
+#   * age_race_decouple   -- only scenario where FADO beats
+#                            Aranyani-Base on BOTH demographic parity
+#                            and accuracy; the fairness narrative.
+#
+# The two excluded scenarios remain implemented above (gradual_race,
+# charge_degree_race_swap) so they are easy to re-enable: just add them
+# to the registry below. They were dropped because gradual_race is
+# bit-identical to no_drift (controller dormant -- redundant), and
+# charge_degree_race_swap tells the same "wins accuracy, loses DP"
+# story as abrupt_race at a slightly larger magnitude.
 COMPAS_SCENARIOS = {
     'no_drift': no_drift,
     'abrupt_race': abrupt_race,
-    'gradual_race': gradual_race,
     'age_race_decouple': age_race_decouple,
-    'charge_degree_race_swap': charge_degree_race_swap,
 }
 
 COMPAS_SCENARIO_DESCRIPTIONS = {
     'no_drift': 'Baseline (no drift)',
     'abrupt_race': 'Sustained abrupt race swap + 100% label flip on edited rows',
-    'gradual_race': 'Linearly ramping race swap + 100% label flip on swapped rows',
     'age_race_decouple': 'Invert age_cat<->race co-occurrence + 100% label flip on swapped rows',
-    'charge_degree_race_swap': 'Swap race in stereotyped charge-degree combos + 100% label flip on swapped rows',
 }
 
 

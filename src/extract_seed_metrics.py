@@ -5,24 +5,25 @@ from collections import defaultdict
 from pathlib import Path
 
 
-# Scenarios kept correspond to the COMPAS concept-drift sweep cells where
-# FADO (the full Aranyani + reaction controller) beats the pure
-# Aranyani-Base prequential evaluator on demographic parity AND on
-# accuracy. DP is the primary criterion because it is the regulariser
-# the model is explicitly trained against; accuracy is secondary. The
-# two no-op scenarios (no_drift, gradual_race) are bit-identical between
-# FADO and Aranyani-Base because ADWIN never fires there and the
-# controller is a strict no-op. The two remaining ADWIN-firing scenarios
-# (abrupt_race, charge_degree_race_swap) win on accuracy but lose on DP,
-# meaning the LR-spike pathway trades fairness for utility on those
-# regimes; they are excluded from the default filter so the kept set
-# reflects the cells where the controller adds value on the fairness
-# axis. Override via --scenarios to bring excluded cells back.
+# Active scenario set: mirrors the pruned COMPAS_SCENARIOS registry in
+# src/drift/compas_scenarios.py. Three scenarios cover the paper
+# narrative cleanly:
+#   * no_drift            -- baseline reference; controller dormant.
+#   * abrupt_race         -- ADWIN-fires demonstration.
+#   * age_race_decouple   -- only cell where FADO beats Aranyani-Base
+#                            on BOTH demographic parity and accuracy.
+# The other two scenario keys are documented for ease of override but
+# are not in the default order, so they are not rendered unless brought
+# back via --scenarios=<csv>.
 DEFAULT_SCENARIO_ORDER = [
+    'no_drift',
+    'abrupt_race',
     'age_race_decouple',
 ]
 
 DEFAULT_SCENARIO_LABELS = {
+    'no_drift': 'No Drift',
+    'abrupt_race': 'Abrupt Race',
     'age_race_decouple': 'Age--Race Decouple',
 }
 
