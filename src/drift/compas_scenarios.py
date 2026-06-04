@@ -1,4 +1,15 @@
-"""Virtual drift scenarios for the COMPAS test stream.
+"""Concept-drift scenarios for the COMPAS test stream.
+
+Each scenario combines a row-level categorical feature edit (covariate
+shift on P(x)) with a deterministic label flip on the same edited rows
+(label-conditional shift on P(y|x)). The combination is genuine concept
+drift in the Webb et al. sense: pure covariate-only edits on race,
+age_cat, or c_charge_degree leave P(y|x) almost unchanged for an
+Aranyani forest that relies primarily on the numeric priors_count /
+age features, and we verified empirically that ADWIN does not detect
+such virtual drift on COMPAS. Pairing the categorical edit with a
+per-subgroup label flip moves the conditional and yields a detectable
+prequential-error signal.
 
 Layout (3 phases, ``test_size=0.30``, test stream ~2.1k rows):
 
