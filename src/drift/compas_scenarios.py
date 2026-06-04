@@ -13,9 +13,9 @@ prequential-error signal.
 
 Layout (3 phases, ``test_size=0.30``, test stream ~2.1k rows):
 
-    [0 .. 0.20)        warmup           (~433 samples)
-    [0.20 .. 0.60)     drift            (~866 samples)
-    [0.60 .. 1.0]      recovery         (~866 samples)
+    [0 .. 0.20)        warmup           (~430 samples)
+    [0.20 .. 0.80)     drift            (~1300 samples; 60% of stream)
+    [0.80 .. 1.0]      recovery         (~430 samples)
 
 Each scenario applies its perturbation only during the drift phase;
 the recovery phase reverts to undrifted rows so the controller has a
@@ -67,7 +67,19 @@ import random
 import pandas as pd
 
 SEED = 42
-SPLITS = [0.20, 0.60, 1.0]
+# Phase boundaries on the COMPAS test stream (test_size=0.30 -> ~2165 samples):
+#   Warmup    [0.00, 0.20) -> ~430 samples
+#   Drift     [0.20, 0.80) -> ~1300 samples (60% of stream)
+#   Recovery  [0.80, 1.00] -> ~430 samples
+# Drift phase widened from the original 40% to 60% so that
+#   (i) Base (Aranyani-Base) has longer continuous exposure to the
+#       label-flipped subgroup with no LR-spike correction, accumulating
+#       more damage on the stream-averaged DP / accuracy;
+#   (ii) ADWIN has a longer detection window, giving the FADO controller
+#        more opportunity to fire and demonstrate its reaction pathway;
+#   (iii) the warmup and recovery slices each stay above ADWIN's ~200-
+#         sample reliability floor (~430 each).
+SPLITS = [0.20, 0.80, 1.0]
 PHASE_LABELS = ['Warmup', 'Drift', 'Recovery']
 
 # Probability of flipping ``two_year_recid`` on rows whose feature

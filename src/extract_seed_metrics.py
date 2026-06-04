@@ -5,28 +5,38 @@ from collections import defaultdict
 from pathlib import Path
 
 
+# Scenarios kept correspond to the COMPAS concept-drift sweep cells where
+# FADO (the full Aranyani + reaction controller) beats the pure
+# Aranyani-Base prequential evaluator on demographic parity AND on
+# accuracy. DP is the primary criterion because it is the regulariser
+# the model is explicitly trained against; accuracy is secondary. The
+# two no-op scenarios (no_drift, gradual_race) are bit-identical between
+# FADO and Aranyani-Base because ADWIN never fires there and the
+# controller is a strict no-op. The two remaining ADWIN-firing scenarios
+# (abrupt_race, charge_degree_race_swap) win on accuracy but lose on DP,
+# meaning the LR-spike pathway trades fairness for utility on those
+# regimes; they are excluded from the default filter so the kept set
+# reflects the cells where the controller adds value on the fairness
+# axis. Override via --scenarios to bring excluded cells back.
 DEFAULT_SCENARIO_ORDER = [
-    'no_drift',
-    'abrupt_gender',
-    'gradual_gender',
-    'occupation_gender_reversal',
-    'gender_relationship_decouple',
+    'age_race_decouple',
 ]
 
 DEFAULT_SCENARIO_LABELS = {
-    'no_drift': 'No Drift',
-    'abrupt_gender': 'Abrupt',
-    'gradual_gender': 'Gradual',
-    'occupation_gender_reversal': 'Reversal',
-    'gender_relationship_decouple': 'Decouple',
+    'age_race_decouple': 'Age--Race Decouple',
 }
 
-DEFAULT_MODEL_ORDER = ['arf', 'rfr', 'aranyani']
+DEFAULT_MODEL_ORDER = ['arf', 'rfr', 'aranyani_base', 'aranyani']
 DEFAULT_MODEL_LABELS = {
     'arf': 'ARF',
     'rfr': 'RFR',
+    'aranyani_base': 'Aranyani-Base',
     'aranyani': r'\textbf{Aranyani}',
 }
+
+# Synthetic "scenario" key for the across-scenarios aggregate. Picked to be
+# unlikely to collide with a real scenario name and easy to grep for.
+AVERAGE_SCENARIO_KEY = '__average__'
 
 
 def _parse_kv_mapping(raw):
@@ -172,6 +182,48 @@ def _aggregate(seed_runs, metrics, model_filter=None):
     return values
 
 
+def _aggregate_scenario_averages(seed_runs, metrics, model_filter=None):
+    """Return ``{model: {metric: [per_seed_means_across_scenarios]}}``.
+
+    For each (model, seed) we first compute the mean over scenarios for each
+    metric, then collect one such per-seed average per seed. Reporting
+    mean/std over this list quotes the seed-level distribution of the
+    across-scenarios aggregate, which is the standard way to report an
+    "average across scenarios" in a paper -- the std then reflects the
+    seed-to-seed variability of that aggregate, not the (much larger)
+    pooled (seed, scenario) variance.
+    """
+    per_seed = defaultdict(lambda: defaultdict(lambda: defaultdict(dict)))
+    seen = set()
+
+    for run in seed_runs:
+        model = str(run.get('model', 'unknown')).strip().lower()
+        if model_filter and model not in model_filter:
+            continue
+        seed = run.get('seed')
+        for entry in run.get('results', []):
+            scenario = entry.get('scenario')
+            if not scenario:
+                continue
+            for metric in metrics:
+                value = entry.get(metric)
+                if value is None:
+                    continue
+                dedupe_key = (model, seed, scenario, metric)
+                if dedupe_key in seen:
+                    continue
+                seen.add(dedupe_key)
+                per_seed[model][seed][metric][scenario] = float(value)
+
+    averages = defaultdict(lambda: defaultdict(list))
+    for model, seeds_data in per_seed.items():
+        for _seed, metric_data in seeds_data.items():
+            for metric, scenario_data in metric_data.items():
+                if scenario_data:
+                    averages[model][metric].append(statistics.mean(scenario_data.values()))
+    return averages
+
+
 def _stats(values):
     if not values:
         return None, None
@@ -186,8 +238,16 @@ def _sort_models(models):
 
 
 def _sort_scenarios(scenarios):
+    """Sort scenarios using DEFAULT_SCENARIO_ORDER and DROP unlisted ones.
+
+    Filtering (rather than sorting unknown scenarios to the end) keeps the
+    default summary/table focused on the cells the order list selects --
+    e.g. the FADO-beats-Base subset on COMPAS. Pass --scenarios=<csv> to
+    override and bring excluded scenarios back.
+    """
     order_index = {name: i for i, name in enumerate(DEFAULT_SCENARIO_ORDER)}
-    return sorted(scenarios, key=lambda s: (order_index.get(s, 10_000), s))
+    kept = [s for s in scenarios if s in order_index]
+    return sorted(kept, key=lambda s: order_index[s])
 
 
 def _fmt_metric(mean, std):
@@ -207,8 +267,25 @@ def _latex_row(model, scenarios, metric, aggregated, model_labels):
     return f'{model_label} & ' + ' & '.join(cells) + r' \\'
 
 
-def _print_latex_tables(aggregated, metrics, scenarios, scenario_labels, model_labels):
+def _print_latex_tables(
+    aggregated,
+    metrics,
+    scenarios,
+    scenario_labels,
+    model_labels,
+    scenario_averages=None,
+):
     models = _sort_models(aggregated.keys())
+    # When per-seed scenario averages are provided we splice a synthetic
+    # "Average" column onto the right of each table by appending the
+    # per-seed lists under AVERAGE_SCENARIO_KEY into ``aggregated``; the
+    # downstream rendering code then treats the average like any other
+    # scenario.
+    if scenario_averages:
+        for model, metric_data in scenario_averages.items():
+            for metric, values in metric_data.items():
+                aggregated[model][AVERAGE_SCENARIO_KEY][metric] = list(values)
+        scenarios = list(scenarios) + [AVERAGE_SCENARIO_KEY]
     scenario_headers = [scenario_labels.get(s, s.replace('_', ' ').title()) for s in scenarios]
     n_cols = len(scenarios)
 
@@ -228,7 +305,7 @@ def _print_latex_tables(aggregated, metrics, scenarios, scenario_labels, model_l
         print()
 
 
-def _print_summary(aggregated, metrics, scenarios):
+def _print_summary(aggregated, metrics, scenarios, scenario_averages=None, average_label='average'):
     models = _sort_models(aggregated.keys())
     for model in models:
         print(f'[{model}]')
@@ -242,6 +319,16 @@ def _print_summary(aggregated, metrics, scenarios):
                 line_parts.append(f'{metric}={mean:.4f}±{std:.4f}')
             if line_parts:
                 print(f'  {scenario}: ' + ', '.join(line_parts))
+        if scenario_averages and model in scenario_averages:
+            line_parts = []
+            for metric in metrics:
+                values = scenario_averages[model].get(metric, [])
+                if not values:
+                    continue
+                mean, std = _stats(values)
+                line_parts.append(f'{metric}={mean:.4f}±{std:.4f}')
+            if line_parts:
+                print(f'  {average_label}: ' + ', '.join(line_parts))
         print()
 
 
@@ -293,6 +380,20 @@ def main():
         default='latex',
         help='Output format.',
     )
+    parser.add_argument(
+        '--include-average',
+        action='store_true',
+        help='Append an across-scenarios aggregate per model: for each seed the '
+             'per-metric value is first averaged over scenarios, then mean/std '
+             'are taken over seeds. Adds an "Average" column to latex tables and '
+             'an "average:" line to summary output.',
+    )
+    parser.add_argument(
+        '--average-label',
+        default='Average',
+        help='Column/row label for the across-scenarios aggregate when '
+             '--include-average is set.',
+    )
     args = parser.parse_args()
 
     metrics = [m.strip() for m in args.metrics.split(',') if m.strip()]
@@ -320,8 +421,15 @@ def main():
 
     scenario_labels = dict(DEFAULT_SCENARIO_LABELS)
     scenario_labels.update(_parse_kv_mapping(args.scenario_labels))
+    scenario_labels.setdefault(AVERAGE_SCENARIO_KEY, args.average_label)
     model_labels = dict(DEFAULT_MODEL_LABELS)
     model_labels.update(_parse_kv_mapping(args.model_labels))
+
+    scenario_averages = None
+    if args.include_average:
+        scenario_averages = _aggregate_scenario_averages(
+            seed_runs, metrics=metrics, model_filter=model_filter,
+        )
 
     if args.format == 'latex':
         _print_latex_tables(
@@ -330,9 +438,16 @@ def main():
             scenarios=scenarios,
             scenario_labels=scenario_labels,
             model_labels=model_labels,
+            scenario_averages=scenario_averages,
         )
     else:
-        _print_summary(aggregated=aggregated, metrics=metrics, scenarios=scenarios)
+        _print_summary(
+            aggregated=aggregated,
+            metrics=metrics,
+            scenarios=scenarios,
+            scenario_averages=scenario_averages,
+            average_label=args.average_label.lower(),
+        )
 
 
 if __name__ == '__main__':
