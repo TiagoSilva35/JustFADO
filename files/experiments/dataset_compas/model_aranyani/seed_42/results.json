@@ -1,0 +1,14 @@
+[
+  {
+    "model": "aranyani",
+    "scenario": "abrupt_race",
+    "accuracy": 0.5923135868966227,
+    "dp": 0.08842071261776153,
+    "eo": 0.1344129466747326,
+    "stream_final_accuracy": 0.5923135868966227,
+    "stream_final_dp": 0.08842071261776153,
+    "stream_final_eo": 0.1344129466747326,
+    "elapsed_seconds": 433.2,
+    "error": null
+  }
+]

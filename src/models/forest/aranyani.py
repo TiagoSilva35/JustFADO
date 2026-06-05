@@ -99,7 +99,19 @@ def train_online(
         class_weights = tf.gather(weight_updater.class_weights, targets_batch)
         target_loss = criteria(y_true=targets_batch, y_pred=predictions, sample_weight=class_weights)
         weight_updater.total_num_samples += 1
-      
+
+      # B2 fix (2026-06): per-sample slicing MUST happen inside the tape's
+      # with-block so the slice ops are recorded. Slicing the batch tensors
+      # outside the tape produces untracked tensors that make
+      # ``tape.gradient`` return None for every var, silently disabling the
+      # fairness regulariser. See DOCS/BUG_REPORT_fairness_regulariser.md.
+      if compute_fairness:
+        node_decisions_per_sample = tf.unstack(node_decisions, axis=1)
+        predictions_per_sample = tf.unstack(predictions, axis=0)
+      else:
+        node_decisions_per_sample = None
+        predictions_per_sample = None
+
       y_pred_np = y_pred.numpy()
       targets_np = targets_batch.numpy()
       protected_np = protected_batch.numpy()
@@ -146,7 +158,7 @@ def train_online(
     if compute_fairness:
       initializers.accumulate_fairness_stats(
           tape, protected_batch.numpy(), targets_batch.numpy(),
-          node_decisions, predictions,
+          node_decisions_per_sample, predictions_per_sample,
           all_tree_trainable_vars, model.trainable_variables,
           gradient_w, gradient_b, agg_y,
           subgroup_count, protected_class_count,

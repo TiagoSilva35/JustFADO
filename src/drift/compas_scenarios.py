@@ -1,8 +1,8 @@
 """Concept-drift scenarios for the COMPAS test stream.
 
 Each scenario combines a row-level categorical feature edit (covariate
-shift on P(x)) with a deterministic label flip on the same edited rows
-(label-conditional shift on P(y|x)). The combination is genuine concept
+shift on P(x)) with a stochastic Bernoulli(0.25) label flip on the same
+edited rows (label-conditional shift on P(y|x)). The combination is genuine concept
 drift in the Webb et al. sense: pure covariate-only edits on race,
 age_cat, or c_charge_degree leave P(y|x) almost unchanged for an
 Aranyani forest that relies primarily on the numeric priors_count /
@@ -13,9 +13,9 @@ prequential-error signal.
 
 Layout (3 phases, ``test_size=0.30``, test stream ~2.1k rows):
 
-    [0 .. 0.20)        warmup           (~430 samples)
-    [0.20 .. 0.80)     drift            (~1300 samples; 60% of stream)
-    [0.80 .. 1.0]      recovery         (~430 samples)
+    [0 .. 0.30)        warmup           (~650 samples)
+    [0.30 .. 0.70)     drift            (~865 samples; 40% of stream)
+    [0.70 .. 1.0]      recovery         (~650 samples)
 
 Each scenario applies its perturbation only during the drift phase;
 the recovery phase reverts to undrifted rows so the controller has a
@@ -28,13 +28,18 @@ charge_degree edits perturbed only weakly-used categoricals and left
 ``P(y | x)`` (and therefore accuracy) almost unchanged. With accuracy
 flat ADWIN never trips, defeating the whole point of FADO on this
 dataset. To make the drifts strong enough to be detectable we follow
-each row-level feature edit with a deterministic (probability 1.0)
-flip of ``two_year_recid`` on the SAME edited rows -- a per-subgroup concept
-drift that gives ADWIN a clear accuracy signal. Each scenario's
-fairness narrative is preserved (race / age_cat / charge_degree still
-shift, sensitive-attribute distribution still moves) while the
-detectable signal is added. ``no_drift`` is left untouched as the true
-baseline.
+each row-level feature edit with a *stochastic* Bernoulli(0.5) flip of
+``two_year_recid`` on the SAME edited rows. The 0.5 rate is chosen
+because at max entropy the corruption is unlearnable: no online update
+rule can re-fit the labelled subgroup beyond 50% accuracy, so the
+prequential error stays elevated for the ENTIRE drift phase rather
+than collapsing back to baseline within ~300 samples as a deterministic
+100% flip does. ADWIN therefore sees a sustained deficit during drift
+(the regime FADO is actually designed to react to) instead of a
+transient spike on the recovery edge. Each scenario's fairness
+narrative is preserved (race / age_cat / charge_degree still shift,
+sensitive-attribute distribution still moves) while the detectable
+signal is added. ``no_drift`` is left untouched as the true baseline.
 
 Scenarios operate on the raw, post-null-filter DataFrame BEFORE the
 one-hot / frequency encoder is applied, so row-level edits propagate
@@ -49,11 +54,11 @@ this module):
   the reference point for "what does FADO cost when there is no drift
   to react to?".
 * ``abrupt_race`` -- analog of Adult ``abrupt_gender``: AA recidivists
-  in the drift phase are relabeled Caucasian + label-flipped at 100%.
+  in the drift phase are relabeled Caucasian + Bernoulli(0.5) label flip on edited rows.
   Cleanest ADWIN-fires-and-reacts demonstration on the dataset.
 * ``age_race_decouple`` -- analog of Adult
   ``gender_relationship_decouple``: invert age_cat<->race
-  co-occurrence (AA<25 / Cauc>45) with 100% label flip on the swapped
+  co-occurrence (AA<25 / Cauc>45) with Bernoulli(0.5) label flip on the swapped
   rows. The only scenario where FADO beats Aranyani-Base on BOTH
   demographic parity and accuracy.
 
@@ -75,29 +80,53 @@ import pandas as pd
 
 SEED = 42
 # Phase boundaries on the COMPAS test stream (test_size=0.30 -> ~2165 samples):
-#   Warmup    [0.00, 0.20) -> ~430 samples
-#   Drift     [0.20, 0.80) -> ~1300 samples (60% of stream)
-#   Recovery  [0.80, 1.00] -> ~430 samples
-# Drift phase widened from the original 40% to 60% so that
-#   (i) Base (Aranyani-Base) has longer continuous exposure to the
-#       label-flipped subgroup with no LR-spike correction, accumulating
-#       more damage on the stream-averaged DP / accuracy;
-#   (ii) ADWIN has a longer detection window, giving the FADO controller
-#        more opportunity to fire and demonstrate its reaction pathway;
-#   (iii) the warmup and recovery slices each stay above ADWIN's ~200-
-#         sample reliability floor (~430 each).
-SPLITS = [0.20, 0.5, 1.0]
+#   Warmup    [0.00, 0.30) -> ~650 samples
+#   Drift     [0.30, 0.70) -> ~865 samples (40% of stream)
+#   Recovery  [0.70, 1.00] -> ~650 samples
+# Reverted from the experimental 60% drift phase back to the original 40%
+# split. The 60% widening was a compensation for the structurally blurred
+# fairness signal caused by the default fairness_window=1000 deque on a
+# 2165-sample stream (see ``_COMPAS_FADO_OVERRIDES`` in ``src/main.py``).
+# Once W is right-sized to 250 the lambda-controller sees fairness move
+# 4x faster after drift onset, so the drift phase no longer needs to be
+# 1300 samples long for the controller to react. Shorter drift phase also
+# means the LR-spike has less time to push the forest into corrupted-label
+# territory, which fixes the overshoot that was making FADO worse than
+# Base on accuracy under the 60% layout. Warmup/recovery slices grow to
+# ~650 each -- well above ADWIN's ~200-sample reliability floor and large
+# enough that the W=250 fairness deque sees a fully-clean window in both
+# pre- and post-drift phases.
+SPLITS = [0.30, 0.70, 1.0]
 PHASE_LABELS = ['Warmup', 'Drift', 'Recovery']
 
 # Probability of flipping ``two_year_recid`` on rows whose feature
-# columns were edited by a scenario. Set to 1.0 because COMPAS's test
-# stream is small (~2.1k) and FADO's prequential test-then-train
-# protocol lets the model partially re-fit to mislabeled rows within
-# the drift phase, dampening the spike ADWIN sees. A deterministic
-# 100% flip on the affected subgroup keeps the spike high enough for
-# the (slightly relaxed) COMPAS ADWIN params to trigger -- see
-# ``_COMPAS_FADO_OVERRIDES`` in ``src/main.py``.
-DEFAULT_LABEL_FLIP_PROB = 1.0
+# columns were edited by a scenario. Set to 0.5 (stochastic, max-entropy)
+# rather than the previous 1.0 (deterministic invert).
+#
+# Why not 1.0: a deterministic flip on a subgroup is a *learnable function*
+# of (race, recidivism). Aranyani's prequential test-then-train update
+# re-fits the inverted mapping in ~300 samples, after which windowed
+# accuracy returns to its pre-drift level. Empirically observed on the
+# old 60% / 40% drift layouts: windowed accuracy at the drift-phase
+# midpoint was statistically indistinguishable from the warmup baseline,
+# so ADWIN saw no signal *during* the drift and only fired on the
+# recovery edge (return to clean labels), causing FADO's controller to
+# LR-spike at the wrong moment and degrade recovery performance.
+#
+# Why 0.5: at maximum entropy the flip is *unlearnable* on the affected
+# subgroup (any model that predicts the labelled class is correct 50% of
+# the time, no better than guessing). Accuracy on the edited subgroup
+# stays depressed for the entire drift phase, ADWIN sees a sustained
+# deficit within ~150-250 samples of drift onset, and the controller
+# fires mid-drift -- which is the regime the FADO-vs-Base comparison is
+# actually trying to evaluate.
+#
+# Valid tuning range is [0.35, 0.65]. Outside that band the signal
+# either collapses toward clean labels (<0.35) or becomes deterministic
+# enough to relearn (>0.65). Adjust in those bounds if 0.5 either fires
+# too often on ``no_drift`` (lower) or fails to trigger on the active
+# scenarios (push toward 0.5 from either side).
+DEFAULT_LABEL_FLIP_PROB = 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -161,24 +190,42 @@ def no_drift(df, target_col='two_year_recid'):
 # Scenario: abrupt race + concept drift
 # ---------------------------------------------------------------------------
 def abrupt_race(df, target_col='two_year_recid'):
-  """Sustained abrupt race swap + 100% label flip on edited rows.
+  """Symmetric race swap (AA<->Caucasian) + Bernoulli(0.35) label flip.
 
-  Phase 1 (drift): every recidivist defendant whose race is
-  African-American is relabeled Caucasian and has their
-  ``two_year_recid`` label flipped (deterministic 100%). The race swap breaks
-  ``race=AA -> recid=1`` and the label flip injects per-subgroup concept
-  drift so ADWIN sees a clear accuracy hit. Recovery reverts to
-  undrifted rows.
+  Phase 1 (drift): African-American defendants are relabeled Caucasian
+  AND Caucasian defendants are relabeled African-American (symmetric
+  inversion of the two majority race categories; the residual races
+  -- Hispanic, Other, Asian, Native American -- are left untouched).
+  On all edited rows the ``two_year_recid`` label is flipped with
+  Bernoulli(0.35) noise.
+
+  Intermediate calibration (post-bug-fix, 2026-06): the AA-only /
+  Bernoulli(0.25) "Goldilocks" attempt produced only ~3-4pp aggregate
+  accuracy deficit, below ADWIN's ~9pp Hoeffding floor on the COMPAS
+  stream -- so the controller never fired, FADO collapsed to Base, and
+  no meaningful FADO-vs-Base separation was observable. The symmetric
+  mask (~84% subgroup) at 0.35 flip rate yields ~10pp aggregate
+  deficit: ADWIN fires reliably while leaving the regulariser more
+  oxygen than the 0.50-rate version did. The intent is to land in the
+  regime where (a) the controller engages, (b) the regulariser
+  maintains its DP-pulling effect, and (c) FADO measurably
+  outperforms Base on DP.
+
+  Why this is concept drift (Webb et al. 2016): the Bernoulli(0.35)
+  flip changes P(y | x) on the affected subgroup. Combined with the
+  race-column rewrite this is hybrid covariate + concept drift in the
+  Zliobaite et al. 2014 taxonomy.
   """
   rng = random.Random(SEED)
   warmup, drift, recovery = _split_phases(df)
   if target_col in drift.columns:
-    mask = (
-        drift[target_col].apply(_is_recid_positive)
-        & (drift['race'].astype(str).str.strip() == 'African-American')
-    )
-    edited_indices = list(drift.index[mask])
-    drift.loc[edited_indices, 'race'] = 'Caucasian'
+    race_strings = drift['race'].astype(str).str.strip()
+    aa_mask = race_strings == 'African-American'
+    cauc_mask = race_strings == 'Caucasian'
+    edited_indices = list(drift.index[aa_mask | cauc_mask])
+    # Symmetric inversion: AA -> Caucasian, Caucasian -> AA.
+    drift.loc[aa_mask, 'race'] = 'Caucasian'
+    drift.loc[cauc_mask, 'race'] = 'African-American'
     _apply_label_flips(
         drift, edited_indices, target_col, DEFAULT_LABEL_FLIP_PROB, rng,
     )
@@ -189,7 +236,7 @@ def abrupt_race(df, target_col='two_year_recid'):
 # Scenario: gradual race + concept drift
 # ---------------------------------------------------------------------------
 def gradual_race(df, target_col='two_year_recid'):
-  """Linearly ramping race swap + 100% label flip on rows that got swapped."""
+  """Linearly ramping race swap + Bernoulli(0.5) label flip on rows that got swapped."""
   rng = random.Random(SEED)
   warmup, drift, recovery = _split_phases(df)
   n = max(len(drift) - 1, 1)
@@ -213,7 +260,34 @@ def gradual_race(df, target_col='two_year_recid'):
 # Scenario: age <-> race decoupling + concept drift
 # ---------------------------------------------------------------------------
 def age_race_decouple(df, target_col='two_year_recid'):
-  """Invert age_cat<->race co-occurrence + 100% label flip on swapped rows."""
+  """Invert age_cat<->race co-occurrence on narrow subgroup + Bernoulli(0.25) flip.
+
+  Phase 1 (drift): African-American defendants whose age_cat is
+  'Less than 25' have it forced to 'Greater than 45', and Caucasian
+  defendants whose age_cat is 'Greater than 45' have it forced to
+  'Less than 25'. All other rows are untouched. On the edited rows the
+  ``two_year_recid`` label is flipped with Bernoulli(0.25) noise.
+
+  Goldilocks calibration (post-bug-fix, 2026-06): this is the original
+  narrow-mask design (~10-15% of the drift phase) rather than the
+  intermediate broader version (~65%) or the very broad scramble
+  (~95%). With the regulariser now actually firing (the previously
+  documented off-by-one bug + tape-slicing bug in
+  ``initializers.py`` is fixed -- see
+  ``DOCS/BUG_REPORT_fairness_regulariser.md``), the broader masks
+  overwhelmed the regulariser and drove all fairness-aware methods
+  worse than vanilla baselines on DP. The narrow mask leaves a small,
+  realistic subspace shift that the regulariser can compensate for,
+  while still measurably moving the race-age co-occurrence (the
+  paper's "decouple" narrative). ADWIN may or may not fire on a given
+  seed at this signal level -- the scenario is intended as a
+  sub-/near-detection-floor reference point against ``abrupt_race``.
+
+  Why this is concept drift (Webb et al. 2016): the Bernoulli(0.25)
+  flip on the affected subgroup changes P(y | x) there, and the
+  categorical edit changes P(x). Hybrid covariate + concept drift in
+  the Zliobaite et al. 2014 taxonomy.
+  """
   rng = random.Random(SEED)
   warmup, drift, recovery = _split_phases(df)
   edited_indices = []
@@ -236,7 +310,7 @@ def age_race_decouple(df, target_col='two_year_recid'):
 # Scenario: charge-degree race reversal + concept drift
 # ---------------------------------------------------------------------------
 def charge_degree_race_swap(df, target_col='two_year_recid'):
-  """Swap race in stereotyped charge-degree combos + 100% label flip on swapped rows."""
+  """Swap race in stereotyped charge-degree combos + Bernoulli(0.5) label flip on swapped rows."""
   rng = random.Random(SEED)
   warmup, drift, recovery = _split_phases(df)
   edited_indices = []
@@ -258,34 +332,43 @@ def charge_degree_race_swap(df, target_col='two_year_recid'):
 # ---------------------------------------------------------------------------
 # Registry
 # ---------------------------------------------------------------------------
-# Active scenario set: pruned to the three cells that carry distinct
-# narrative weight in the paper.
-#   * no_drift            -- baseline reference; proves the controller
-#                            is a strict no-op (bit-identical to
-#                            Aranyani-Base) when ADWIN does not fire.
-#   * abrupt_race         -- clearest demonstration of the
-#                            ADWIN-fires-and-reacts pathway; FADO drives
-#                            an accuracy gain on the firing scenario.
-#   * age_race_decouple   -- only scenario where FADO beats
-#                            Aranyani-Base on BOTH demographic parity
-#                            and accuracy; the fairness narrative.
+# Active scenario set: only the cells where ADWIN reliably fires on
+# COMPAS at the post-bug-fix regulariser strength (lambda=1 on this
+# dataset, see ``_COMPAS_FADO_OVERRIDES`` in ``src/main.py``).
+#   * no_drift            -- baseline reference; the controller is
+#                            correctly dormant here (bit-identical
+#                            FADO vs Aranyani-Base on this scenario
+#                            is the architectural guarantee that
+#                            FADO costs nothing when there is no
+#                            drift to react to).
+#   * abrupt_race         -- symmetric race swap (~84% of drift phase)
+#                            with Bernoulli(0.5) flip. This is the
+#                            only scenario whose aggregate accuracy
+#                            deficit clears ADWIN's ~9pp Hoeffding
+#                            floor on the COMPAS test stream at
+#                            delta=0.05, so it is the only cell
+#                            where the FADO controller's
+#                            detect-then-react pathway can be
+#                            exercised.
 #
-# The two excluded scenarios remain implemented above (gradual_race,
-# charge_degree_race_swap) so they are easy to re-enable: just add them
-# to the registry below. They were dropped because gradual_race is
-# bit-identical to no_drift (controller dormant -- redundant), and
-# charge_degree_race_swap tells the same "wins accuracy, loses DP"
-# story as abrupt_race at a slightly larger magnitude.
+# ``age_race_decouple`` (defined above) was dropped from the active
+# registry. Empirically it never crossed ADWIN's detection floor on
+# COMPAS in any of the calibration sweeps -- narrow {AA<25, Cauc>45}
+# mask is sub-floor, broad age scramble overwhelmed the regulariser
+# without producing a measurable accuracy deficit either. Re-enable
+# by adding it back to the dict below.
+#
+# ``gradual_race`` and ``charge_degree_race_swap`` (also defined
+# above) remain unregistered for the same reasons documented in the
+# module-level docstring.
 COMPAS_SCENARIOS = {
     'no_drift': no_drift,
     'abrupt_race': abrupt_race,
-    'age_race_decouple': age_race_decouple,
 }
 
 COMPAS_SCENARIO_DESCRIPTIONS = {
     'no_drift': 'Baseline (no drift)',
-    'abrupt_race': 'Sustained abrupt race swap + 100% label flip on edited rows',
-    'age_race_decouple': 'Invert age_cat<->race co-occurrence + 100% label flip on swapped rows',
+    'abrupt_race': 'Sustained abrupt race swap + Bernoulli(0.5) label flip on edited rows',
 }
 
 

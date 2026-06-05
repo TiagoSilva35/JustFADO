@@ -195,10 +195,20 @@ def evaluate_aranyani_baseline_over_timesteps(
                 y_probs_train = train_out[0] if isinstance(train_out, tuple) else train_out
                 node_decisions_train = train_out[1] if isinstance(train_out, tuple) else None
                 loss = criteria(y_true=y_t_tensor, y_pred=y_probs_train)
+                # B2 fix (2026-06): per-sample slicing MUST happen inside
+                # the tape. See DOCS/BUG_REPORT_fairness_regulariser.md.
+                if compute_fairness and node_decisions_train is not None:
+                    node_decisions_per_sample = tf.unstack(
+                        node_decisions_train, axis=1
+                    )
+                    predictions_per_sample = tf.unstack(y_probs_train, axis=0)
+                else:
+                    node_decisions_per_sample = None
+                    predictions_per_sample = None
             if compute_fairness and node_decisions_train is not None:
                 accumulate_fairness_stats(
                     tape, [a_t], [y_t],
-                    node_decisions_train, y_probs_train,
+                    node_decisions_per_sample, predictions_per_sample,
                     all_tree_trainable_vars, model.trainable_variables,
                     gradient_w, gradient_b, agg_y,
                     subgroup_count, protected_class_count,

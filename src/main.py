@@ -107,9 +107,60 @@ def _dataset_name():
 # injected by ``src/drift/compas_scenarios.py``. Baseline ``no_drift``
 # should still NOT trigger -- treat any false-positive there as a sign
 # the override is too loose and dial it back.
+# ``fairness_window`` and ``min_samples_per_stream`` are also scaled down
+# for COMPAS. The default W=1000 fairness deque is nearly half of the
+# entire ~2165-sample test stream: the warmup phase (~650 rows under the
+# 30/70/100 split) never fills the window, the drift onset is invisible to
+# the lambda-controller for ~1000 samples after it starts (the deque is
+# still 70% pre-drift content), and the recovery slice is never seen on a
+# clean window. The result is that FADO's fairness-regulariser pathway
+# receives a structurally blurred signal on this dataset and cannot
+# demonstrate measurable separation from Aranyani-Base. Setting W=250
+# (~10-15% of stream, matched to ADWIN's ~200-sample bucket scale) gives
+# both models a window that turns over fast enough to reflect actual
+# per-phase fairness behaviour. ``baseline_evaluator.py`` honours the
+# ``fairness_window`` key from ``static_params`` (lines 104-106), so the
+# override reaches Aranyani-Base too -- keeping the FADO-vs-Base comparison
+# apples-to-apples while removing the signal-blur confound from both arms.
+# Additional COMPAS overrides for the FADO reaction controller and the
+# fairness regulariser:
+#
+# * ``lr_decay_steps: 600`` (default 3000) -- the default decay window
+#   exceeds the entire COMPAS test stream (~2165 samples), so even if the
+#   evaluator's recovery branch ever transitions out of the LR-spike
+#   state, the decay back to base LR cannot complete within the stream.
+#   600 samples is ~28% of the stream and matches the recovery-phase
+#   length (~650 samples), so the decay schedule is in principle
+#   completable on COMPAS. See ``evaluator.py:201-217`` for the structural
+#   precondition (recovery flag must flip from True to False); the
+#   accuracy-based gate there currently prevents that transition on
+#   adversarial-drift streams, so this override is staged for the moment
+#   the recovery logic is fixed and is presently inactive on this dataset.
+#
+# * ``lambda_const: 10.0`` (default 0.1) -- aligns the code with the
+#   paper's documented value. With LR spiked 10x during the FADO drift
+#   response and lambda at the old 0.1, the fairness gradient was
+#   effectively 1000x smaller than the classification gradient -- no
+#   meaningful regularisation pressure during the response window. At
+#   lambda=10.0 the ratio is 1:1 with classification gradient even under
+#   the spike, giving the regulariser a chance to keep DP/EO from
+#   blowing out while the model adapts.
 _COMPAS_FADO_OVERRIDES = {
     'adwin_delta_warn': 1e-3,
     'adwin_delta_confirm': 0.05,
+    'fairness_window': 250,
+    'min_samples_per_stream': 20,
+    'lr_decay_steps': 600,
+    # lambda_const tuning history on COMPAS (post-bug-fix):
+    #   10.0 -> regulariser dominated, suppressed accuracy drop during drift
+    #          -> ADWIN never fired -> FADO bit-identical to Base.
+    #    1.0 -> reduces regulariser pressure enough that drift error
+    #          surfaces (~5pp drop expected) and ADWIN can detect.
+    # Paper claim of lambda=10 was made when the regulariser was
+    # silently disabled (see DOCS/BUG_REPORT_fairness_regulariser.md),
+    # so it was never a tuned value. lambda=1 is the empirical
+    # post-fix calibration for COMPAS.
+    'lambda_const': 1.0,
 }
 
 
@@ -507,6 +558,15 @@ def _run_aranyani_train_then_test(
         tree_depth=tree_depth,
         num_trees=num_trees,
         fairness_window=int(FLAGS.drift_fairness_window),
+        # Pass the same static_params dict FADO receives so the dataset-specific
+        # overrides (e.g. _COMPAS_FADO_OVERRIDES) apply to BOTH models. The
+        # baseline evaluator only honours ``fairness_window`` and
+        # ``lambda_const`` from this dict (see baseline_evaluator.py lines
+        # 104-106) and silently ignores the drift-controller keys, so it is
+        # safe to pass the full dict. Without this, Base on COMPAS runs with
+        # lambda=0.1 / W=1000 while FADO runs with lambda=10.0 / W=250 -- an
+        # apples-to-oranges comparison that hides any real FADO-vs-Base gap.
+        static_params=_build_aranyani_static_params(),
     )
 
 

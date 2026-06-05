@@ -17,31 +17,45 @@ def init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_atrib
     return gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count
 
 def accumulate_fairness_stats(
-        tape, protected_batch, targets_batch, 
-        node_decisions, predictions, 
+        tape, protected_batch, targets_batch,
+        node_decisions_per_sample, predictions_per_sample,
         all_tree_trainable_vars, model_trainable_vars,
         gradient_w, gradient_b, agg_y,
         subgroup_count, protected_class_count,
         num_internal_nodes, data_dim,
         constraint_type='node', gradient_type='vanilla', base_gamma=0.9
 ):
+    """Accumulate per-(group, label) running fair-gradient stats.
+
+    IMPORTANT (B2 fix, 2026-06): ``node_decisions_per_sample`` and
+    ``predictions_per_sample`` MUST be Python lists of per-sample tensors
+    that were produced INSIDE the ``with tf.GradientTape(...) as tape:``
+    block (via ``tf.unstack(node_decisions_batch, axis=1)`` and
+    ``tf.unstack(predictions_batch, axis=0)`` respectively). Slicing the
+    batch tensors outside the tape's ``with``-block creates new tensors
+    the tape has not recorded, so ``tape.gradient(sliced_tensor, vars)``
+    returns ``None`` for every var -- which silently disables the entire
+    fairness regulariser. See ``DOCS/BUG_REPORT_fairness_regulariser.md``
+    for the full diagnosis.
+    """
     for i, a_label in enumerate(protected_batch):
         a_label = int(a_label)
         y_label = int(targets_batch[i])
         protected_class_count[a_label] += 1
         subgroup_count[(a_label, y_label)] += 1
-        
-        agg_y[(a_label, y_label)] += node_decisions[:, i].numpy()
-        
-        if constraint_type == 'node':
-            fair_gradients = tape.gradient(node_decisions[:, i], all_tree_trainable_vars)
-        elif constraint_type == 'leaf':
-            fair_gradients = tape.gradient(predictions[i], model_trainable_vars)
 
-        # none_count = sum(1 for g in fair_gradients if g is None)
-        # nonzero_norms = [float(tf.norm(g).numpy()) for g in fair_gradients if g is not None]
-        # if len(nonzero_norms) == 0 or all(n == 0.0 for n in nonzero_norms[:3]):
-        #     print(f"[ACCUM DEBUG] a={a_label} y={y_label} none={none_count}/{len(fair_gradients)} norms={nonzero_norms[:6]}")
+        # Per-sample node decisions are pre-sliced (list indexing, not
+        # tensor slicing) so this update sees the tape-recorded tensors.
+        agg_y[(a_label, y_label)] += node_decisions_per_sample[i].numpy()
+
+        if constraint_type == 'node':
+            fair_gradients = tape.gradient(
+                node_decisions_per_sample[i], all_tree_trainable_vars
+            )
+        elif constraint_type == 'leaf':
+            fair_gradients = tape.gradient(
+                predictions_per_sample[i], model_trainable_vars
+            )
 
         idx_b = idx_w = -1
         for fair_grad in fair_gradients:
@@ -57,12 +71,12 @@ def accumulate_fairness_stats(
                 idx_theta = idx_w
             else:
                 continue
-            
+
             if gradient_type in ('momentum', 'ema'):
                 gradient_theta[idx_theta] = (
                     gradient_theta[idx_theta] * base_gamma + fair_grad.numpy()
                 )
-            else: 
+            else:
                 factor = 1 / subgroup_count[(a_label, y_label)]
                 gradient_theta[idx_theta] = (
                     gradient_theta[idx_theta] * (1 - factor) + fair_grad.numpy() * factor
@@ -77,7 +91,17 @@ def compute_fairness_gradients(
     gradient_type='vanilla', base_gamma=0.9,
     huber_loss_delta=0.1, dp_sign=1.0, constraint_type='node',
 ):
-    group_ids = range(1, number_of_atributes + 1)
+    # NOTE: must match the indexing convention used by ``init_fairness_state``
+    # (line 8) and ``accumulate_fairness_stats`` (lines 28-34), both of which
+    # key state dicts by ``int(a_label)`` -- i.e. the raw 0/1 protected-attribute
+    # value, not a 1-indexed group id. The previous ``range(1, n+1)`` here
+    # caused ``can_compute`` to fail on binary protected attributes
+    # (protected_class_count[2] was never populated because no sample has
+    # a_label == 2), short-circuiting this function to ``return gradients``
+    # unmodified and making ``lambda_const`` dead code during the prequential
+    # train phase. Confirmed via bit-identical FADO/Aranyani-Base results at
+    # lambda=0.1 vs lambda=10.0 on COMPAS abrupt_race (seed 42, 2025-11).
+    group_ids = range(0, number_of_atributes)
     if fairness_type == 'dp':
         can_compute = all(protected_class_count[a] > 0 for a in group_ids)
     else:

@@ -1,62 +1,14 @@
 [
   {
     "model": "aranyani_base",
-    "scenario": "no_drift",
-    "accuracy": 0.6819096955177967,
-    "dp": 0.12032936075855533,
-    "eo": 0.12504686108537685,
-    "stream_final_accuracy": 0.6819096955177967,
-    "stream_final_dp": 0.12032936075855533,
-    "stream_final_eo": 0.12504686108537685,
-    "elapsed_seconds": 193.6,
-    "error": null
-  },
-  {
-    "model": "aranyani_base",
     "scenario": "abrupt_race",
-    "accuracy": 0.676022505818606,
-    "dp": 0.05805572394350763,
-    "eo": 0.0997035243360293,
-    "stream_final_accuracy": 0.676022505818606,
-    "stream_final_dp": 0.05805572394350763,
-    "stream_final_eo": 0.0997035243360293,
-    "elapsed_seconds": 193.4,
-    "error": null
-  },
-  {
-    "model": "aranyani_base",
-    "scenario": "gradual_race",
-    "accuracy": 0.6733180020918275,
-    "dp": 0.08055902418825964,
-    "eo": 0.11470095516632849,
-    "stream_final_accuracy": 0.6733180020918275,
-    "stream_final_dp": 0.08055902418825964,
-    "stream_final_eo": 0.11470095516632849,
-    "elapsed_seconds": 191.6,
-    "error": null
-  },
-  {
-    "model": "aranyani_base",
-    "scenario": "age_race_decouple",
-    "accuracy": 0.6527397757254252,
-    "dp": 0.09844895368721507,
-    "eo": 0.1262394909527419,
-    "stream_final_accuracy": 0.6527397757254252,
-    "stream_final_dp": 0.09844895368721507,
-    "stream_final_eo": 0.1262394909527419,
-    "elapsed_seconds": 211.2,
-    "error": null
-  },
-  {
-    "model": "aranyani_base",
-    "scenario": "charge_degree_race_swap",
-    "accuracy": 0.6149024520887457,
-    "dp": 0.05585236065330696,
-    "eo": 0.09302389609829331,
-    "stream_final_accuracy": 0.6149024520887457,
-    "stream_final_dp": 0.05585236065330696,
-    "stream_final_eo": 0.09302389609829331,
-    "elapsed_seconds": 187.2,
+    "accuracy": 0.6226082860882909,
+    "dp": 0.10307820595304962,
+    "eo": 0.1327912347702379,
+    "stream_final_accuracy": 0.6226082860882909,
+    "stream_final_dp": 0.10307820595304962,
+    "stream_final_eo": 0.1327912347702379,
+    "elapsed_seconds": 411.0,
     "error": null
   }
 ]
