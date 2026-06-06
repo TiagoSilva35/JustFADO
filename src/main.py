@@ -182,6 +182,41 @@ _COMPAS_FADO_OVERRIDES = {
 }
 
 
+# Folktables-specific FADO overrides (Option A from the 2026-06 pilot).
+#
+# Background: pilot runs at the 10% subsample (~18.7k test samples) showed
+# FADO losing to Aranyani-Base on all three metrics across seeds 7 and 8.
+# Trajectory analysis: ADWIN fires once around the 2017/2018 boundary
+# (gradual cross-year shift, not abrupt), the controller spikes LR x10
+# and drops temperature to 0.1 (hard routing), which collapses the
+# soft-routing gradient flow that the node-level fairness regulariser
+# relies on. The result is a post-drift DP creep that does not occur in
+# the controller-free Aranyani-Base run.
+#
+# These overrides soften the reaction so it does not break the regulariser
+# on a gradual shift:
+#   * drift_lr_spike_mult 10 -> 3: still a meaningful boost on confirmation,
+#                                  but no longer dominates the steady-state
+#                                  gradient by an order of magnitude.
+#   * temperature_on_drift 0.1 -> 0.5: soft sharpening only. Gradient still
+#                                  flows through the sigmoids so the
+#                                  regulariser can keep adjusting per-group
+#                                  routing balance during the spike.
+#   * lr_decay_steps 3000 -> 1000: at 10% subsample (~18.7k samples) the
+#                                  3000-step decay only completes ~16% of
+#                                  the stream; 1000 steps fully unwinds
+#                                  within the post-drift portion.
+#
+# The ADWIN thresholds and rolling window are unchanged: the gradual-shift
+# detection floor at the default delta is still well below realistic
+# Folktables cross-year accuracy deficits.
+_FOLKTABLES_FADO_OVERRIDES = {
+    'drift_lr_spike_mult': 3.0,
+    'temperature_on_drift': 0.5,
+    'lr_decay_steps': 1000,
+}
+
+
 def _build_aranyani_static_params():
     params = {
         'adwin_delta_warn': float(FLAGS.drift_adwin_delta_warn),
@@ -197,8 +232,11 @@ def _build_aranyani_static_params():
         'temperature_recovery_step': float(FLAGS.drift_temperature_recovery_step),
         'lambda_const': float(FLAGS.lambda_const),
     }
-    if _dataset_name().lower() == 'compas':
+    dataset_key = _dataset_name().lower()
+    if dataset_key == 'compas':
         params.update(_COMPAS_FADO_OVERRIDES)
+    elif dataset_key == 'folktables':
+        params.update(_FOLKTABLES_FADO_OVERRIDES)
     return params
 
 
