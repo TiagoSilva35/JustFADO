@@ -1,14 +1,26 @@
 [
   {
     "model": "rfr",
+    "scenario": "no_drift",
+    "accuracy": 0.6770000023887204,
+    "dp": 0.11908013210705407,
+    "eo": 0.12800206163936023,
+    "stream_final_accuracy": 0.6770000023887204,
+    "stream_final_dp": 0.11908013210705407,
+    "stream_final_eo": 0.12800206163936023,
+    "elapsed_seconds": 3.8,
+    "error": null
+  },
+  {
+    "model": "rfr",
     "scenario": "abrupt_race",
-    "accuracy": 0.6385138742977902,
-    "dp": 0.060030410399563076,
-    "eo": 0.06163570170110344,
-    "stream_final_accuracy": 0.6385138742977902,
-    "stream_final_dp": 0.060030410399563076,
-    "stream_final_eo": 0.06163570170110344,
-    "elapsed_seconds": 4.0,
+    "accuracy": 0.638341220931866,
+    "dp": 0.059279081461474405,
+    "eo": 0.059551917891653296,
+    "stream_final_accuracy": 0.638341220931866,
+    "stream_final_dp": 0.059279081461474405,
+    "stream_final_eo": 0.059551917891653296,
+    "elapsed_seconds": 3.8,
     "error": null
   }
 ]

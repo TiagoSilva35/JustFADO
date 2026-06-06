@@ -1,6 +1,18 @@
 [
   {
     "model": "arf",
+    "scenario": "no_drift",
+    "accuracy": 0.6621429621256114,
+    "dp": 0.1274900080169167,
+    "eo": 0.14902653288968684,
+    "stream_final_accuracy": 0.6621429621256114,
+    "stream_final_dp": 0.1274900080169167,
+    "stream_final_eo": 0.14902653288968684,
+    "elapsed_seconds": 2.9,
+    "error": null
+  },
+  {
+    "model": "arf",
     "scenario": "abrupt_race",
     "accuracy": 0.6245178844814118,
     "dp": 0.07476958720471515,

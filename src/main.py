@@ -61,6 +61,16 @@ flags.DEFINE_string(
     '',
     'Optional dataset override for pipeline runs. Empty keeps --dataset.',
 )
+flags.DEFINE_float(
+    'folktables_subsample_fraction',
+    1.0,
+    'If <1.0, uniformly subsample the Folktables train and test splits to '
+    'this fraction, preserving their original proportions. The subsample is '
+    'drawn deterministically from the per-seed RNG so all models within a '
+    'seed see the same rows (paired tests remain valid) but seeds differ. '
+    'Default 1.0 = use full splits. Set 0.10 to slim a ~187k+187k cell to '
+    '~18.7k+18.7k for a ~10x wall-clock reduction.',
+)
 flags.DEFINE_string(
     'diabetes_path',
     'data/diabetes/diabetic_data.csv',
@@ -147,7 +157,15 @@ def _dataset_name():
 #   blowing out while the model adapts.
 _COMPAS_FADO_OVERRIDES = {
     'adwin_delta_warn': 1e-3,
-    'adwin_delta_confirm': 0.05,
+    # adwin_delta_confirm tuning history on COMPAS (Hoeffding):
+    #   eps_cut = sqrt((1/(2m))*ln(4/delta)). SMALLER delta -> LARGER
+    #   eps_cut -> needs MORE evidence before confirming. LARGER delta
+    #   -> looser bound -> ADWIN fires earlier and more often.
+    #     0.005 -> too conservative; 0 events even on abrupt_race seed 2.
+    #     0.05  -> ~9pp accuracy deficit floor; fires 0-2x per seed
+    #              (seed 5 silent, seeds 2/3/4 fire once, seed 42 twice).
+    #     0.2   -> looser, expected to fire more reliably across seeds.
+    'adwin_delta_confirm': 0.2,
     'fairness_window': 250,
     'min_samples_per_stream': 20,
     'lr_decay_steps': 600,
@@ -335,6 +353,43 @@ def _ensure_train_test(x_train, x_test, y_train, y_test, a_train, a_test, seed):
     raise ValueError('Dataset has no usable samples for train/test evaluation.')
 
 
+def _maybe_subsample_folktables(
+        x_train, y_train, a_train,
+        x_test, y_test, a_test,
+        seed,
+):
+    """Uniformly subsample both Folktables splits to
+    ``FLAGS.folktables_subsample_fraction`` of their original size.
+
+    The subsample is reproducible per seed (so all four models within a seed
+    see identical rows and the paired Wilcoxon protocol holds) but varies
+    across seeds (so the cross-seed variance reflects sampling uncertainty
+    rather than a single fixed slice).
+    """
+    fraction = float(FLAGS.folktables_subsample_fraction)
+    if not (0.0 < fraction < 1.0):
+        return x_train, y_train, a_train, x_test, y_test, a_test
+
+    rng = np.random.default_rng(seed)
+
+    def _take(x, y, a):
+        n = len(y)
+        k = max(1, int(round(n * fraction)))
+        idx = rng.choice(n, size=k, replace=False)
+        idx.sort()
+        x_arr = np.asarray(x)
+        return x_arr[idx], np.asarray(y)[idx], np.asarray(a)[idx]
+
+    x_train, y_train, a_train = _take(x_train, y_train, a_train)
+    x_test, y_test, a_test = _take(x_test, y_test, a_test)
+
+    print(
+        f'[FOLKTABLES-SUBSAMPLE] fraction={fraction:.4f} seed={seed} '
+        f'-> train={len(y_train)}, test={len(y_test)}'
+    )
+    return x_train, y_train, a_train, x_test, y_test, a_test
+
+
 def _load_dataset_splits(dataset_key, scenario_name, seed):
     if dataset_key == 'adult':
         x_train, _, y_train, _, a_train, _ = read_adult(False, drift_scenario=None)
@@ -348,6 +403,9 @@ def _load_dataset_splits(dataset_key, scenario_name, seed):
             state=[state.strip() for state in str(FLAGS.folktables_states).split(',') if state.strip()],
             horizon=FLAGS.folktables_horizon,
             sensitive_attribute=FLAGS.folktables_sensitive_attribute,
+        )
+        x_train, y_train, a_train, x_test, y_test, a_test = _maybe_subsample_folktables(
+            x_train, y_train, a_train, x_test, y_test, a_test, seed=seed,
         )
         return _ensure_train_test(x_train, x_test, y_train, y_test, a_train, a_test, seed=seed)
 

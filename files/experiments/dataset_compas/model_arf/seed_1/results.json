@@ -1,1 +1,26 @@
-[]
+[
+  {
+    "model": "arf",
+    "scenario": "no_drift",
+    "accuracy": 0.6489556454773924,
+    "dp": 0.11692350557403318,
+    "eo": 0.15534819906317687,
+    "stream_final_accuracy": 0.6489556454773924,
+    "stream_final_dp": 0.11692350557403318,
+    "stream_final_eo": 0.15534819906317687,
+    "elapsed_seconds": 2.9,
+    "error": null
+  },
+  {
+    "model": "arf",
+    "scenario": "abrupt_race",
+    "accuracy": 0.6153715246464514,
+    "dp": 0.09108020827907343,
+    "eo": 0.14189868151038018,
+    "stream_final_accuracy": 0.6153715246464514,
+    "stream_final_dp": 0.09108020827907343,
+    "stream_final_eo": 0.14189868151038018,
+    "elapsed_seconds": 3.0,
+    "error": null
+  }
+]
