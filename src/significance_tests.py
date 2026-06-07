@@ -46,21 +46,44 @@ DEFAULT_METRICS = ('accuracy', 'dp', 'eo')
 
 
 def _load_seed_runs(inputs_dir: Path) -> List[dict]:
-    """Load the seed_runs list from the top-level pipeline JSON."""
-    pipeline_path = inputs_dir / 'seed_pipeline_results.json'
-    if not pipeline_path.exists():
+    """Discover per-seed results across all ``model_*/seed_*/results.json``.
+
+    Each ``results.json`` holds a list of scenario records (one per scenario
+    actually run for that seed and model). We flatten everything into the
+    ``[{seed, model, results:[scenario records]}]`` shape that the rest of
+    the script expects, so the per-seed pipeline JSON and the per-seed
+    result files become drop-in equivalents from the caller's point of
+    view.
+    """
+    if not inputs_dir.exists():
+        raise FileNotFoundError(f'Inputs directory does not exist: {inputs_dir}')
+
+    aggregated: Dict[Tuple[int, str], List[dict]] = {}
+    for model_dir in sorted(inputs_dir.glob('model_*')):
+        model_name = model_dir.name[len('model_'):]
+        for seed_dir in sorted(model_dir.glob('seed_*')):
+            try:
+                seed = int(seed_dir.name[len('seed_'):])
+            except ValueError:
+                continue
+            results_path = seed_dir / 'results.json'
+            if not results_path.exists():
+                continue
+            with results_path.open() as f:
+                payload = json.load(f)
+            if not isinstance(payload, list):
+                # Tolerate older single-dict files.
+                payload = [payload]
+            aggregated[(seed, model_name)] = payload
+
+    if not aggregated:
         raise FileNotFoundError(
-            f'No seed_pipeline_results.json under {inputs_dir}. '
-            'Run `python -m src.main --dataset compas --seeds ...` first.'
+            f'No model_*/seed_*/results.json files found under {inputs_dir}.'
         )
-    with pipeline_path.open() as f:
-        blob = json.load(f)
-    runs = blob.get('seed_runs') if isinstance(blob, dict) else None
-    if not isinstance(runs, list):
-        raise ValueError(
-            f'Unexpected JSON shape in {pipeline_path}: expected '
-            '{"seed_runs":[...]}'
-        )
+
+    runs: List[dict] = []
+    for (seed, model_name), results in aggregated.items():
+        runs.append({'seed': seed, 'model': model_name, 'results': results})
     return runs
 
 
