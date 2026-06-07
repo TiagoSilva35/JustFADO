@@ -256,6 +256,8 @@ INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/generic/pgf/fro
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarytopaths.code.tex
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/placeins/placeins.sty
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/placeins/placeins.sty
+INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/cite/cite.sty
+INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/cite/cite.sty
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarypositioning.code.tex
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/generic/pgf/frontendlayer/tikz/libraries/tikzlibrarypositioning.code.tex
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/generic/pgf/libraries/pgflibraryarrows.meta.code.tex
@@ -408,12 +410,12 @@ INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/am
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/vf/adobe/times/ptmr8t.vf
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/adobe/times/ptmr8r.tfm
-INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/cm/cmbx10.tfm
-INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/cm/cmbx7.tfm
-INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/cm/cmbx5.tfm
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/vf/adobe/times/ptmr8t.vf
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/vf/adobe/times/ptmrc8t.vf
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/adobe/times/ptmr8r.tfm
+INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/cm/cmbx10.tfm
+INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/cm/cmbx7.tfm
+INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/cm/cmbx5.tfm
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/cm/cmbx8.tfm
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/tfm/public/cm/cmbx6.tfm
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/vf/adobe/times/ptmb8t.vf

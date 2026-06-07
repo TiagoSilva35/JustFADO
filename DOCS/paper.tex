@@ -15,18 +15,13 @@
 \usepackage{graphicx}
 \usepackage{placeins}
 \usepackage{etoolbox}
-\AtBeginEnvironment{thebibliography}{\scriptsize}
+\usepackage{cite}
 \usetikzlibrary{positioning, arrows.meta, shapes.geometric, calc, backgrounds}
 \newcommand{\TODO}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
 
 \title{FADO: A Reaction Controller for Fairness-Aware Online Learning Under Concept Drift}
 
-% \author{%
-%   Tiago Silva\thanks{Corresponding author} \\
-%   Department of Informatics Engineering\\
-%   University of Coimbra\\
-%   \texttt{tds@student.uc.pt} \\
-% }
+
 
 \begin{document}
 
@@ -42,12 +37,18 @@ complementary fairness benchmarks: \textsc{Folktables} ACS Income (CA), which pr
 $2017$--$2018$ prequential test; and a controlled-drift testbed on \textsc{COMPAS} in which a symmetric race swap is paired with a $\mathrm{Bernoulli}(0.5)$
 label flip to produce an abrupt subpopulation shift. We compare \textsc{FADO} against the \textsc{ARF} and \textsc{RFR} streaming baselines and against a
 controller-free \textsc{Aranyani} ablation that isolates the contribution of the drift-reaction controller. Across both datasets and aggregated over $30$
-random seeds, \textsc{FADO} outperforms \textsc{ARF} and \textsc{RFR} on every reported metric (paired Wilcoxon Holm-corrected $p<0.001$ throughout), with
-demographic-parity reductions of $\sim$$56\%$/$\sim$$56\%$ on \textsc{Folktables} and $\sim$$24\%$/$\sim$$25\%$ on \textsc{COMPAS}. The
+random seeds, \textsc{FADO} attains the best mean Accuracy, DP and EO against both \textsc{ARF} and \textsc{RFR} on both datasets, with all
+\textsc{Folktables} comparisons and all DP comparisons reaching paired Wilcoxon Holm-corrected $p<0.001$ and the remaining \textsc{COMPAS} comparisons at
+$p<0.01$ or below (except the \textsc{FADO}-vs-\textsc{RFR} accuracy comparison on \textsc{COMPAS}, which is not statistically distinguishable, $p=0.31$).
+\textsc{FADO} reduces demographic parity by $\sim$$61\%$/$\sim$$61\%$ on \textsc{Folktables} and $\sim$$24\%$/$\sim$$25\%$ on \textsc{COMPAS}. The
 \textsc{FADO}-vs-\textsc{Aranyani} comparison is regime-dependent: the reaction controller adds a measurable demographic-parity and equalised-odds
 improvement on the abrupt-shift testbed (\textsc{COMPAS}, both $p<0.001$) at a sub-$0.2$pp accuracy trade-off, and is statistically tied with the
 controller-free baseline on the gradual-shift natural data (\textsc{Folktables}, sub-$0.3$pp differences in either direction).
 \end{abstract}
+
+\begin{IEEEkeywords}
+fairness-aware online learning, concept drift, drift detection, group fairness, oblique decision forests
+\end{IEEEkeywords}
 
 \section{Introduction}
 The increasing deployment of machine learning (ML) systems in high-stakes decision-making domains, including healthcare~\cite{8474918}, criminal justice~\cite{10467221}, 
@@ -250,11 +251,11 @@ loop. Figure~\ref{fig:drift-pipeline} provides an end-to-end overview of that lo
 drift scenarios, baselines, hyperparameter selection, and the evaluation protocol.
 \begin{figure*}[t]
 \centering
-\includegraphics[width=0.8\textwidth]{1846ea20-2f1d-415b-9b62-cb781adbf1f6.png}
+\includegraphics[width=0.85\textwidth]{1846ea20-2f1d-415b-9b62-cb781adbf1f6.png}
 \caption{\textsc{FADO} pipeline: dual-ADWIN detector $\to$ reaction controller modulating $\eta_t$ and $\tau_t$ $\to$ fairness-aware gradient step on the \textsc{Aranyani} base learner~\cite{chowdhury2024enhancing}.}
 \label{fig:drift-pipeline}
 \end{figure*}
-All experiments were run in Python 3.9. Source code, configuration files, and seed manifests are released for reproducibility (Section~\ref{sec:method:reproducibility}).
+All experiments were run in Python 3.9 across three machines: a MacBook Pro (Apple M5, $16$\,GB RAM); a desktop with Intel i5-8500 CPU, NVIDIA GTX $1060$ Ti GPU, and $16$\,GB RAM; and a desktop with Intel i9-9900K CPU, NVIDIA RTX $2080$ Ti GPU, and $32$\,GB RAM. Per-seed runs were dispatched across the three machines for wall-clock parallelism; within any given seed, all four models were executed on the same machine to preserve the seed-pinned data ordering required by the paired statistical tests (Section~\ref{sec:method:protocol}). Source code, configuration files, and seed manifests are released for reproducibility (Section~\ref{sec:method:reproducibility}).
 
 \subsection{Fair Oblique Decision Forest}
 \label{sec:method:model}
@@ -325,7 +326,7 @@ using training-set means and standard deviations, categorical variables are one-
 column is frequency-encoded with rare categories collapsed below a count threshold. The encoder is fitted on the training split alone and reused unchanged
 for the test stream, so the streaming protocol remains free of test-time information leakage.
 
-\begin{table}[htbp]
+\begin{table}[t]
 \centering
 \caption{Datasets.}
 \label{tab:datasets}
@@ -377,7 +378,7 @@ All baselines are evaluated under the same batch-size-one test-then-train preque
 \label{sec:method:hpo}
 Table~\ref{tab:hparams} lists the fairness-regulariser and controller hyperparameters with their Folktables defaults and the COMPAS overrides. For the base learner we use $K=4$ trees of depth $h=4$ with base learning rate $\eta_0=2{\times}10^{-3}$, slightly larger than the \textsc{Aranyani} defaults to handle Folktables' higher dimensionality. The non-obvious overrides are justified below.
 
-\begin{table}[htbp]
+\begin{table}[t]
 \centering
 \caption{\textsc{FADO} hyperparameters. Dash = \textsc{COMPAS} inherits the \textsc{Folktables} default.}
 \label{tab:hparams}
@@ -473,7 +474,7 @@ shift) and the controlled abrupt-shift testbed on \textsc{COMPAS} (short stream,
 $\pm$ std over $30$ seeds. Convergent findings across the two regimes anchor each research question; divergences --- primarily between abrupt and gradual
 shift on the controller-isolation comparison --- are dissected explicitly.
 
-\begin{table}[!htb]
+\begin{table}[!htbp]
 \centering
 \caption{Prequential results, mean $\pm$ std over $30$ seeds. \textbf{Bold} = best mean per metric within each dataset; superscripts on the \textsc{FADO} row = paired Wilcoxon Holm-corrected significance vs \emph{every} baseline at the indicated level ($^{*}p{<}0.05$, $^{**}p{<}0.01$, $^{***}p{<}0.001$). Columns with no \textsc{FADO} marker have mixed per-baseline directions and are dissected in the text.}
 \label{tab:results}
@@ -484,10 +485,10 @@ shift on the controller-isolation comparison --- are dissected explicitly.
 Dataset & Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \midrule
 \multirow{4}{*}{\textsc{Folktables}}
- & \textbf{FADO} & $0.8057 \pm 0.0085$ & $\mathbf{0.0321 \pm 0.0128}^{*}$ & $0.0301 \pm 0.0050$ \\
- & Aranyani      & $\mathbf{0.8083 \pm 0.0086}$ & $0.0348 \pm 0.0138$ & $\mathbf{0.0285 \pm 0.0065}$ \\
- & ARF           & $0.7514 \pm 0.0165$ & $0.0726 \pm 0.0102$ & $0.0736 \pm 0.0140$ \\
- & RFR           & $0.7796 \pm 0.0066$ & $0.0723 \pm 0.0059$ & $0.0575 \pm 0.0063$ \\
+ & \textbf{FADO} & $0.8033 \pm 0.0053$ & $\mathbf{0.0284 \pm 0.0041}^{**}$ & $0.0281 \pm 0.0027$ \\
+ & Aranyani      & $\mathbf{0.8053 \pm 0.0049}$ & $0.0299 \pm 0.0032$ & $\mathbf{0.0257 \pm 0.0024}$ \\
+ & ARF           & $0.7447 \pm 0.0104$ & $0.0722 \pm 0.0108$ & $0.0743 \pm 0.0153$ \\
+ & RFR           & $0.7780 \pm 0.0047$ & $0.0733 \pm 0.0063$ & $0.0586 \pm 0.0065$ \\
 \midrule
 \multirow{4}{*}{\textsc{COMPAS}}
  & \textbf{FADO} & $0.6434 \pm 0.0105$ & $\mathbf{0.0611 \pm 0.0094}^{***}$ & $\mathbf{0.0923 \pm 0.0130}^{**}$ \\
@@ -501,13 +502,13 @@ Dataset & Model & Accuracy $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ \\
 \subsection{RQ1: To What Extent Does Concept Drift Affect Group Fairness?}
 \label{sec:results:rq1}
 The \textsc{Folktables} cross-year shift inflates the fairness violation of both external streaming baselines (Table~\ref{tab:results}). \textsc{ARF},
-which carries no fairness mechanism, lands at $\mathrm{DP}=0.0726$ on the $2017$--$2018$ stream against \textsc{FADO}'s $0.0321$ and at $\mathrm{EO}=0.0736$
-vs.\ \textsc{FADO}'s $0.0301$. \textsc{RFR}, which \emph{is} fairness-aware via sharpness-aware reweighting fitted on the $2015$ training data,
-nonetheless drifts to $\mathrm{DP}=0.0723$ and $\mathrm{EO}=0.0575$ on the same test stream --- more than double \textsc{FADO}'s DP, despite enforcing
+which carries no fairness mechanism, lands at $\mathrm{DP}=0.0722$ on the $2017$--$2018$ stream against \textsc{FADO}'s $0.0284$ and at $\mathrm{EO}=0.0743$
+vs.\ \textsc{FADO}'s $0.0281$. \textsc{RFR}, which \emph{is} fairness-aware via sharpness-aware reweighting fitted on the $2015$ training data,
+nonetheless drifts to $\mathrm{DP}=0.0733$ and $\mathrm{EO}=0.0586$ on the same test stream --- more than double \textsc{FADO}'s DP, despite enforcing
 fairness at training time --- which directly illustrates the static-fairness failure mode (L1 in Section~\ref{sec:related:limitations}). Both gaps are
 highly significant (paired Wilcoxon Holm-corrected $p<0.001$). The same pattern reproduces on \textsc{COMPAS}: \textsc{ARF} and \textsc{RFR} sit at
 $\mathrm{DP}\approx 0.081$ against \textsc{FADO}'s $0.061$ ($\sim 24\%$ relative reduction, both $p<0.001$). Crucially, the controller-free
-\textsc{Aranyani} baseline lands close to \textsc{FADO} on both datasets ($\mathrm{DP}=0.0348$ on \textsc{Folktables}, $0.0679$ on \textsc{COMPAS}) ---
+\textsc{Aranyani} baseline lands close to \textsc{FADO} on both datasets ($\mathrm{DP}=0.0299$ on \textsc{Folktables}, $0.0679$ on \textsc{COMPAS}) ---
 i.e.\ the bulk of the gap to \textsc{ARF} and \textsc{RFR} is contributed by the \emph{in-processing} fairness regulariser, not by the controller. The
 directional consistency across the natural gradual shift (\textsc{Folktables}) and the synthetic abrupt shift (\textsc{COMPAS}) is the central RQ1 finding:
 drift erodes fairness against an accuracy-oriented streaming ensemble \emph{and} against a static fairness-aware reweighting, on both data scales and at
@@ -515,20 +516,24 @@ both shift speeds, even when the corresponding predictive-accuracy gap is modest
 
 \subsection{RQ2: Can Adaptive Mechanisms Preserve Fairness While Maintaining Utility?}
 \label{sec:results:rq2}
-\textsc{FADO} dominates both external streaming baselines (\textsc{ARF} and \textsc{RFR}) on every metric and on both datasets (Table~\ref{tab:results}). On \textsc{Folktables} this
-manifests as $+5.4$pp Accuracy over \textsc{ARF} and $+2.6$pp over \textsc{RFR}, $\sim 56\%$ DP reduction against each, and $\sim 59\%$/$\sim 48\%$ EO
-reduction. On \textsc{COMPAS} the gains are smaller in absolute terms ($+1.2$pp Accuracy over \textsc{ARF}, $\sim 24\%$ DP reduction over both) but the
-direction is identical and all twelve paired Wilcoxon comparisons against \textsc{ARF} and \textsc{RFR} reach Holm-corrected $p<0.001$. The headline RQ2
-answer against the accuracy-only and the fairness-without-adaptation baselines is therefore unambiguous and consistent across regimes: an adaptive
-in-processing fairness-aware learner wins on accuracy and on every fairness statistic simultaneously.
+\textsc{FADO} attains the best mean Accuracy, DP and EO against both external streaming baselines (\textsc{ARF} and \textsc{RFR}) on both datasets
+(Table~\ref{tab:results}). On \textsc{Folktables} this manifests as $+5.9$pp Accuracy over \textsc{ARF} and $+2.5$pp over \textsc{RFR}, $\sim 61\%$ DP
+reduction against each, and $\sim 62\%$/$\sim 52\%$ EO reduction; all six FADO-vs-\{\textsc{ARF},\textsc{RFR}\} comparisons reach Holm-corrected paired
+Wilcoxon $p<0.001$. On \textsc{COMPAS} the gains are smaller in absolute terms ($+1.2$pp Accuracy over \textsc{ARF}, $\sim 24\%$ DP reduction over both)
+and the significance is less uniform: DP wins against both at $p<0.001$, Accuracy against \textsc{ARF} at $p<0.001$, and EO against both at $p<0.01$;
+Accuracy against \textsc{RFR} is in \textsc{FADO}'s favour by $+0.30$pp but not statistically distinguishable ($p=0.31$, paired Wilcoxon
+Holm-corrected). Nine of the twelve FADO-vs-\{\textsc{ARF},\textsc{RFR}\} comparisons therefore land at $p<0.001$, two at $p<0.01$, and one is a tie. The
+RQ2 answer against the accuracy-only and the fairness-without-adaptation baselines is consistent in direction across regimes: an adaptive in-processing
+fairness-aware learner produces the highest mean on accuracy and the lowest mean on every fairness statistic, with the bulk of those wins being highly
+significant.
 
 The \textsc{FADO}-vs-\textsc{Aranyani} comparison isolates the contribution of the reaction controller itself: the two models share the identical base
 learner, fairness loss, rolling-window statistics, and seed-pinned data ordering, so the gap between the two rows is attributable solely to the
 dual-ADWIN controller. The answer is \emph{regime-dependent}. On \textsc{COMPAS}'s abrupt subpopulation shift, the controller reduces DP by $0.68$pp
 ($\sim 10\%$, $p<0.001$) and EO by $0.56$pp ($\sim 6\%$, $p<0.001$) at a $0.17$pp accuracy cost ($p<0.001$ in the opposite direction): the spike+sharpening
 reaction is exactly the right response to break the old per-group equilibrium and re-fit. On \textsc{Folktables}'s gradual cross-year shift, the same
-controller is essentially tied with the bare \textsc{Aranyani} base learner: a $0.27$pp DP reduction in \textsc{FADO}'s favour ($p<0.05$), a $0.26$pp
-accuracy and $0.16$pp EO deficit in \textsc{Aranyani}'s favour ($p<0.001$ and $p<0.01$ respectively), all well within seed-to-seed standard deviation. We
+controller is essentially tied with the bare \textsc{Aranyani} base learner: a $0.14$pp DP reduction in \textsc{FADO}'s favour ($p<0.01$), a $0.21$pp
+accuracy and $0.25$pp EO deficit in \textsc{Aranyani}'s favour (both $p<0.001$), all well within seed-to-seed standard deviation. We
 reinforce that EO was only monitored and thus, neither model optimizes for it. The
 interpretation is mechanical and consistent with the drift-adaptation literature: a one-shot spike+sharpening response is the right reaction to an abrupt
 shift but is unnecessary --- and slightly counter-productive --- when the regulariser is already tracking a smooth, slowly evolving distribution. RQ2 is
@@ -556,9 +561,10 @@ sharpening the soft-routing temperature, and annealing both quantities back to b
 inherited in-processing base learner and that the contribution of this paper is the drift-detection-and-response machinery wrapped around it.
 
 Empirically, across both the natural cross-year shift on \textsc{Folktables} and the controlled abrupt-shift testbed on \textsc{COMPAS}, and aggregated
-over $30$ random seeds, \textsc{FADO} dominates the \textsc{ARF} and \textsc{RFR} streaming baselines on every reported metric (paired Wilcoxon
-Holm-corrected $p<0.001$ throughout), with demographic-parity reductions in the $50$--$60\%$ range on \textsc{Folktables} and the $20$--$25\%$ range on
-\textsc{COMPAS}. The controller-isolation comparison against the bare \textsc{Aranyani} base learner is regime-dependent: on the abrupt-shift testbed the
+over $30$ random seeds, \textsc{FADO} attains the best mean Accuracy, DP and EO against \textsc{ARF} and \textsc{RFR} on both datasets. Nine of the twelve
+paired Wilcoxon comparisons land at Holm-corrected $p<0.001$ (every \textsc{Folktables} cell and every DP cell), two at $p<0.01$ (COMPAS EO against
+\textsc{ARF} and \textsc{RFR}), and one --- COMPAS Accuracy against \textsc{RFR} --- is not statistically distinguishable ($+0.30$pp in \textsc{FADO}'s
+favour, $p=0.31$). Demographic-parity reductions sit at $\sim 61\%$ on \textsc{Folktables} and in the $20$--$25\%$ range on \textsc{COMPAS}. The controller-isolation comparison against the bare \textsc{Aranyani} base learner is regime-dependent: on the abrupt-shift testbed the
 reaction controller delivers a clear DP and EO improvement ($\sim$$10\%$ and $\sim$$6\%$ respectively, both $p<0.001$) at a small accuracy trade-off, while
 on the gradual-shift natural data it sits within seed-to-seed standard deviation of the controller-free baseline. Together these results quantify RQ1
 (drift erodes the fairness guarantees of every non-adaptive baseline tested, on both gradual and abrupt regimes) and give a regime-aware affirmative

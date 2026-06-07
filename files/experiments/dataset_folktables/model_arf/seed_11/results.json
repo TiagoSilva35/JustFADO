@@ -2,13 +2,13 @@
   {
     "model": "arf",
     "scenario": "folktables",
-    "accuracy": 0.7816905001499481,
-    "dp": 0.07636799408660826,
-    "eo": 0.06722728795392864,
-    "stream_final_accuracy": 0.7816905001499481,
-    "stream_final_dp": 0.07636799408660826,
-    "stream_final_eo": 0.06722728795392864,
-    "elapsed_seconds": 3935.2,
+    "accuracy": 0.7252610957194091,
+    "dp": 0.061905047561250336,
+    "eo": 0.06446984331727137,
+    "stream_final_accuracy": 0.7252610957194091,
+    "stream_final_dp": 0.061905047561250336,
+    "stream_final_eo": 0.06446984331727137,
+    "elapsed_seconds": 98.8,
     "error": null
   }
 ]
