@@ -37,10 +37,10 @@ complementary fairness benchmarks: \textsc{Folktables} ACS Income (CA), which pr
 $2017$--$2018$ prequential test; and a controlled-drift testbed on \textsc{COMPAS} in which a symmetric race swap is paired with a $\mathrm{Bernoulli}(0.5)$
 label flip to produce an abrupt subpopulation shift. We compare \textsc{FADO} against the \textsc{ARF} and \textsc{RFR} streaming baselines and against a
 controller-free \textsc{Aranyani} ablation that isolates the contribution of the drift-reaction controller. Across both datasets and aggregated over $30$
-random seeds, \textsc{FADO} attains the best mean Accuracy, DP and EO against both \textsc{ARF} and \textsc{RFR} on both datasets, with all
+seeds, \textsc{FADO} attains the best mean Accuracy, DP and EO against both \textsc{ARF} and \textsc{RFR} on both datasets, with all
 \textsc{Folktables} comparisons and all DP comparisons reaching paired Wilcoxon Holm-corrected $p<0.001$ and the remaining \textsc{COMPAS} comparisons at
 $p<0.01$ or below (except the \textsc{FADO}-vs-\textsc{RFR} accuracy comparison on \textsc{COMPAS}, which is not statistically distinguishable, $p=0.31$).
-\textsc{FADO} reduces demographic parity by $\sim$$61\%$/$\sim$$61\%$ on \textsc{Folktables} and $\sim$$24\%$/$\sim$$25\%$ on \textsc{COMPAS}. The
+\textsc{FADO} reduces demographic parity by $\sim$$61\%$ on \textsc{Folktables} and $\sim$$25\%$ on \textsc{COMPAS}. The
 \textsc{FADO}-vs-\textsc{Aranyani} comparison is regime-dependent: the reaction controller adds a measurable demographic-parity and equalised-odds
 improvement on the abrupt-shift testbed (\textsc{COMPAS}, both $p<0.001$) at a sub-$0.2$pp accuracy trade-off, and is statistically tied with the
 controller-free baseline on the gradual-shift natural data (\textsc{Folktables}, sub-$0.3$pp differences in either direction).
@@ -561,7 +561,7 @@ sharpening the soft-routing temperature, and annealing both quantities back to b
 inherited in-processing base learner and that the contribution of this paper is the drift-detection-and-response machinery wrapped around it.
 
 Empirically, across both the natural cross-year shift on \textsc{Folktables} and the controlled abrupt-shift testbed on \textsc{COMPAS}, and aggregated
-over $30$ random seeds, \textsc{FADO} attains the best mean Accuracy, DP and EO against \textsc{ARF} and \textsc{RFR} on both datasets. Nine of the twelve
+over $30$ seeds, \textsc{FADO} attains the best mean Accuracy, DP and EO against \textsc{ARF} and \textsc{RFR} on both datasets. Nine of the twelve
 paired Wilcoxon comparisons land at Holm-corrected $p<0.001$ (every \textsc{Folktables} cell and every DP cell), two at $p<0.01$ (COMPAS EO against
 \textsc{ARF} and \textsc{RFR}), and one --- COMPAS Accuracy against \textsc{RFR} --- is not statistically distinguishable ($+0.30$pp in \textsc{FADO}'s
 favour, $p=0.31$). Demographic-parity reductions sit at $\sim 61\%$ on \textsc{Folktables} and in the $20$--$25\%$ range on \textsc{COMPAS}. The controller-isolation comparison against the bare \textsc{Aranyani} base learner is regime-dependent: on the abrupt-shift testbed the

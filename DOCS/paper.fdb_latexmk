@@ -1,14 +1,14 @@
 # Fdb version 4
-["bibtex paper"] 1780825260.66663 "paper.aux" "paper.bbl" "paper" 1780825261.43115 0
+["bibtex paper"] 1780825260.66663 "paper.aux" "paper.bbl" "paper" 1780826827.35413 0
   "./IEEEtran.bst" 1780351919.15034 57748 7c8250ecf02814ce6ddc0cdbb63df1dd ""
   "./references.bib" 1780352220.83707 17699 b941f2ed4804d4f96a1855e781a6fa35 ""
-  "paper.aux" 1780825261.29184 9712 3972b9747b2e138545b7f7e28e52cbd6 "pdflatex"
+  "paper.aux" 1780826827.23465 9712 3972b9747b2e138545b7f7e28e52cbd6 "pdflatex"
   (generated)
   "paper.bbl"
   "paper.blg"
   (rewritten before read)
-["pdflatex"] 1780825260.71939 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" "paper.pdf" "paper" 1780825261.43128 0
-  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" 1780825260.39538 60652 2eba2806f18c58790181d6ce39f1bd16 ""
+["pdflatex"] 1780826826.75297 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" "paper.pdf" "paper" 1780826827.35422 0
+  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper.tex" 1780826826.5908 60584 f340febbc58eb40a432716e0f43160a7 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/base/8r.enc" 1772380719 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/fontname/texfonts.map" 1772380719 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/pdftex/updmap/pdftex.map" 1772380719 5541360 f183aac233c4cd1e5ef882fcbe8e7096 ""
@@ -220,10 +220,10 @@
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/web2c/texmf.cnf" 1772380719 43633 14bbc273cebd985e64ab1a698333eaf9 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-var/web2c/pdftex/pdflatex.fmt" 1772380719 3636956 5168b884cb430e6a6336cfea08fa659a ""
   "1846ea20-2f1d-415b-9b62-cb781adbf1f6.png" 1779378635.71972 1366075 eec666c94b36c2b0c5ca781196f833bd ""
-  "paper.aux" 1780825261.29184 9712 3972b9747b2e138545b7f7e28e52cbd6 "pdflatex"
+  "paper.aux" 1780826827.23465 9712 3972b9747b2e138545b7f7e28e52cbd6 "pdflatex"
   "paper.bbl" 1780825260.71445 8302 596282cce130437d076a9430aacf2d3e "bibtex paper"
-  "paper.out" 1780825261.29244 4976 4978655b209ac7fa034d393c9fcf29da "pdflatex"
-  "paper.tex" 1780825260.39538 60652 2eba2806f18c58790181d6ce39f1bd16 ""
+  "paper.out" 1780826827.23528 4976 4978655b209ac7fa034d393c9fcf29da "pdflatex"
+  "paper.tex" 1780826826.5908 60584 f340febbc58eb40a432716e0f43160a7 ""
   (generated)
   "paper.aux"
   "paper.log"
