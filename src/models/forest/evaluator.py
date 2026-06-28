@@ -2,7 +2,6 @@ import numpy as np
 import tensorflow as tf
 from river import drift
 from src.models.forest.initializers import init_fairness_state, accumulate_fairness_stats, compute_fairness_gradients
-from src.helpers.utils import _compute_window_fairness
 from collections import deque
 from src.helpers import utils
 
@@ -86,7 +85,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     baseline_accuracy = 0.0
     y_preds_all = []
     y_true_all = []
-    a_all = []
     n_samples = len(x_test)
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     criteria = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
@@ -129,8 +127,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
 
         y_preds_all.append(y_pred)
         y_true_all.append(y_t)
-        a_all.append(a_t)
-        
+
         pred_window.append(y_pred)
         true_window.append(y_t)
         protected_window.append(a_t)
@@ -180,14 +177,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             for tree in model.layers:
                 if hasattr(tree, 'temperature'):
                     tree.temperature.assign(TEMP_ON_DRIFT)
-        dp_val, eo_val = _compute_window_fairness(
-            y_preds_all=y_preds_all,
-            y_true_all=y_true_all,
-            a_all=a_all,
-            fairness_start=fairness_start,
-            fairness_window=None,
-        )
-
         dp_val, dp_sign = utils.get_demographic_parity(list(pred_window), list(protected_window))
         eo_val, eo_sign = utils.get_equalized_odds(list(pred_window), list(protected_window), list(true_window))
         dps.append(float(dp_val))
