@@ -1,59 +1,74 @@
 This is BibTeX, Version 0.99e (TeX Live 2026/Homebrew)
 Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: paper.aux
-The style file: IEEEtran.bst
-Reallocated singl_function (elt_size=4) to 100 items from 50.
+The style file: ACM-Reference-Format.bst
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
-Reallocated singl_function (elt_size=4) to 100 items from 50.
 Database file #1: references.bib
 Warning--string name "june" is undefined
 --line 165 of file references.bib
--- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
--- http://www.michaelshell.org/tex/ieeetran/bibtex/
--- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
-
-Done.
-You've used 20 entries,
-            4087 wiz_defined-function locations,
-            970 strings with 12509 characters,
-and the built_in function-call counts, 14964 in all, are:
-= -- 1312
-> -- 304
-< -- 67
-+ -- 158
-- -- 63
-* -- 722
-:= -- 2337
-add.period$ -- 46
-call.type$ -- 20
-change.case$ -- 23
-chr.to.int$ -- 120
-cite$ -- 20
-duplicate$ -- 1167
-empty$ -- 1220
-format.name$ -- 83
-if$ -- 3506
-int.to.chr$ -- 0
-int.to.str$ -- 20
-missing$ -- 207
-newline$ -- 117
-num.names$ -- 22
-pop$ -- 478
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocated wiz_functions (elt_size=4) to 9000 items from 6000.
+Reallocated glb_str_ptr (elt_size=4) to 20 items from 10.
+Reallocated global_strs (elt_size=200001) to 20 items from 10.
+Reallocated glb_str_end (elt_size=4) to 20 items from 10.
+Reallocated singl_function (elt_size=4) to 100 items from 50.
+Warning--empty publisher in chowdhury2024enhancing
+Warning--empty address in chowdhury2024enhancing
+Warning--page numbers missing in both pages and numpages fields in chowdhury2024enhancing
+Warning--empty publisher in foulds2020intersectional
+Warning--empty address in foulds2020intersectional
+Warning--empty address in NIPS2016_6a9659fe
+Warning--empty publisher in kearns2018gerrymandering
+Warning--empty address in kearns2018gerrymandering
+Warning--empty address in Mishler_2021
+Warning--empty publisher in 8474918
+Warning--empty address in 8474918
+Warning--empty address in Small_2024
+Warning--empty publisher in 10467221
+Warning--empty address in 10467221
+Warning--page numbers missing in both pages and numpages fields in DBLP:journals/corr/WebbHCNP15
+Warning--empty address in ijcai2019p205
+You've used 22 entries,
+            6273 wiz_defined-function locations,
+            1706 strings with 24284 characters,
+and the built_in function-call counts, 26239 in all, are:
+= -- 3396
+> -- 764
+< -- 0
++ -- 264
+- -- 291
+* -- 1772
+:= -- 2394
+add.period$ -- 107
+call.type$ -- 22
+change.case$ -- 149
+chr.to.int$ -- 21
+cite$ -- 38
+duplicate$ -- 2408
+empty$ -- 1635
+format.name$ -- 326
+if$ -- 6488
+int.to.chr$ -- 3
+int.to.str$ -- 1
+missing$ -- 86
+newline$ -- 252
+num.names$ -- 155
+pop$ -- 888
 preamble$ -- 1
-purify$ -- 0
-quote$ -- 2
-skip$ -- 1222
+purify$ -- 320
+quote$ -- 0
+skip$ -- 992
 stack$ -- 0
-substring$ -- 445
-swap$ -- 899
-text.length$ -- 27
+substring$ -- 1928
+swap$ -- 313
+text.length$ -- 38
 text.prefix$ -- 0
-top$ -- 5
-type$ -- 20
-warning$ -- 0
-while$ -- 46
-width$ -- 22
-write$ -- 263
-(There was 1 warning)
+top$ -- 0
+type$ -- 542
+warning$ -- 16
+while$ -- 131
+width$ -- 0
+write$ -- 498
+(There were 17 warnings)

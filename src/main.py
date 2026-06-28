@@ -91,6 +91,14 @@ flags.DEFINE_bool(
     False,
     'Enable Weights & Biases logging for pipeline runs (useful for sweeps/ablations).',
 )
+flags.DEFINE_bool(
+    'intersectional',
+    False,
+    'Enable multi-protected-attribute (intersectional) mode. When True the '
+    'COMPAS loader returns the composite race x sex code and the Folktables '
+    'loader returns the composite SEX x RAC1P-binarised code, plus per-attribute '
+    'marginal arrays for diagnostic DP/EO reporting. Default off for back-compat.',
+)
 flags.DEFINE_string(
     'wandb_project',
     'adult-drift-ablations',
@@ -395,6 +403,8 @@ def _maybe_subsample_folktables(
         x_train, y_train, a_train,
         x_test, y_test, a_test,
         seed,
+        marginals_train=None,
+        marginals_test=None,
 ):
     """Uniformly subsample both Folktables splits to
     ``FLAGS.folktables_subsample_fraction`` of their original size.
@@ -403,64 +413,124 @@ def _maybe_subsample_folktables(
     see identical rows and the paired Wilcoxon protocol holds) but varies
     across seeds (so the cross-seed variance reflects sampling uncertainty
     rather than a single fixed slice).
+
+    When ``marginals_train`` / ``marginals_test`` are provided (intersectional
+    mode), the same row indices are applied to those marginal-attribute
+    arrays so they stay aligned with x/y/a row-for-row.
     """
     fraction = float(FLAGS.folktables_subsample_fraction)
+    has_marginals = marginals_train is not None and marginals_test is not None
     if not (0.0 < fraction < 1.0):
+        if has_marginals:
+            return (x_train, y_train, a_train, x_test, y_test, a_test,
+                    marginals_train, marginals_test)
         return x_train, y_train, a_train, x_test, y_test, a_test
 
     rng = np.random.default_rng(seed)
 
-    def _take(x, y, a):
+    def _take(x, y, a, m=None):
         n = len(y)
         k = max(1, int(round(n * fraction)))
         idx = rng.choice(n, size=k, replace=False)
         idx.sort()
         x_arr = np.asarray(x)
-        return x_arr[idx], np.asarray(y)[idx], np.asarray(a)[idx]
+        if m is None:
+            return x_arr[idx], np.asarray(y)[idx], np.asarray(a)[idx], None
+        return (
+            x_arr[idx], np.asarray(y)[idx], np.asarray(a)[idx],
+            np.asarray(m)[idx],
+        )
 
-    x_train, y_train, a_train = _take(x_train, y_train, a_train)
-    x_test, y_test, a_test = _take(x_test, y_test, a_test)
+    x_train, y_train, a_train, marginals_train = _take(
+        x_train, y_train, a_train, marginals_train
+    )
+    x_test, y_test, a_test, marginals_test = _take(
+        x_test, y_test, a_test, marginals_test
+    )
 
     print(
         f'[FOLKTABLES-SUBSAMPLE] fraction={fraction:.4f} seed={seed} '
         f'-> train={len(y_train)}, test={len(y_test)}'
     )
+    if has_marginals:
+        return (x_train, y_train, a_train, x_test, y_test, a_test,
+                marginals_train, marginals_test)
     return x_train, y_train, a_train, x_test, y_test, a_test
 
 
 def _load_dataset_splits(dataset_key, scenario_name, seed):
+    """Return ``(x_train, x_test, y_train, y_test, a_train, a_test, marginals)``.
+
+    ``marginals`` is ``None`` unless ``FLAGS.intersectional`` is set, in which
+    case it is a dict with keys ``'attr_names'`` (tuple of names), ``'train'``,
+    and ``'test'`` (each ``[N, 2]`` int32 arrays of per-attribute group codes,
+    aligned row-for-row with the split they belong to).
+    """
+    intersectional = bool(FLAGS.intersectional)
     if dataset_key == 'adult':
         x_train, _, y_train, _, a_train, _ = read_adult(False, drift_scenario=None)
         x_test, y_test, a_test = load_drifted_test_set(scenario_name)
-        return _ensure_train_test(x_train, x_test, y_train, y_test, a_train, a_test, seed=seed)
+        x_train, x_test, y_train, y_test, a_train, a_test = _ensure_train_test(
+            x_train, x_test, y_train, y_test, a_train, a_test, seed=seed)
+        return x_train, x_test, y_train, y_test, a_train, a_test, None
 
     if dataset_key == 'folktables':
-        x_train, x_test, y_train, y_test, a_train, a_test, _ = read_folktables(
+        loader_out = read_folktables(
             train_year=FOLKTABLES_PIPELINE_TRAIN_YEAR,
             test_years=FOLKTABLES_PIPELINE_TEST_YEARS,
             state=[state.strip() for state in str(FLAGS.folktables_states).split(',') if state.strip()],
             horizon=FLAGS.folktables_horizon,
             sensitive_attribute=FLAGS.folktables_sensitive_attribute,
+            intersectional=intersectional,
         )
-        x_train, y_train, a_train, x_test, y_test, a_test = _maybe_subsample_folktables(
-            x_train, y_train, a_train, x_test, y_test, a_test, seed=seed,
-        )
-        return _ensure_train_test(x_train, x_test, y_train, y_test, a_train, a_test, seed=seed)
+        if intersectional:
+            (x_train, x_test, y_train, y_test, a_train, a_test,
+             _num_groups, a_marginals) = loader_out
+            (x_train, y_train, a_train, x_test, y_test, a_test,
+             m_train, m_test) = _maybe_subsample_folktables(
+                x_train, y_train, a_train, x_test, y_test, a_test, seed=seed,
+                marginals_train=a_marginals['train'],
+                marginals_test=a_marginals['test'],
+            )
+            marginals = {
+                'attr_names': a_marginals['attr_names'],
+                'train': m_train, 'test': m_test,
+            }
+        else:
+            x_train, x_test, y_train, y_test, a_train, a_test, _ = loader_out
+            x_train, y_train, a_train, x_test, y_test, a_test = (
+                _maybe_subsample_folktables(
+                    x_train, y_train, a_train, x_test, y_test, a_test, seed=seed,
+                )
+            )
+            marginals = None
+        x_train, x_test, y_train, y_test, a_train, a_test = _ensure_train_test(
+            x_train, x_test, y_train, y_test, a_train, a_test, seed=seed)
+        return x_train, x_test, y_train, y_test, a_train, a_test, marginals
 
     if dataset_key == 'diabetes':
         x_train, x_test, y_train, y_test, a_train, a_test = read_diabetes(path=FLAGS.diabetes_path)
-        return _ensure_train_test(x_train, x_test, y_train, y_test, a_train, a_test, seed=seed)
+        x_train, x_test, y_train, y_test, a_train, a_test = _ensure_train_test(
+            x_train, x_test, y_train, y_test, a_train, a_test, seed=seed)
+        return x_train, x_test, y_train, y_test, a_train, a_test, None
 
     if dataset_key == 'compas':
         # Drift-aware loader: splits raw rows by seed, applies the named
         # scenario to the test slice only, then fits the encoder on train
         # so the scenario edit on race / age_cat / c_charge_degree
         # propagates correctly through the one-hot transformer.
-        return read_compas_train_test(
+        compas_out = read_compas_train_test(
             scenario_name=scenario_name,
             path=FLAGS.compas_path,
             seed=seed,
+            intersectional=intersectional,
         )
+        if intersectional:
+            (x_train, x_test, y_train, y_test, a_train, a_test,
+             a_marginals) = compas_out
+            return (x_train, x_test, y_train, y_test, a_train, a_test,
+                    a_marginals)
+        return (*compas_out, None)
 
     raise ValueError(f"Unsupported dataset for pipeline evaluation: '{dataset_key}'.")
 
@@ -471,6 +541,43 @@ def _extract_test_metrics(stream):
         'dp': _mean_stream_metric(stream.get('dp')),
         'eo': _mean_stream_metric(stream.get('eo')),
     }
+
+
+def _compute_marginal_dp_eo(stream, a_marginals_test, attr_names):
+    """Compute per-attribute (marginal) DP/EO from accumulated predictions.
+
+    Intersectional mode reports composite-group DP/EO via the existing
+    ``dp`` / ``eo`` stream keys (these already use ``a_test``, which the
+    loader sets to the composite group index). This function adds the
+    *marginal* DP/EO for each individual protected attribute as a single
+    end-of-stream scalar per attribute, computed against the full recorded
+    prediction stream rather than the rolling window. Returns
+    ``{'<attr>': {'dp': float, 'eo': float}}`` for each attribute, or
+    ``None`` if predictions weren't recorded.
+    """
+    from src.helpers import utils as _utils  # noqa: WPS433 -- local import
+    y_preds = stream.get('y_preds_all') if isinstance(stream, dict) else None
+    y_true = stream.get('y_true_all') if isinstance(stream, dict) else None
+    if not y_preds or not y_true:
+        return None
+    a_marginals_test = np.asarray(a_marginals_test, dtype=np.int32)
+    if a_marginals_test.ndim != 2 or a_marginals_test.shape[1] != len(attr_names):
+        return None
+    n = min(len(y_preds), len(y_true), a_marginals_test.shape[0])
+    if n == 0:
+        return None
+    preds = list(y_preds[:n])
+    trues = list(y_true[:n])
+    out = {}
+    for idx, attr in enumerate(attr_names):
+        marginal_a = a_marginals_test[:n, idx].astype(np.int32).tolist()
+        dp_val, _ = _utils.get_demographic_parity(preds, marginal_a)
+        eo_val, _ = _utils.get_equalized_odds(preds, marginal_a, trues)
+        out[str(attr)] = {
+            'dp': float(dp_val),
+            'eo': float(eo_val),
+        }
+    return out
 
 
 def _mean_stream_metric(values):
@@ -797,15 +904,23 @@ def _single_scenario(
     print(f"{'#' * 80}\n")
     start = time.time()
 
-    x_train, x_test, y_train, y_test, a_train, a_test = _load_dataset_splits(
-        dataset_key=str(dataset_name).lower(),
-        scenario_name=scenario_name,
-        seed=seed,
+    x_train, x_test, y_train, y_test, a_train, a_test, a_marginals = (
+        _load_dataset_splits(
+            dataset_key=str(dataset_name).lower(),
+            scenario_name=scenario_name,
+            seed=seed,
+        )
     )
     print(
         f"train_samples={len(x_train)} test_samples={len(x_test)} "
         f"features={x_train.shape[1] if len(x_train) > 0 else x_test.shape[1]}"
     )
+    if a_marginals is not None:
+        n_groups_composite = len({int(v) for v in np.asarray(a_train).tolist()})
+        print(
+            f"[INTERSECTIONAL] attrs={a_marginals['attr_names']} "
+            f"composite_groups_train={n_groups_composite}"
+        )
 
     stream = _evaluate_selected_model(
         model_name=model_name,
@@ -819,6 +934,15 @@ def _single_scenario(
         seed=seed,
     )
     test_metrics = _extract_test_metrics(stream)
+    if a_marginals is not None:
+        marginal_metrics = _compute_marginal_dp_eo(
+            stream=stream,
+            a_marginals_test=a_marginals['test'],
+            attr_names=a_marginals['attr_names'],
+        )
+        if marginal_metrics:
+            test_metrics['marginal'] = marginal_metrics
+            stream['marginal_metrics'] = marginal_metrics
 
     os.makedirs(output_dir, exist_ok=True)
     return {
@@ -892,6 +1016,7 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
     for result in results:
         tm = result.get('test_metrics') or {}
         ts = result.get('timestep_results') or {}
+        marginal = tm.get('marginal') if isinstance(tm, dict) else None
         row = {
             'model': result.get('model'),
             'scenario': result.get('scenario'),
@@ -906,6 +1031,18 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
             'test_metrics': tm,
             'timestep_results': ts,
         }
+        if marginal:
+            row['marginal'] = marginal
+            # Flatten marginal DP/EO into top-level keys so significance_tests
+            # (and any consumer that reads scalar columns) can pick them up
+            # without inspecting the nested ``marginal`` blob.
+            for attr_name, vals in marginal.items():
+                if not isinstance(vals, dict):
+                    continue
+                if vals.get('dp') is not None:
+                    row[f'dp_{attr_name}'] = float(vals['dp'])
+                if vals.get('eo') is not None:
+                    row[f'eo_{attr_name}'] = float(vals['eo'])
         rows.append(row)
         rows_for_disk.append({
             k: v for k, v in row.items() if k not in ('test_metrics', 'timestep_results')

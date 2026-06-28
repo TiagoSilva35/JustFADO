@@ -1,54 +1,58 @@
-\documentclass[conference]{IEEEtran}
-
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{hyperref}
-\usepackage{url}
-\usepackage{booktabs}
+\documentclass[sigconf,anonymous,review]{acmart}
+% acmart already loads: inputenc, fontenc, hyperref, url, microtype, graphicx,
+% xcolor, amsmath, amsfonts, booktabs, natbib. Do NOT re-load these or the
+% \usepackage{cite} package, which conflicts with acmart's natbib.
 \usepackage{multirow}
-\usepackage{amsmath}
-\usepackage{amsfonts}
 \usepackage{nicefrac}
-\usepackage{microtype}
-\usepackage{xcolor}
 \usepackage{tikz}
-\usepackage{graphicx}
 \usepackage{placeins}
 \usepackage{etoolbox}
-\usepackage{cite}
 \usetikzlibrary{positioning, arrows.meta, shapes.geometric, calc, backgrounds}
 \newcommand{\TODO}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
 
+% Strip the ACM reference / copyright footer for the anonymous review build.
+\settopmatter{printacmref=false}
+\setcopyright{none}
+\renewcommand\footnotetextcopyrightpermission[1]{}
+\pagestyle{plain}
+\acmConference[Conference'26]{}{2026}{}
+\acmYear{2026}
+\copyrightyear{2026}
+
 \title{FADO: A Reaction Controller for Fairness-Aware Online Learning Under Concept Drift}
 
-
+\author{Anonymous}
+\affiliation{%
+  \institution{Anonymous}
+  \country{}}
+\email{anonymous@example.com}
 
 \begin{document}
 
-\maketitle
 
 \begin{abstract}
-Online learning systems deployed in non-stationary environments must remain both predictive and fair as the data distribution evolves. Existing fairness-aware
-online learners optimise a fixed regulariser and do not adapt to concept drift, whereas drift-adaptive streaming methods react to drift but enforce no fairness
-constraints. We propose Fairness-Aware Drift-Aware Online Learning (\textsc{FADO}), a framework that couples the \textsc{Aranyani} fair oblique decision forest~\cite{chowdhury2024enhancing} with a
-dual-threshold ADWIN drift detector and a reaction controller that modulates the optimiser learning rate and the soft-routing temperature in response to
-detected drift, and anneals both back to baseline during recovery. We evaluate \textsc{FADO} under a prequential test-then-train protocol on two
-complementary fairness benchmarks: \textsc{Folktables} ACS Income (CA), which provides a natural cross-year shift between $2015$ training and
-$2017$--$2018$ prequential test; and a controlled-drift testbed on \textsc{COMPAS} in which a symmetric race swap is paired with a $\mathrm{Bernoulli}(0.5)$
-label flip to produce an abrupt subpopulation shift. We compare \textsc{FADO} against the \textsc{ARF} and \textsc{RFR} streaming baselines and against a
-controller-free \textsc{Aranyani} ablation that isolates the contribution of the drift-reaction controller. Across both datasets and aggregated over $30$
-seeds, \textsc{FADO} attains the best mean Accuracy, DP and EO against both \textsc{ARF} and \textsc{RFR} on both datasets, with all
-\textsc{Folktables} comparisons and all DP comparisons reaching paired Wilcoxon Holm-corrected $p<0.001$ and the remaining \textsc{COMPAS} comparisons at
-$p<0.01$ or below (except the \textsc{FADO}-vs-\textsc{RFR} accuracy comparison on \textsc{COMPAS}, which is not statistically distinguishable, $p=0.31$).
-\textsc{FADO} reduces demographic parity by $\sim$$61\%$ on \textsc{Folktables} and $\sim$$25\%$ on \textsc{COMPAS}. The
-\textsc{FADO}-vs-\textsc{Aranyani} comparison is regime-dependent: the reaction controller adds a measurable demographic-parity and equalised-odds
-improvement on the abrupt-shift testbed (\textsc{COMPAS}, both $p<0.001$) at a sub-$0.2$pp accuracy trade-off, and is statistically tied with the
-controller-free baseline on the gradual-shift natural data (\textsc{Folktables}, sub-$0.3$pp differences in either direction).
+  Online learning systems deployed in non-stationary environments must remain both predictive and fair as the data distribution evolves. Existing fairness-aware
+  online learners optimise a fixed regulariser and do not adapt to concept drift, whereas drift-adaptive streaming methods react to drift but enforce no fairness
+  constraints. We propose Fairness-Aware Drift-Aware Online Learning (\textsc{FADO}), a framework that couples the \textsc{Aranyani} fair oblique decision forest~\cite{chowdhury2024enhancing} with a
+  dual-threshold ADWIN drift detector and a reaction controller that modulates the optimiser learning rate and the soft-routing temperature in response to
+  detected drift, and anneals both back to baseline during recovery. We evaluate \textsc{FADO} under a prequential test-then-train protocol on two
+  complementary fairness benchmarks: \textsc{Folktables} ACS Income (CA), which provides a natural cross-year shift between $2015$ training and
+  $2017$--$2018$ prequential test; and a controlled-drift testbed on \textsc{COMPAS} in which a symmetric race swap is paired with a $\mathrm{Bernoulli}(0.5)$
+  label flip to produce an abrupt subpopulation shift. We compare \textsc{FADO} against the \textsc{ARF} and \textsc{RFR} streaming baselines and against a
+  controller-free \textsc{Aranyani} ablation that isolates the contribution of the drift-reaction controller. Across both datasets and aggregated over $30$
+  seeds, \textsc{FADO} attains the best mean Accuracy, DP and EO against both \textsc{ARF} and \textsc{RFR} on both datasets, with all
+  \textsc{Folktables} comparisons and all DP comparisons reaching paired Wilcoxon Holm-corrected $p<0.001$ and the remaining \textsc{COMPAS} comparisons at
+  $p<0.01$ or below (except the \textsc{FADO}-vs-\textsc{RFR} accuracy comparison on \textsc{COMPAS}, which is not statistically distinguishable, $p=0.31$).
+  \textsc{FADO} reduces demographic parity by $\sim$$61\%$ on \textsc{Folktables} and $\sim$$25\%$ on \textsc{COMPAS}. The
+  \textsc{FADO}-vs-\textsc{Aranyani} comparison is regime-dependent: the reaction controller adds a measurable demographic-parity and equalised-odds
+  improvement on the abrupt-shift testbed (\textsc{COMPAS}, both $p<0.001$) at a sub-$0.2$pp accuracy trade-off, and is statistically tied with the
+  controller-free baseline on the gradual-shift natural data (\textsc{Folktables}, sub-$0.3$pp differences in either direction).
 \end{abstract}
 
-\begin{IEEEkeywords}
-fairness-aware online learning, concept drift, drift detection, group fairness, oblique decision forests
-\end{IEEEkeywords}
+\keywords{fairness-aware online learning, concept drift, group fairness,
+oblique decision forests, drift detection}
+
+\maketitle
 
 \section{Introduction}
 The increasing deployment of machine learning (ML) systems in high-stakes decision-making domains, including healthcare~\cite{8474918}, criminal justice~\cite{10467221}, 
@@ -142,6 +146,19 @@ $y_t \in \{0,1\}$ is the binary target label, and $a_t \in \mathcal{A}$ is a sen
 formulation of previous work~\cite{chowdhury2024enhancing,ijcai2019p205}, at each time step the learner receives $x_t$, produces a prediction
 $\hat{y}_t = \arg\max f_t(x_t)$, then observes $(y_t, a_t)$ and updates its parameters under a prequential, test-then-train protocol. The fairness formulation introduced below
 supports arbitrary $K$, although some datasets are binarised in our study (given that most existing benchmarks only contain binary protected attributes).
+
+\paragraph{Multiple protected attributes.}
+\label{sec:problem:multi-attr}
+When more than one protected attribute is observed --- e.g.\ $a_t = (a^{(1)}_t, a^{(2)}_t)$ with $a^{(k)}_t \in \mathcal{A}^{(k)}$ --- we adopt the
+\emph{intersectional} (Cartesian-product) instantiation of the same single-attribute formulation: we set $\mathcal{A} = \mathcal{A}^{(1)} \times \mathcal{A}^{(2)}$ and treat
+the joint subgroup $a_t = (a^{(1)}_t, a^{(2)}_t)$ as a single index into $\mathcal{A}$ with $K = |\mathcal{A}^{(1)}| \cdot |\mathcal{A}^{(2)}|$. This choice follows the
+intersectional-fairness reading of group fairness in~\cite{kearns2018gerrymandering,foulds2020intersectional}: marginal regularisation along each attribute axis
+\emph{alone} is provably defeatable by classifiers that achieve perfect per-axis demographic parity while violating subgroup parity on the intersection (the ``fairness
+gerrymandering'' construction of~\cite{kearns2018gerrymandering}), whereas optimising the intersectional violation directly closes that loophole by construction. The
+node-level regulariser of Section~\ref{sec:problem:regulariser} applies unchanged at $K = |\mathcal{A}|$; the controller of Section~\ref{sec:method:drift} is
+attribute-agnostic and does not need to be re-derived. For transparency we additionally report the \emph{marginal} demographic-parity and equalised-odds violations
+along each attribute as diagnostics in Section~\ref{sec:results}, computed from the same prediction stream but with $\mathcal{A}_t$ restricted to a single attribute's
+groups.
 
 \subsection{Group Fairness Metrics}
 We focus on \emph{group fairness}, which assesses whether model behaviour is statistically similar across protected groups. Although~\cite{chowdhury2024enhancing} already 
@@ -253,6 +270,11 @@ drift scenarios, baselines, hyperparameter selection, and the evaluation protoco
 \centering
 \includegraphics[width=0.85\textwidth]{1846ea20-2f1d-415b-9b62-cb781adbf1f6.png}
 \caption{\textsc{FADO} pipeline: dual-ADWIN detector $\to$ reaction controller modulating $\eta_t$ and $\tau_t$ $\to$ fairness-aware gradient step on the \textsc{Aranyani} base learner~\cite{chowdhury2024enhancing}.}
+\Description{Block diagram of the FADO prequential loop: an online error
+stream feeds two ADWIN detectors (pre-warm and confirmation); the reaction
+controller modulates the optimiser learning rate and the soft-routing
+temperature; both quantities then enter the fairness-aware gradient step
+of the Aranyani fair oblique decision forest.}
 \label{fig:drift-pipeline}
 \end{figure*}
 All experiments were run in Python 3.9 across three machines: a MacBook Pro (Apple M5, $16$\,GB RAM); a desktop with Intel i5-8500 CPU, NVIDIA GTX $1060$ Ti GPU, and $16$\,GB RAM; and a desktop with Intel i9-9900K CPU, NVIDIA RTX $2080$ Ti GPU, and $32$\,GB RAM. Per-seed runs were dispatched across the three machines for wall-clock parallelism; within any given seed, all four models were executed on the same machine to preserve the seed-pinned data ordering required by the paired statistical tests (Section~\ref{sec:method:protocol}). Source code, configuration files, and seed manifests are released for reproducibility (Section~\ref{sec:method:reproducibility}).
@@ -580,7 +602,7 @@ component design (label-noise guard, temperature modulation, LR pre-warm) to qua
 with smooth post-processing methods such as~\cite{Small_2024} during recovery windows is a promising direction, since the two mechanisms address fairness
 at orthogonal layers of the prediction pipeline.
 
+\bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
-\bibliographystyle{IEEEtran}
 
 \end{document}

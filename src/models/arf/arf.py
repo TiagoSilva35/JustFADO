@@ -74,7 +74,9 @@ def evaluate_arf_over_timesteps(
         'dp': dps,
         'eo': eos,
         'n_samples': n_samples,
-        'drifted_points': [],  
+        'drifted_points': [],
+        'y_preds_all': list(y_preds_all),
+        'y_true_all': list(y_true_all),
     }
     if return_model:
         return result, arf

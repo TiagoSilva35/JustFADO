@@ -652,6 +652,22 @@ def _compas_sensitive_to_binary(values):
   return _normalize_binary_series(values, 'sensitive attribute')
 
 
+def _compas_sex_to_binary(values):
+  """Encode COMPAS ``sex`` as binary (1=Female, 0=Male).
+
+  Used to build the intersectional composite group label
+  ``a = 2*a_race + a_sex`` when ``intersectional=True`` is passed to
+  ``read_compas_train_test``. The 1=Female convention follows the COMPAS
+  fairness literature where positive-rate parity is typically analysed
+  with women as the reference subgroup.
+  """
+  series = pd.Series(values)
+  if series.dtype.kind in {'O', 'U', 'S'}:
+    normalized = series.astype(str).str.strip().str.lower()
+    return normalized.isin({'female', 'f', 'woman'}).astype(np.int32).to_numpy()
+  return _normalize_binary_series(series, 'sex attribute')
+
+
 def _encode_compas_features(work_df, target_col, feature_transformer=None, fit=False):
   """Encode only the feature columns of a COMPAS frame and return x + transformer.
 
@@ -729,6 +745,7 @@ def read_compas_train_test(
     path='data/compas/*',
     seed=42,
     test_size=0.3,
+    intersectional=False,
 ):
   """Read COMPAS, split train/test by seed, apply a drift scenario to test.
 
@@ -825,7 +842,39 @@ def read_compas_train_test(
       test_df, target_col=target_col,
       feature_transformer=transformer, fit=False,
   )
-  return x_train, x_test, y_train, y_test, a_train, a_test
+
+  if not intersectional:
+    return x_train, x_test, y_train, y_test, a_train, a_test
+
+  # Intersectional mode: build a composite group code a = 2*a_race + a_sex
+  # and expose the two marginal arrays for diagnostic DP/EO reporting.
+  # ``sex`` is one of the legacy COMPAS feature columns; the encoder is
+  # fitted post-split so this column survives in the raw train/test DFs.
+  if 'sex' not in train_df.columns or 'sex' not in test_df.columns:
+    raise ValueError(
+        "COMPAS intersectional mode requires a 'sex' column in the raw "
+        "frame; got columns " + str(list(train_df.columns))
+    )
+  a_sex_train = _compas_sex_to_binary(train_df['sex'])
+  a_sex_test = _compas_sex_to_binary(test_df['sex'])
+  # a_train/a_test already hold the binary race code (1=Caucasian).
+  a_race_train = a_train
+  a_race_test = a_test
+  a_train_intersect = (2 * a_race_train.astype(np.int32)
+                       + a_sex_train.astype(np.int32))
+  a_test_intersect = (2 * a_race_test.astype(np.int32)
+                      + a_sex_test.astype(np.int32))
+  a_marginals = {
+      'attr_names': ('race', 'sex'),
+      'train': np.stack([a_race_train, a_sex_train], axis=1).astype(np.int32),
+      'test': np.stack([a_race_test, a_sex_test], axis=1).astype(np.int32),
+  }
+  return (
+      x_train, x_test, y_train, y_test,
+      a_train_intersect.astype(np.int32),
+      a_test_intersect.astype(np.int32),
+      a_marginals,
+  )
 
 
 # CelebA
@@ -1047,12 +1096,15 @@ def _preprocess_folktables_frame(
     sensitive_attribute,
     feature_transformer=None,
     fit_feature_transformer=False,
+    intersectional=False,
 ):
   work = _adult_income_filter(frame).copy()
   sensitive_attribute = str(sensitive_attribute).lower()
   sensitive_column = 'RAC1P' if sensitive_attribute == 'race' else 'SEX'
   feature_columns = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'WKHP', 'SEX', 'RAC1P']
-  required_columns = list(dict.fromkeys(feature_columns + ['PINCP', sensitive_column]))
+  required_columns = list(dict.fromkeys(
+      feature_columns + ['PINCP', sensitive_column, 'SEX', 'RAC1P']
+  ))
   work = work.dropna(subset=required_columns).copy()
 
   y = (pd.to_numeric(work['PINCP'], errors='coerce') > 50000).astype(np.int32).to_numpy()
@@ -1066,12 +1118,28 @@ def _preprocess_folktables_frame(
     x, feature_transformer = _fit_tabular_transformer(features, categorical_features)
   else:
     x = _transform_tabular_features(features, feature_transformer)
-  return x, y, a, feature_transformer
+
+  if not intersectional:
+    return x, y, a, feature_transformer
+
+  # Intersectional mode: also compute marginal sex and race-binarised
+  # arrays so the caller can build a = 2*a_sex + a_race and report per-
+  # attribute DP/EO as diagnostics.
+  a_sex = _normalize_sensitive_attribute(
+      pd.to_numeric(work['SEX'], errors='coerce').to_numpy(),
+      'sex',
+  )
+  a_race = _normalize_sensitive_attribute(
+      pd.to_numeric(work['RAC1P'], errors='coerce').to_numpy(),
+      'race',
+  )
+  marginals = np.stack([a_sex, a_race], axis=1).astype(np.int32)
+  return x, y, a, feature_transformer, marginals
 
 
 def read_folktables(path='data/acs-folktables', train_year=2015, test_years=(2017, 2018),
                     state='CA', horizon='1-Year', sensitive_attribute='sex',
-                    download=True):
+                    download=True, intersectional=False):
   """Read Folktables ACS Income data from local cache."""
   train_year = int(train_year)
   test_years = tuple(int(year) for year in test_years)
@@ -1086,33 +1154,72 @@ def read_folktables(path='data/acs-folktables', train_year=2015, test_years=(201
       survey_year=train_year, horizon=horizon, survey='person', root_dir=path
   )
   train_df = train_source.get_data(states=states, download=download)
-  x_train, y_train, a_train, folktables_transformer = _preprocess_folktables_frame(
+  pre_train = _preprocess_folktables_frame(
       train_df,
       sensitive_attribute=sensitive_attribute,
       feature_transformer=None,
       fit_feature_transformer=True,
+      intersectional=intersectional,
   )
-  x_tests, y_tests, a_tests = [], [], []
+  if intersectional:
+    x_train, y_train, a_train, folktables_transformer, m_train = pre_train
+  else:
+    x_train, y_train, a_train, folktables_transformer = pre_train
+    m_train = None
+  x_tests, y_tests, a_tests, m_tests = [], [], [], []
   for year in test_years:
     test_source = ACSDataSource(
         survey_year=year, horizon=horizon, survey='person', root_dir=path
     )
     test_df = test_source.get_data(states=states, download=download)
-    x_t, y_t, a_t, _ = _preprocess_folktables_frame(
+    pre_test = _preprocess_folktables_frame(
         test_df,
         sensitive_attribute=sensitive_attribute,
         feature_transformer=folktables_transformer,
         fit_feature_transformer=False,
+        intersectional=intersectional,
     )
+    if intersectional:
+      x_t, y_t, a_t, _, m_t = pre_test
+    else:
+      x_t, y_t, a_t, _ = pre_test
+      m_t = None
     # append only a subset of the test data
     split_size = len(x_train) // max(len(test_years), 1)
     x_tests.append(x_t[:split_size])
     y_tests.append(y_t[:split_size])
     a_tests.append(a_t[:split_size])
+    if intersectional:
+      m_tests.append(m_t[:split_size])
 
   x_test = np.concatenate(x_tests, axis=0) if x_tests else np.array([], dtype=np.float32)
   y_test = np.concatenate(y_tests, axis=0) if y_tests else np.array([], dtype=np.int32)
   a_test = np.concatenate(a_tests, axis=0) if a_tests else np.array([], dtype=np.int32)
+
+  if intersectional:
+    m_test = (np.concatenate(m_tests, axis=0)
+              if m_tests else np.zeros((0, 2), dtype=np.int32))
+    # Build composite intersectional code a = 2*a_sex + a_race.
+    # m_train / m_test columns: [sex, race_binarised].
+    a_train_intersect = (2 * m_train[:, 0].astype(np.int32)
+                         + m_train[:, 1].astype(np.int32))
+    a_test_intersect = (2 * m_test[:, 0].astype(np.int32)
+                        + m_test[:, 1].astype(np.int32))
+    a_marginals = {
+        'attr_names': ('sex', 'race'),
+        'train': m_train.astype(np.int32),
+        'test': m_test.astype(np.int32),
+    }
+    return (
+        np.asarray(x_train, dtype=np.float32),
+        np.asarray(x_test, dtype=np.float32),
+        np.asarray(y_train, dtype=np.int32),
+        np.asarray(y_test, dtype=np.int32),
+        np.asarray(a_train_intersect, dtype=np.int32),
+        np.asarray(a_test_intersect, dtype=np.int32),
+        len({int(v) for v in a_train_intersect.tolist()}),
+        a_marginals,
+    )
 
   return (
       np.asarray(x_train, dtype=np.float32),

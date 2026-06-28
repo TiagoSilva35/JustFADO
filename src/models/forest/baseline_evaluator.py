@@ -243,6 +243,8 @@ def evaluate_aranyani_baseline_over_timesteps(
         'eo': eos,
         'n_samples': n_samples,
         'drifted_points': [],
+        'y_preds_all': list(y_preds_all),
+        'y_true_all': list(y_true_all),
         'static_params_used': {
             'fairness_window': FAIRNESS_WINDOW,
             'lambda_const': lambda_const,

@@ -391,6 +391,8 @@ def evaluate_rfr_over_timesteps(
         'eo': eos,
         'n_samples': n_samples,
         'drifted_points': [],
+        'y_preds_all': list(y_preds_all),
+        'y_true_all': list(y_true_all),
     }
     if return_model:
         return result, model

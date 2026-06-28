@@ -274,6 +274,8 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         'eo': eos,
         'n_samples': n_samples,
         'drifted_points': drifted_points,
+        'y_preds_all': list(y_preds_all),
+        'y_true_all': list(y_true_all),
         'static_params_used': {
             'adwin_delta_warn': ADWIN_DELTA_WARN,
             'adwin_delta_confirm': ADWIN_DELTA_CONFIRM,
