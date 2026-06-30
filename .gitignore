@@ -13,3 +13,4 @@ wandb/
 data/acs-folktables/
 /data/
 DOCS/*.pdf
+files/experiments/dataset_folktables/seed_pipeline_results.json
