@@ -89,7 +89,13 @@ def train_online(
       inputs_batch,
       targets_batch,
       protected_batch) in enumerate(iterations):
-    with tf.GradientTape(persistent=True) as tape:
+    # ``persistent`` is only needed when ``.gradient`` is called more than once.
+    # The 'node' fairness gradient is now analytic (see
+    # ``initializers.accumulate_fairness_stats``), so the only tape traversal
+    # left is the task loss below; 'leaf' still needs a second pass.
+    with tf.GradientTape(
+        persistent=(compute_fairness and constraint_type == 'leaf')
+    ) as tape:
       predictions, node_decisions, per_tree_predictions = model(inputs_batch, training=True)
       y_pred = tf.math.argmax(predictions, axis=-1)
       if weight_updater is None:
@@ -163,7 +169,8 @@ def train_online(
           gradient_w, gradient_b, agg_y,
           subgroup_count, protected_class_count,
           num_internal_nodes, data_dim,
-          constraint_type, gradient_type, base_gamma
+          constraint_type, gradient_type, base_gamma,
+          inputs=inputs_batch, model=model,
       )
       total_gradients = initializers.compute_fairness_gradients(
           gradients,

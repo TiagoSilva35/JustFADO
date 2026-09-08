@@ -1,0 +1,120 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{chowdhury2024enhancing}
+\citation{8474918}
+\citation{10467221}
+\citation{10.1145/3351095.3372828}
+\citation{10.1145/3457607}
+\citation{10.1145/2090236.2090255}
+\citation{10.1145/2090236.2090255,NIPS2016_6a9659fe}
+\citation{DBLP:journals/corr/WebbHCNP15}
+\citation{10.1007/s10994-017-5642-8,KLAIBER20231261}
+\citation{Deho2025}
+\citation{chowdhury2024enhancing}
+\citation{10.1007/s10994-017-5642-8}
+\citation{jiang2023chasingfairnessdistributionshift}
+\@writefile{toc}{\contentsline {section}{Abstract}{1}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\citation{kearns2018gerrymandering}
+\citation{Salazar_2026}
+\citation{Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024}
+\citation{zeng2024fairrrpreprocessinggroupfairness}
+\citation{chowdhury2024enhancing}
+\citation{10.1007/s10994-017-5642-8}
+\citation{jiang2023chasingfairnessdistributionshift}
+\citation{hardt2016equalityopportunitysupervisedlearning}
+\citation{Mishler_2021}
+\citation{Small_2024}
+\citation{10.1007/s10994-017-5642-8}
+\citation{chowdhury2024enhancing}
+\citation{jiang2023chasingfairnessdistributionshift}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{2}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Pre-processing methods}{2}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}In-processing methods}{2}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Post-processing methods}{2}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Main Limitations of Prior Work}{2}{subsection.2.4}\protected@file@percent }
+\newlabel{sec:related:limitations}{{2.4}{2}{Main Limitations of Prior Work}{subsection.2.4}{}}
+\citation{chowdhury2024enhancing,ijcai2019p205}
+\citation{kearns2018gerrymandering,foulds2020intersectional}
+\citation{kearns2018gerrymandering}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Problem Statement}{3}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Online Learning Setting}{3}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:problem:online}{{3.1}{3}{Online Learning Setting}{subsection.3.1}{}}
+\newlabel{sec:problem:multi-attr}{{3.1}{3}{Multiple protected attributes}{section*.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Multiple protected attributes.}{3}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Group Fairness Metrics}{3}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Node-Level Fairness Regulariser}{3}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:problem:regulariser}{{3.3}{3}{Node-Level Fairness Regulariser}{subsection.3.3}{}}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Methodology and Experimental Design}{4}{section.4}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces \textsc  {FADO} prequential test-then-train loop}}{4}{algorithm.1}\protected@file@percent }
+\newlabel{alg:fado}{{1}{4}{\textsc {FADO} prequential test-then-train loop}{algorithm.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Fair Oblique Decision Forest}{4}{subsection.4.1}\protected@file@percent }
+\newlabel{sec:method:model}{{4.1}{4}{Fair Oblique Decision Forest}{subsection.4.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Fairness-Aware Online Updates}{4}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:method:updates}{{4.2}{4}{Fairness-Aware Online Updates}{subsection.4.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces The \textsc  {FADO} online learning system. The \emph  {main learning pipeline} (blue) streams each sample $(x_t,y_t,a_t)$ through the \textsc  {Aranyani} fair oblique forest\nonbreakingspace \citep  {chowdhury2024enhancing} under a prequential test-then-train protocol, monitors prequential accuracy and the intersectional fairness metrics over a rolling window of size $W$, and applies the fairness-regularised gradient update $\mathcal  {L}=\mathcal  {L}_{\mathrm  {CE}}+\lambda \mathcal  {L}_{\mathrm  {fair}}$, which writes the updated parameters back to the forest. The \emph  {adaptation subsystem} (orange) runs the dual-threshold ADWIN detector and the reaction controller, which on a confirmed drift spikes the learning rate $\eta _t$ and sharpens the soft-routing temperature $\tau _t$, then anneals both back during recovery. Solid blue arrows denote the model/data flow; dashed orange arrows denote drift signals and control flow.}}{5}{figure.caption.5}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:drift-pipeline}{{1}{5}{The \textsc {FADO} online learning system. The \emph {main learning pipeline} (blue) streams each sample $(x_t,y_t,a_t)$ through the \textsc {Aranyani} fair oblique forest~\cite {chowdhury2024enhancing} under a prequential test-then-train protocol, monitors prequential accuracy and the intersectional fairness metrics over a rolling window of size $W$, and applies the fairness-regularised gradient update $\mathcal {L}=\mathcal {L}_{\mathrm {CE}}+\lambda \mathcal {L}_{\mathrm {fair}}$, which writes the updated parameters back to the forest. The \emph {adaptation subsystem} (orange) runs the dual-threshold ADWIN detector and the reaction controller, which on a confirmed drift spikes the learning rate $\eta _t$ and sharpens the soft-routing temperature $\tau _t$, then anneals both back during recovery. Solid blue arrows denote the model/data flow; dashed orange arrows denote drift signals and control flow}{figure.caption.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Drift Detection and Reaction Controller}{5}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:method:drift}{{4.3}{5}{Drift Detection and Reaction Controller}{subsection.4.3}{}}
+\citation{DBLP:journals/corr/WebbHCNP15}
+\citation{10.1007/s10994-017-5642-8}
+\citation{jiang2023chasingfairnessdistributionshift}
+\citation{chowdhury2024enhancing}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces Datasets.}}{6}{table.caption.6}\protected@file@percent }
+\newlabel{tab:datasets}{{1}{6}{Datasets}{table.caption.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Datasets and Preprocessing}{6}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:method:data}{{4.4}{6}{Datasets and Preprocessing}{subsection.4.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Concept-Drift Scenarios}{6}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:method:scenarios}{{4.5}{6}{Concept-Drift Scenarios}{subsection.4.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Baselines}{6}{subsection.4.6}\protected@file@percent }
+\newlabel{sec:method:baselines}{{4.6}{6}{Baselines}{subsection.4.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}Hyperparameter Selection}{6}{subsection.4.7}\protected@file@percent }
+\newlabel{sec:method:hpo}{{4.7}{6}{Hyperparameter Selection}{subsection.4.7}{}}
+\citation{demsar2006statistical}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces \textsc  {FADO} hyperparameters. Dash = \textsc  {COMPAS} inherits the \textsc  {Folktables} default.}}{7}{table.caption.7}\protected@file@percent }
+\newlabel{tab:hparams}{{2}{7}{\textsc {FADO} hyperparameters. Dash = \textsc {COMPAS} inherits the \textsc {Folktables} default}{table.caption.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.8}Evaluation Protocol}{7}{subsection.4.8}\protected@file@percent }
+\newlabel{sec:method:protocol}{{4.8}{7}{Evaluation Protocol}{subsection.4.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9}Reproducibility}{7}{subsection.4.9}\protected@file@percent }
+\newlabel{sec:method:reproducibility}{{4.9}{7}{Reproducibility}{subsection.4.9}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Results and Discussion}{7}{section.5}\protected@file@percent }
+\newlabel{sec:results}{{5}{7}{Results and Discussion}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}RQ1: To What Extent Does Concept Drift Affect Group Fairness?}{7}{subsection.5.1}\protected@file@percent }
+\newlabel{sec:results:rq1}{{5.1}{7}{RQ1: To What Extent Does Concept Drift Affect Group Fairness?}{subsection.5.1}{}}
+\citation{kearns2018gerrymandering}
+\citation{kearns2018gerrymandering}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Prequential results under \emph  {intersectional} (sex\,$\times $\,race) grouping, mean $\pm $ std over $30$ seeds. DP is the intersectional demographic-parity violation over the four joint subgroups (the objective \textsc  {FADO} optimises); $\mathrm  {DP}_{\text  {sex}}$ and $\mathrm  {DP}_{\text  {race}}$ are the marginal per-attribute diagnostics. \textbf  {Bold} = best mean per metric within each dataset; superscripts on the \textsc  {FADO} row = paired Wilcoxon Holm-corrected significance vs \emph  {every} baseline ($^{*}p{<}0.05$, $^{**}p{<}0.01$, $^{***}p{<}0.001$); columns with no marker have mixed per-baseline directions and are dissected in the text. Equalised-odds results are deferred to the EO-objective study (Section\nonbreakingspace \ref {sec:conclusion}).}}{8}{table.caption.8}\protected@file@percent }
+\newlabel{tab:results}{{3}{8}{Prequential results under \emph {intersectional} (sex\,$\times $\,race) grouping, mean $\pm $ std over $30$ seeds. DP is the intersectional demographic-parity violation over the four joint subgroups (the objective \textsc {FADO} optimises); $\mathrm {DP}_{\text {sex}}$ and $\mathrm {DP}_{\text {race}}$ are the marginal per-attribute diagnostics. \textbf {Bold} = best mean per metric within each dataset; superscripts on the \textsc {FADO} row = paired Wilcoxon Holm-corrected significance vs \emph {every} baseline ($^{*}p{<}0.05$, $^{**}p{<}0.01$, $^{***}p{<}0.001$); columns with no marker have mixed per-baseline directions and are dissected in the text. Equalised-odds results are deferred to the EO-objective study (Section~\ref {sec:conclusion})}{table.caption.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}RQ2: Can Adaptive Mechanisms Preserve Fairness While Maintaining Utility?}{8}{subsection.5.2}\protected@file@percent }
+\newlabel{sec:results:rq2}{{5.2}{8}{RQ2: Can Adaptive Mechanisms Preserve Fairness While Maintaining Utility?}{subsection.5.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}Conclusion and Future Work}{8}{section.6}\protected@file@percent }
+\newlabel{sec:conclusion}{{6}{8}{Conclusion and Future Work}{section.6}{}}
+\bibstyle{ACM-Reference-Format}
+\bibdata{references}
+\citation{demsar2006statistical}
+\@writefile{toc}{\contentsline {section}{\numberline {A}Equalised Odds: Metric and Regulariser}{9}{appendix.A}\protected@file@percent }
+\newlabel{app:eo}{{A}{9}{Equalised Odds: Metric and Regulariser}{appendix.A}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {B}Per-Dataset Hyperparameter Calibration}{9}{appendix.B}\protected@file@percent }
+\newlabel{app:hpo}{{B}{9}{Per-Dataset Hyperparameter Calibration}{appendix.B}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {C}Choice of Statistical Test}{9}{appendix.C}\protected@file@percent }
+\newlabel{app:tests}{{C}{9}{Choice of Statistical Test}{appendix.C}{}}
+\newlabel{tocindent-1}{0pt}
+\newlabel{tocindent0}{0pt}
+\newlabel{tocindent1}{6.25499pt}
+\newlabel{tocindent2}{10.34999pt}
+\newlabel{tocindent3}{0pt}
+\newlabel{tocindent4}{0pt}
+\newlabel{tocindent5}{0pt}
+\newlabel{TotPages}{{10}{10}{}{page.10}{}}
+\gdef \@abspage@last{10}

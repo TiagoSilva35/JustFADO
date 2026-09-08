@@ -1,0 +1,184 @@
+% FADO --- Training Speed. CISUC template (Beamer).  17 July 2026.
+% Compiles with pdfLaTeX, XeLaTeX, or LuaLaTeX (run twice for the TikZ overlays).
+\documentclass[aspectratio=169]{beamer}
+\usepackage{geometry}
+\geometry{paperwidth=13.333in,paperheight=7.5in}
+\usepackage{iftex}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{array}
+
+% ---- fonts (engine-agnostic) ----
+\ifPDFTeX\usepackage[utf8]{inputenc}\fi
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{tgheros}
+\usepackage{tgcursor}
+\renewcommand{\familydefault}{\sfdefault}
+\newcommand{\monofont}{\ttfamily}
+
+% ---- colours ----
+\definecolor{cred}{HTML}{DA0725}
+\definecolor{ink}{HTML}{141414}
+\definecolor{body}{HTML}{262626}
+\definecolor{grey}{HTML}{9A9A9A}
+\definecolor{lgrey}{HTML}{C4C4C4}
+\definecolor{green}{HTML}{2E9E5B}
+\definecolor{amber}{HTML}{C77A18}
+
+\setbeamercolor{normal text}{fg=body}
+\setbeamertemplate{navigation symbols}{}
+\setbeamersize{text margin left=0pt,text margin right=0pt}
+
+% ---- running header ----
+\newcommand{\hdrsec}{}
+\newcommand{\hdrpg}{}
+\newcommand{\pageset}[2]{\renewcommand{\hdrsec}{#1}\renewcommand{\hdrpg}{#2}}
+\setbeamertemplate{headline}{%
+  \vskip3mm%
+  \makebox[\paperwidth][c]{%
+    \hspace{9mm}%
+    \parbox[t]{4.4in}{\monofont\color{grey}\fontsize{9}{11}\selectfont
+      FADO: Training Speed\\ 17 July 2026}%
+    \hfill
+    \parbox[t]{4.2in}{\centering\monofont\color{grey}\fontsize{10}{12}\selectfont \hdrsec}%
+    \hfill
+    \parbox[t]{2.4in}{\raggedleft\monofont\fontsize{13}{15}\selectfont
+      \textbf{\color{ink}\hdrpg}{\color{grey}/05}}%
+    \hspace{9mm}%
+  }%
+}
+\setbeamertemplate{footline}{}
+\setbeamertemplate{frametitle}{}
+
+% ---- helpers ----
+\newcommand{\tb}[5][]{\begin{tikzpicture}[remember picture,overlay]%
+  \node[anchor=north west,inner sep=0pt,outer sep=0pt,text width=#2in,align=left,#1]
+    at ([xshift=#3in,yshift=-#4in]current page.north west){\raggedright #5\par};\end{tikzpicture}}
+\newcommand{\fs}[2]{\fontsize{#1}{#2}\selectfont}
+\newcommand{\hrl}[3]{\tb{#3}{#1}{#2}{{\color{lgrey}\rule{#3in}{0.9pt}}}}
+\newcommand{\ctitle}[2][28]{\tb[font=\fontsize{#1}{#1}\selectfont\bfseries]{11.7}{0.85}{1.4}{\color{ink}#2}}
+\newcommand{\panel}[5][]{\begin{tikzpicture}[remember picture,overlay]%
+  \node[anchor=north west,text width=#2in,align=left,fill=cred!7,rounded corners=3pt,inner sep=11pt,#1]
+    at ([xshift=#3in,yshift=-#4in]current page.north west){\raggedright #5\par};\end{tikzpicture}}
+
+\begin{document}
+
+% ===================================================== LOGO
+\begin{frame}[plain]
+  \tb{4.6}{4.37}{3.35}{\includegraphics[width=4.6in]{assets/cisuc_logo.png}}
+\end{frame}
+
+% ===================================================== TITLE
+\begin{frame}[plain]
+  \tb[font=\fontsize{42}{48}\selectfont\bfseries]{11.6}{0.9}{2.5}{\color{ink}FADO --- Training Speed}
+  \tb[font=\fontsize{20}{26}\selectfont]{11.6}{0.9}{3.6}{\color{body}Removing a redundant backward pass, and where the time actually goes}
+  \tb{11}{0.92}{4.75}{\color{ink}\fs{19}{22}Tiago Silva}
+  \tb{11}{0.92}{5.3}{\color{ink}\fs{14}{18}\textbf{CISUC \textperiodcentered{} Data-Centric AI Lab} \textperiodcentered{} 17 July 2026\\
+    {\color{body}\fs{14}{18}Department of Informatics Engineering, University of Coimbra}}
+  \tb{2.5}{0.9}{6.75}{\includegraphics[width=2.5in]{assets/cisuc_logo.png}}
+\end{frame}
+
+% ---- 01 the change ----
+\pageset{1.The change}{01}
+\begin{frame}
+  \ctitle{The change: an analytic fairness gradient}
+  \tb{11.7}{0.85}{2.2}{\color{body}\fs{15}{20}Each online step ran \textbf{two} backward passes: one for the task loss, and a second (on a persistent tape, once per sample) only to read $\partial n/\partial W$, $\partial n/\partial b$ for the fairness penalty.}
+  \panel{11.3}{0.85}{3.1}{\fs{14}{18.5}%
+    {\color{cred}\bfseries Why the second pass was never needed.}\par
+    \vspace{2pt}
+    {\color{body}The fairness penalty is a function of the \emph{node activations}, so its gradient is the node's own \textbf{local} Jacobian --- there is no upstream chain to assemble. With $n=\sigma(z)$, $z=(W^{\top}x+b)/\tau$:}\par
+    \vspace{4pt}
+    \centering$\displaystyle \frac{\partial n}{\partial W}=x\,\sigma'(z)^{\top}/\tau,\qquad
+      \frac{\partial n}{\partial b}=\sigma'(z)/\tau,\qquad \sigma'(z)=\sigma(z)\bigl(1-\sigma(z)\bigr).$\par
+    \vspace{4pt}
+    \raggedright{\color{body}And $\sigma(z)$ \emph{is} the forward pass's {\monofont node\_decisions} --- already computed. One elementwise product, one outer product, per tree. No tape.}}
+  \tb{11.6}{0.85}{5.55}{\color{ink}\fs{13.5}{18}\setlength{\parskip}{5pt}
+    {\color{cred}\textbullet}\ The \textbf{task loss keeps autodiff}: its target is the prediction, so it genuinely needs the full upstream chain (leaf mixture, gates, $\theta$).\par
+    {\color{cred}\textbullet}\ Applied to all three training loops \textperiodcentered{} the tape is no longer persistent \textperiodcentered{} {\monofont 'leaf'} mode still uses autodiff.}
+  \hrl{0.85}{6.75}{11.6}
+  \tb{11.6}{0.85}{6.9}{\color{body}\fs{12.5}{15}Autodiff is worth its cost only when you need the \emph{upstream} chain. The fairness term never leaves the top of the graph.}
+\end{frame}
+
+% ---- 02 verified ----
+\pageset{2.Verified}{02}
+\begin{frame}
+  \ctitle{Verified: bit-identical}
+  \tb{5.75}{0.85}{2.35}{\bfseries\color{ink}\fs{16}{19}Unit: both paths, same state}
+  \tb{5.75}{0.85}{2.85}{\color{body}\fs{13.5}{18}\setlength{\parskip}{5pt}
+    {\monofont gradient\_w}, {\monofont gradient\_b}, {\monofont agg\_y} all differ by {\color{green}\textbf{0.00e+00}}; counts match.\par
+    Across $\tau \in \{1.0,\ 0.35,\ 0.1\}$ and both update rules (vanilla, EMA).}
+  \tb{5.75}{7.05}{2.35}{\bfseries\color{ink}\fs{16}{19}End-to-end A/B}
+  \tb{5.75}{7.05}{2.85}{\color{body}\fs{13.5}{18}\setlength{\parskip}{5pt}
+    Original code restored and re-run on the same seed, 400 online steps.\par
+    DP, EO and accuracy trajectories \textbf{and} all 12 final weight tensors: {\color{green}\textbf{identical}}.}
+  \hrl{0.85}{4.5}{11.6}
+  \panel{11.3}{0.85}{4.75}{\fs{14}{19}%
+    {\color{cred}\bfseries Why exactly zero, and not just close?}\par
+    \vspace{2pt}
+    {\color{body}Because the analytic path \textbf{reuses the forward's $\sigma(z)$} instead of recomputing $z$, there is not even float32 rounding drift. (Recomputing $z$ gives $\sim$1e-6; reusing it gives 0.)\par
+    \vspace{3pt}
+    Consequence: \textbf{the published numbers cannot move.} This is a pure speed change.}}
+  \tb{11.6}{0.85}{6.6}{\color{body}\fs{12.5}{15}Bonus: trees are now indexed directly instead of inferred from gradient shapes --- immune to a $\theta$ whose leading dimension equals {\monofont data\_dim}.}
+\end{frame}
+
+% ---- 03 measured ----
+\pageset{3.Measured}{03}
+\begin{frame}
+  \ctitle{Measured: the honest result}
+  \tb{5.6}{0.85}{2.3}{\color{body}\fs{14.5}{19}\setlength{\parskip}{6pt}
+    {\color{green}\textbf{The replaced pass:}} $\sim$4.5\,ms $\rightarrow$ $\sim$8\,\textmu s per sample.\par
+    {\color{amber}\textbf{End-to-end:}} 24.44\,s $\rightarrow$ 22.72\,s $=$ \textbf{1.08$\times$}.\par
+    {\color{body}The arithmetic is consistent: $\sim$61\,ms per step, and we removed $\sim$4.5\,ms $\approx$ 7\%.}\par
+    {\color{cred}\textbf{The fairness backward was never the bulk of the step.}}}
+  \tb{6.1}{6.55}{2.3}{\color{ink}\fs{12.5}{15}%
+    \renewcommand{\arraystretch}{1.45}%
+    \begin{tabular}{@{}p{3.5in} r@{}}
+    \toprule
+    \textbf{Profile ({\monofont train\_online}, 400 steps)} & \textbf{cum}\\
+    \midrule
+    {\monofont compute\_fairness\_gradients} & {\color{cred}\textbf{11.84 s}}\\
+    \quad {\monofont convert\_to\_tensor} (195{,}565 calls) & 8.13 s\\
+    {\monofont \_gradient\_function} (task loss) & 3.91 s\\
+    {\monofont accumulate\_fairness\_stats} {\color{green}(target)} & {\color{green}\textbf{0.57 s}}\\
+    \midrule
+    total & 26.28 s\\
+    \bottomrule
+    \end{tabular}}
+  \hrl{0.85}{5.85}{11.6}
+  \tb{11.6}{0.85}{6.05}{\color{body}\fs{14}{18}The change did exactly its job --- {\monofont accumulate\_fairness\_stats} fell off the profile. But the bottleneck was somewhere else entirely: {\monofont compute\_fairness\_gradients} is \textbf{45\% of the runtime}.}
+\end{frame}
+
+% ---- 04 next ----
+\pageset{4.Next}{04}
+\begin{frame}
+  \ctitle{Next: the actual bottleneck}
+  \tb{11.7}{0.85}{2.3}{\color{body}\fs{15.5}{21}{\monofont compute\_fairness\_gradients} operates on state that is \textbf{already NumPy} ({\monofont gradient\_w}, {\monofont gradient\_b} are plain arrays) --- but rebuilds every term with Python {\monofont sum()} comprehensions and per-element {\monofont tf.convert\_to\_tensor}, once per gradient tensor, every step.}
+  \panel{11.3}{0.85}{3.5}{\fs{14.5}{19}%
+    {\color{cred}\bfseries $\approx$196{,}000 tensor constructions per 400 steps} --- to do arithmetic on arrays of a few dozen numbers.\par
+    \vspace{3pt}
+    {\color{body}Fix: rewrite it in pure NumPy. No TF in the loop, no wrapping, no host syncs. Same treatment as today: prove bit-identical, then A/B the full trajectory.}}
+  \tb{11.6}{0.85}{5.1}{\color{ink}\fs{14}{19}\setlength{\parskip}{5pt}
+    {\color{cred}\textbullet}\ Then: \textbf{incremental fairness window} --- $O(1)$ running counters instead of recomputing DP/EO over the whole window every step.\par
+    {\color{cred}\textbullet}\ Then: \textbf{graph the forward} with {\monofont @tf.function} (eager today) \textperiodcentered{} batch the trees instead of a Python loop.}
+  \hrl{0.85}{6.4}{11.6}
+  \tb{11.6}{0.85}{6.6}{\color{body}\fs{13}{16}Lesson worth keeping: the derivation was right and the component got 540$\times$ faster --- but it was 7\% of the step. \textbf{Profile first, then optimise.}}
+\end{frame}
+
+% ---- 05 summary ----
+\pageset{5.Summary}{05}
+\begin{frame}
+  \ctitle{Summary}
+  \tb{11.6}{0.85}{2.4}{\color{ink}\fs{16}{23}\setlength{\parskip}{11pt}
+    {\color{green}\textbf{Done.}}\ The redundant fairness backward pass is gone from all three training loops --- proven bit-identical (state, trajectories and final weights), so no result changes.\par
+    {\color{amber}\textbf{Honest gain.}}\ 1.08$\times$ end-to-end. The component is $\sim$540$\times$ cheaper, but it was only 7\% of the step.\par
+    {\color{cred}\textbf{Real target.}}\ {\monofont compute\_fairness\_gradients} --- 45\% of runtime, $\sim$196k needless tensor constructions. Pure-NumPy rewrite next.}
+  \hrl{0.85}{5.75}{11.6}
+  \tb{11.4}{0.85}{5.95}{\bfseries\color{ink}\fs{17}{21}All of this is speed only --- it is what makes sweeping tree depth affordable.}
+  \tb{11.4}{0.85}{6.45}{\color{grey}\fs{12.5}{15}Tiago Silva \textperiodcentered{} CISUC Data-Centric AI Lab \textperiodcentered{} FADO \textperiodcentered{} 17 July 2026}
+  \tb{2.0}{0.85}{6.8}{\includegraphics[width=2.0in]{assets/cisuc_logo.png}}
+\end{frame}
+
+\end{document}

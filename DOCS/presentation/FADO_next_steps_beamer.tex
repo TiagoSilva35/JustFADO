@@ -1,0 +1,263 @@
+% FADO --- Next Steps. CISUC template (Beamer).
+% Compiles with pdfLaTeX, XeLaTeX, or LuaLaTeX (run twice for the TikZ overlays).
+\documentclass[aspectratio=169]{beamer}
+\usepackage{geometry}
+\geometry{paperwidth=13.333in,paperheight=7.5in}
+\usepackage{iftex}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{array}
+
+% ---- fonts (engine-agnostic) ----
+\ifPDFTeX\usepackage[utf8]{inputenc}\fi
+\usepackage[T1]{fontenc}
+\usepackage{textcomp}
+\usepackage{tgheros}
+\usepackage{tgcursor}
+\renewcommand{\familydefault}{\sfdefault}
+\newcommand{\monofont}{\ttfamily}
+
+% ---- colours ----
+\definecolor{cred}{HTML}{DA0725}
+\definecolor{ink}{HTML}{141414}
+\definecolor{body}{HTML}{262626}
+\definecolor{grey}{HTML}{9A9A9A}
+\definecolor{lgrey}{HTML}{C4C4C4}
+\definecolor{rulec}{HTML}{2A2A2A}
+\definecolor{green}{HTML}{2E9E5B}
+\definecolor{amber}{HTML}{C77A18}
+
+\setbeamercolor{normal text}{fg=body}
+\setbeamertemplate{navigation symbols}{}
+\setbeamersize{text margin left=0pt,text margin right=0pt}
+
+% ---- running header ----
+\newcommand{\hdrsec}{}
+\newcommand{\hdrpg}{}
+\newcommand{\pageset}[2]{\renewcommand{\hdrsec}{#1}\renewcommand{\hdrpg}{#2}}
+\setbeamertemplate{headline}{%
+  \vskip3mm%
+  \makebox[\paperwidth][c]{%
+    \hspace{9mm}%
+    \parbox[t]{4.4in}{\monofont\color{grey}\fontsize{9}{11}\selectfont
+      FADO: Next Steps\\ Fairness-aware online learning under drift}%
+    \hfill
+    \parbox[t]{4.2in}{\centering\monofont\color{grey}\fontsize{10}{12}\selectfont \hdrsec}%
+    \hfill
+    \parbox[t]{2.4in}{\raggedleft\monofont\fontsize{13}{15}\selectfont
+      \textbf{\color{ink}\hdrpg}{\color{grey}/15}}%
+    \hspace{9mm}%
+  }%
+}
+\setbeamertemplate{footline}{}
+\setbeamertemplate{frametitle}{}
+
+% ---- helpers ----
+\newcommand{\tb}[5][]{\begin{tikzpicture}[remember picture,overlay]%
+  \node[anchor=north west,inner sep=0pt,outer sep=0pt,text width=#2in,align=left,#1]
+    at ([xshift=#3in,yshift=-#4in]current page.north west){\raggedright #5\par};\end{tikzpicture}}
+\newcommand{\fs}[2]{\fontsize{#1}{#2}\selectfont}
+\newcommand{\hrl}[3]{\tb{#3}{#1}{#2}{{\color{lgrey}\rule{#3in}{0.9pt}}}}
+\newcommand{\ctitle}[2][28]{\tb[font=\fontsize{#1}{#1}\selectfont\bfseries]{11.7}{0.85}{1.4}{\color{ink}#2}}
+\newcommand{\divider}[2]{\tb[font=\fontsize{38}{44}\selectfont\bfseries]{11.5}{1.0}{3.05}{%
+  \centering{\color{cred}#1.\ }{\color{ink}#2}}}
+\newcommand{\panel}[5][]{\begin{tikzpicture}[remember picture,overlay]%
+  \node[anchor=north west,text width=#2in,align=left,fill=cred!7,rounded corners=3pt,inner sep=11pt,#1]
+    at ([xshift=#3in,yshift=-#4in]current page.north west){\raggedright #5\par};\end{tikzpicture}}
+
+\begin{document}
+
+% ===================================================== 1 LOGO
+\begin{frame}[plain]
+  \tb{4.6}{4.37}{3.35}{\includegraphics[width=4.6in]{assets/cisuc_logo.png}}
+\end{frame}
+
+% ===================================================== 2 TITLE
+\begin{frame}[plain]
+  \tb[font=\fontsize{44}{50}\selectfont\bfseries]{11.6}{0.9}{2.6}{\color{ink}FADO --- Next Steps}
+  \tb[font=\fontsize{21}{27}\selectfont]{11.6}{0.9}{3.7}{\color{body}Background on the tools and data, and a plan for the work ahead}
+  \tb{11}{0.92}{4.85}{\color{ink}\fs{19}{22}Tiago Silva}
+  \tb{11}{0.92}{5.45}{\color{ink}\fs{14}{18}\textbf{CISUC \textperiodcentered{} Data-Centric AI Lab}\\
+    {\color{body}\fs{14}{18}Department of Informatics Engineering, University of Coimbra}}
+  \tb{2.5}{0.9}{6.75}{\includegraphics[width=2.5in]{assets/cisuc_logo.png}}
+\end{frame}
+
+% ===================================================== 3 OUTLINE (01)
+\pageset{Outline}{01}
+\begin{frame}
+  \tb{6}{0.85}{1.55}{\bfseries\color{ink}\fs{30}{34}Outline}
+  \tb[font=\fontsize{21}{36}\selectfont]{10}{2.1}{2.9}{\color{ink}\setlength{\parskip}{11pt}
+    {\color{cred}\bfseries 1.}~~Current state\par
+    {\color{cred}\bfseries 2.}~~Background: the tools and data\par
+    {\color{cred}\bfseries 3.}~~Plan\par
+    {\color{cred}\bfseries 4.}~~Constraints}
+\end{frame}
+
+% ===================================================== S1 divider (02)
+\begin{frame}[plain]\divider{1}{Current state}\end{frame}
+
+% ---- 1.1 (03) ----
+\pageset{1.Current state}{03}
+\begin{frame}
+  \ctitle{Current state}
+  \tb{5.9}{0.85}{2.5}{\bfseries\color{green}\fs{17}{20}Done}
+  \tb{5.9}{0.85}{3.05}{\color{body}\fs{15}{20}\setlength{\parskip}{7pt}
+    Intersectional extension (composite group, per-node fairness)\par
+    Folktables sweep complete and significance-tested\par
+    Controller: warn / confirm / recover, dual-ADWIN\par
+    Statistics independently verified (scipy + statsmodels)}
+  \tb{5.9}{7.0}{2.5}{\bfseries\color{cred}\fs{17}{20}Missing}
+  \tb{5.9}{7.0}{3.05}{\color{body}\fs{15}{20}\setlength{\parskip}{7pt}
+    Only two datasets\par
+    COMPAS drift is hand-made (not standard)\par
+    Controller not yet ablated\par
+    Fairness weight $\lambda$ is a single global constant}
+  \hrl{0.85}{6.4}{11.6}
+  \tb{11.6}{0.85}{6.6}{\color{body}\fs{14}{18}The next steps target these gaps: more standard drift, more data, and a better fairness weight.}
+\end{frame}
+
+% ===================================================== S2 divider (04)
+\begin{frame}[plain]\divider{2}{Background: the tools and data}\end{frame}
+
+% ---- 2.1 CapyMOA (05) ----
+\pageset{2.Background}{05}
+\begin{frame}
+  \ctitle{CapyMOA}
+  \tb{11.7}{0.85}{2.3}{\color{body}\fs{15}{20}A Python library for machine learning on data streams, built on MOA (Java) with a PyTorch bridge. It provides streaming classifiers (e.g.\ ARF), drift detectors (ADWIN), prequential evaluation, dataset loaders, and drift generators.}
+  \hrl{0.85}{3.55}{11.6}
+  \tb{5.8}{0.85}{3.75}{\bfseries\color{ink}\fs{15}{18}Does it improve performance?}
+  \tb{5.8}{0.85}{4.25}{\color{body}\fs{13}{16.5}\setlength{\parskip}{5pt}
+    {\color{cred}Base learner: no.} It does not contain our forest, so it cannot make the model itself more accurate.\par
+    {\color{green}Detector: yes --- it is swappable.} The controller reacts to a drift signal, so we can replace ADWIN with a better detector (SEED, STEPD, DDM, HDDM, \ldots) and benchmark it.\par
+    {\color{green}Baselines: yes.} Standard, tested, efficient ARF and streaming trees.}
+  \tb{5.8}{7.05}{3.75}{\bfseries\color{ink}\fs{15}{18}Can it make deeper trees affordable?}
+  \tb{5.8}{7.05}{4.25}{\color{body}\fs{13}{16.5}\setlength{\parskip}{5pt}
+    The real cost: FADO's forest is our own implementation, so more depth means a lot more training time --- that is what makes sweeping tree height expensive today.\par
+    {\color{cred}CapyMOA does not run our forest, so it cannot speed it up} --- its streaming learners are different algorithms.\par
+    To afford deeper trees the lever is our own code: {\color{ink}vectorise} across trees / nodes (depth is parallel width) and parallelise the sweep. GPUs help only if we batch updates over a window --- one-at-a-time online steps are too small to fill one.}
+\end{frame}
+
+% ---- 2.2 speeding up training (06) ----
+\pageset{2.Background}{06}
+\begin{frame}
+  \ctitle{Speeding up our own training}
+  \tb{11.7}{0.85}{2.2}{\color{body}\fs{15}{20}The forest is small --- almost all the per-step cost is overhead, not math. These changes cut it, and \textbf{none change our results}.}
+  \panel{11.3}{0.85}{3.15}{\fs{14}{18.5}%
+    {\color{cred}\bfseries Main upgrade --- analytic fairness gradient.}\par
+    \vspace{2pt}
+    {\color{body}Every step now runs a \emph{second} backward pass (a persistent tape) just to read $\partial n/\partial W$ and $\partial n/\partial b$ for the fairness penalty. But a node is $n=\sigma\!\big((w^{\top}x+b)/\tau\big)$, so these are closed-form:}\par
+    \vspace{4pt}
+    \centering$\displaystyle \frac{\partial n}{\partial W}=x\,\sigma'(z)^{\top}/\tau,\qquad
+      \frac{\partial n}{\partial b}=\sigma'(z)/\tau,\qquad z=(w^{\top}x+b)/\tau.$\par
+    \vspace{4pt}
+    \raggedright{\color{body}Replacing the extra autodiff pass with this formula drops about \textbf{half the backward work} per step --- identical numbers, confirmed by a gradient check.}}
+  \tb{11.6}{0.85}{5.75}{\color{ink}\fs{13.5}{18}\setlength{\parskip}{5pt}
+    {\color{cred}\textbullet}\ \textbf{Pure-NumPy fairness math} --- the state is already NumPy; drop the per-step {\monofont tf.convert\_to\_tensor}.\par
+    {\color{cred}\textbullet}\ \textbf{Incremental fairness window} --- $O(1)$ running counters instead of recomputing the whole window each step.\par
+    {\color{cred}\textbullet}\ \textbf{Graph the forward} --- wrap forward + loss in {\monofont @tf.function} (eager today) \textperiodcentered{} batch the trees instead of a Python loop.}
+  \hrl{0.85}{6.8}{11.6}
+  \tb{11.6}{0.85}{6.95}{\color{body}\fs{12.5}{15}All speed-only --- this is what makes sweeping tree depth and the 1M-row BAF runs affordable.}
+\end{frame}
+
+% ---- 2.3 drift generation (07) ----
+\pageset{2.Background}{07}
+\begin{frame}
+  \ctitle{Drift generation (KDD'26)}
+  \tb{11.7}{0.85}{2.3}{\color{body}\fs{15}{20}A method (Cerqueira et al., KDD'26 --- same group as CapyMOA) to inject controlled, labelled concept drift into a real data stream: shuffle the stream, pick a random onset point, apply a typed change, either abrupt or gradual.}
+  \tb{6.5}{0.85}{3.55}{\color{ink}\fs{14.5}{21}\setlength{\parskip}{5pt}
+    {\color{cred}\textbullet}\ \textbf{Class-prior} --- drop a class with some probability\par
+    {\color{cred}\textbullet}\ \textbf{Class-label swap} --- relabel one class to another\par
+    {\color{cred}\textbullet}\ \textbf{Feature permutation} --- reorder the features\par
+    {\color{cred}\textbullet}\ \textbf{Feature filtering} --- drop rows above a threshold}
+  \tb{4.9}{7.6}{3.55}{\color{body}\fs{13.5}{18}\setlength{\parskip}{6pt}
+    Our COMPAS drift is already a class-label swap --- adopting this makes it standard and citable.\par
+    Note: it is drift/accuracy focused; its own datasets have no protected attributes.}
+\end{frame}
+
+% ---- 2.3 datasets (07) ----
+\pageset{2.Background}{08}
+\begin{frame}
+  \ctitle{New datasets}
+  \tb{5.9}{0.85}{2.4}{\bfseries\color{ink}\fs{17}{20}Feedzai BAF}
+  \tb{5.9}{0.85}{2.95}{\color{body}\fs{14.5}{19}\setlength{\parskip}{6pt}
+    Bank-account-fraud suite (NeurIPS'22).\par
+    About 1M rows per variant, 8 months of temporal shift, a protected attribute (age), and $\sim$1\% positives (imbalanced).\par
+    A real fairness + drift benchmark. Large, so full runs are compute-heavy.}
+  \tb{5.9}{7.0}{2.4}{\bfseries\color{ink}\fs{17}{20}USP / Insects}
+  \tb{5.9}{7.0}{2.95}{\color{body}\fs{14.5}{19}\setlength{\parskip}{6pt}
+    Real streams with known, labelled drift (abrupt / gradual / incremental / recurring).\par
+    No protected attributes, so it validates drift adaptation only, not fairness.\par
+    Small and cheap to run.}
+\end{frame}
+
+% ---- 2.4 per-node lambda (08) ----
+\pageset{2.Background}{09}
+\begin{frame}
+  \ctitle{Per-node / per-tree $\lambda$}
+  \tb{11.7}{0.85}{2.4}{\color{body}\fs{16}{22}\setlength{\parskip}{9pt}
+    Today the fairness weight $\lambda$ in $\mathcal{L}=\mathcal{L}_{\mathrm{CE}}+\lambda\,\mathcal{L}_{\mathrm{fair}}$ is a single global constant.\par
+    Idea: let $\lambda$ vary \textbf{per node or per tree} --- larger where a node's group disparity is larger, smaller where fairness is already met. Each node already tracks group statistics, so it fits naturally.\par
+    Goal: a better accuracy / fairness trade-off. The benefit is uncertain and needs an ablation to confirm it beats a global $\lambda$.}
+\end{frame}
+
+% ===================================================== S3 divider (09)
+\begin{frame}[plain]\divider{3}{Plan}\end{frame}
+
+% ---- 3.1 combining (10) ----
+\pageset{3.Plan}{11}
+\begin{frame}
+  \ctitle{Combining drift generation with fairness data}
+  \tb{11.7}{0.85}{2.4}{\color{body}\fs{16}{22}The drift framework is accuracy-focused; BAF and Folktables carry fairness. The two can be combined.}
+  \tb{11.2}{0.9}{3.5}{\color{ink}\fs{15.5}{21}\setlength{\parskip}{9pt}
+    Inject a typed, labelled drift (from the KDD'26 method) onto a \textbf{protected subgroup} of a fairness dataset --- for example, a class-label swap that affects one group only.\par
+    This gives controlled fairness-under-drift scenarios with \textbf{known onset points}: we can measure when fairness breaks and how the controller responds.}
+  \hrl{0.85}{5.75}{11.6}
+  \tb{11.6}{0.85}{5.95}{\color{body}\fs{14}{18}This combines the drift generator, a real dataset, and the controller into one experiment that existing benchmarks do not provide.}
+\end{frame}
+
+% ---- 3.2 order of work (11) ----
+\pageset{3.Plan}{12}
+\begin{frame}
+  \ctitle[26]{Order of work}
+  \tb{12.2}{0.6}{2.4}{\color{ink}\fs{13}{16}%
+    \renewcommand{\arraystretch}{1.7}%
+    \begin{tabular}{@{}p{0.5in} p{2.6in} p{8.5in}@{}}
+    \toprule
+    & \textbf{Step} & \textbf{Work}\\
+    \midrule
+    {\color{cred}\textbf{A}} & \textbf{Consolidate} & Finish COMPAS intersectional \textperiodcentered{} controller ablation \textperiodcentered{} run USP/Insects\\
+    {\color{cred}\textbf{B}} & \textbf{Infrastructure} & Adopt CapyMOA: baselines, streams, and swap in better drift detectors (SEED / STEPD) \textperiodcentered{} add KDD'26 drift generation\\
+    {\color{cred}\textbf{C}} & \textbf{New data} & Build the Feedzai BAF loader \textperiodcentered{} run sweeps on a suitable machine\\
+    {\color{cred}\textbf{D}} & \textbf{Method} & Per-node / per-tree adaptive $\lambda$, with an ablation\\
+    \bottomrule
+    \end{tabular}}
+  \tb{11.6}{0.85}{6.35}{\color{body}\fs{13.5}{17}Steps A and B are mostly coding and need little compute. Steps C and D need heavier runs, so they are built first and run on a suitable machine.}
+\end{frame}
+
+% ===================================================== S4 divider (12)
+\begin{frame}[plain]\divider{4}{Constraints}\end{frame}
+
+% ---- 4.1 (13) ----
+\pageset{4.Constraints}{14}
+\begin{frame}
+  \ctitle{Constraints}
+  \tb{11.7}{0.85}{2.4}{\color{body}\fs{15.5}{21}\setlength{\parskip}{10pt}
+    {\color{cred}\bfseries Compute.}\ The heavy multi-seed sweeps (BAF, drift Monte-Carlo, $\lambda$ tuning) need a machine that can sustain the load; the home setup cannot. Coding and single-seed tests can be done anywhere.\par
+    {\color{cred}\bfseries CapyMOA is pre-1.0.}\ Its API may still change, so we wrap only the parts we need.\par
+    {\color{cred}\bfseries BAF demographics.}\ Its usable protected attribute is mostly age --- good for marginal and temporal drift, limited for intersectional subgroups.\par
+    {\color{cred}\bfseries Adaptive $\lambda$.}\ Its benefit is uncertain --- kept last and behind an ablation.}
+\end{frame}
+
+% ===================================================== CLOSING (14)
+\begin{frame}[plain]
+  \tb[font=\fontsize{34}{40}\selectfont\bfseries]{11.5}{0.9}{2.7}{\color{ink}Summary}
+  \tb{11.4}{0.92}{3.7}{\fs{18}{25}{\color{body}Consolidate and make the drift standard first (low compute); then add a real fairness + drift dataset, and try the adaptive $\lambda$.}}
+  \tb{11.4}{0.92}{5.25}{\bfseries\color{ink}\fs{18}{22}Discussion --- which step to start with?}
+  \tb{11.4}{0.92}{5.75}{\color{grey}\fs{13}{16}Tiago Silva \textperiodcentered{} CISUC Data-Centric AI Lab \textperiodcentered{} FADO}
+  \tb{2.2}{0.9}{6.7}{\includegraphics[width=2.2in]{assets/cisuc_logo.png}}
+\end{frame}
+
+\end{document}

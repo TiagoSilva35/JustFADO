@@ -190,7 +190,12 @@ def evaluate_aranyani_baseline_over_timesteps(
         # ---- Train phase (fairness-aware Aranyani update) ---------------
         if test_then_train:
             y_t_tensor = tf.convert_to_tensor([y_t], dtype=tf.int32)
-            with tf.GradientTape(persistent=compute_fairness) as tape:
+            # The 'node' fairness gradient is analytic (no tape traversal), so
+            # only 'leaf' needs a second ``.gradient`` call and thus a
+            # persistent tape.
+            with tf.GradientTape(
+                persistent=(compute_fairness and constraint_type == 'leaf')
+            ) as tape:
                 train_out = model(x_t, training=True)
                 y_probs_train = train_out[0] if isinstance(train_out, tuple) else train_out
                 node_decisions_train = train_out[1] if isinstance(train_out, tuple) else None
@@ -214,6 +219,7 @@ def evaluate_aranyani_baseline_over_timesteps(
                     subgroup_count, protected_class_count,
                     num_internal_nodes, data_dim,
                     constraint_type, gradient_type, base_gamma,
+                    inputs=x_t, model=model,
                 )
             grads = tape.gradient(loss, model.trainable_variables)
             if compute_fairness and node_decisions_train is not None:
