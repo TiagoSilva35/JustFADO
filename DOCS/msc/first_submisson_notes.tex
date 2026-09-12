@@ -1,0 +1,211 @@
+% !TEX program = pdflatex
+\documentclass[11pt,a4paper]{article}
+
+\setlength{\parindent}{0pt}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{amssymb}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{titlesec}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  urlcolor=blue!50!black,
+  citecolor=blue!50!black
+}
+
+\titleformat{\section}{\large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.6em}{}
+
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\title{\textbf{Revision Strategy after FADO's First Submission Reviews}}
+\author{}
+\date{September 2026}
+
+\begin{document}
+
+\maketitle
+
+\section{Overall Assessment}
+
+Strengths:
+\begin{itemize}[leftmargin=*]
+  \item the problem is practically significant;
+  \item the manuscript is generally well organized and clearly written;
+  \item the method consistently improves fairness metrics while
+    maintaining competitive predictive performance;
+  \item the use of 30 random seeds and paired Wilcoxon tests with
+    Holm correction is rigorous;
+  \item the implementation and experimental configuration are reproducible.
+\end{itemize}
+
+The main disagreement is therefore concentrated around
+\textbf{novelty, technical justification, and experimental breadth},
+rather than a fundamental problem with the research question.
+
+\section{Priority Revision Plan}
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \begin{tabular}{P{0.10\textwidth} P{0.27\textwidth} P{0.50\textwidth}}
+    \toprule
+    \textbf{Priority} & \textbf{Issue} & \textbf{Why it matters} \\
+    \midrule
+    1 & Make the novelty of FADO unmistakable & Reviewers 2 and 3
+    argue that FADO may be an incremental extension of ARANYANI. Kind
+    of critical \\
+    2 & Add a comprehensive ablation study & Reviewers explicitly ask
+    which individual components are responsible for the gains. This
+    is expected \\
+    3 & Expand drift experiments & The COMPAS drift is considered
+    artificial, and reviewers request gradual, recurring, and
+    multiple drift scenarios. Also already discussed as a limitation
+    and already have an idea of how to address it. \\
+    4 & Justify the reaction controller & The learning-rate,
+    temperature, thresholds, and multipliers currently appear
+    heuristic. This is essentially just an ablation of the
+    controler's components.\\
+    5 & Address EO optimization directly & The paper derives EO
+    regularization but does not use it for training because of
+    computational cost. \\
+    6 & Reconsider hyperparameter tuning & Offline NSGA-II tuning may
+    appear inconsistent with the fully online motivation. We are not even using NSGA-II as the model is too heavy \\
+    7 & Add computational overhead analysis & Reviewers want evidence
+    that the method remains practical for streaming systems. Required math that will improve the theoretical foundation. \\
+    8 & Discuss interpretability & Oblique decision forests create an
+    important limitation for high-stakes applications. Also must do something about it, im just not sure how yet.\\
+    \bottomrule
+  \end{tabular}
+  \caption{Recommended revision priorities.}
+\end{table}
+
+\subsection{A new set of experiments to establish novelty}
+
+Compare:
+\begin{enumerate}[leftmargin=*]
+  \item ARANYANI;
+  \item ARANYANI + ADWIN;
+  \item ARANYANI + ADWIN + learning-rate adaptation;
+  \item ARANYANI + ADWIN + routing-temperature adaptation;
+  \item ARANYANI + ADWIN + both adaptations;
+  \item Full FADO.
+\end{enumerate}
+
+This experiment directly answers the strongest novelty criticism from
+Reviewers 2 and 3.
+
+\section{Add a Comprehensive Ablation Study}
+
+The absence of ablations is one of the clearest common weaknesses
+across the reviews, which was expected by us.
+
+A useful ablation should separately evaluate:
+\begin{itemize}[leftmargin=*]
+  \item dual-threshold ADWIN;
+  \item learning-rate spike;
+  \item routing-temperature adjustment;
+  \item confidence filtering;
+  \item cooldown;
+  \item annealing;
+  \item fairness monitoring, where applicable.
+\end{itemize}
+
+For each variant, report:
+\begin{itemize}[leftmargin=*]
+  \item predictive accuracy;
+  \item Demographic Parity (DP);
+  \item Equalized Odds (EO);
+  \item fairness recovery time after drift;
+  \item number/frequency of controller activations;
+  \item computational cost where feasible.
+\end{itemize}
+
+The goal is to answer:
+\begin{quote}
+  \textbf{Which component causes the observed improvement?}
+\end{quote}
+
+This converts FADO from a collection of design choices into a
+scientifically analyzed method.
+
+\subsection{Routing-Temperature Adaptation}
+
+Reviewer 3 explicitly asks why lowering $\tau$ during drift
+contributes to fairness recovery. This should be supported by:
+\begin{itemize}[leftmargin=*]
+  \item an explanation of how temperature affects routing and adaptation;
+  \item an empirical sensitivity analysis;
+  \item ideally, a small theoretical argument about the expected
+    effect on adaptation.
+\end{itemize}
+
+\subsection{Sensitivity Analysis}
+
+Rather than presenting values such as $\beta_w=5$, $\beta_c=10$, or
+$\tau_{\mathrm{drift}}=0.1$ as isolated choices, show that the method
+is not excessively sensitive to them.
+
+For example, vary:
+\[
+  \beta \in \{1,2,5,10,20\}
+\]
+and evaluate several plausible values of $\tau_{\mathrm{drift}}$.
+
+The central question is whether the main conclusions remain stable
+across reasonable parameter choices.
+
+\subsection{Stability and Annealing}
+
+Explain why the temporary aggressive adaptation is followed by
+annealing and cooldown. If a formal convergence proof is not
+feasible, provide empirical evidence that the controller improves
+recovery without causing persistent instability.
+
+\section{Add a proper runtime and efficiency analysis}
+
+The paper already has a strong conceptual argument that it avoids
+storing and replaying historical samples. Quantify this advantage.
+
+Report, where possible:
+\begin{itemize}[leftmargin=*]
+  \item training time per instance;
+  \item memory consumption;
+  \item runtime overhead relative to ARANYANI;
+  \item runtime overhead relative to ARANYANI + ADWIN;
+  \item frequency and cost of controller activations;
+  \item additional cost of EO optimization.
+\end{itemize}
+
+This is especially important because practical viability is part of
+the paper's streaming-learning motivation.
+
+\section{Discuss Interpretability and High-Stakes Applications}
+
+Reviewer 1 points out that oblique decision forests are less
+interpretable than simple axis-aligned decision rules.
+
+The paper does not necessarily need to abandon its high-stakes
+motivation. Instead, it should acknowledge that:
+\begin{itemize}[leftmargin=*]
+  \item oblique splits can reduce interpretability;
+  \item fairness does not by itself make a model suitable for
+    high-stakes deployment;
+  \item transparency, explainability, and legal requirements remain
+    separate concerns.
+\end{itemize}
+
+This limitation should be presented explicitly in the discussion or
+limitations section.
+
+\end{document}

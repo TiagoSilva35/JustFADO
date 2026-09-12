@@ -3,7 +3,11 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow_probability as tfp
+import logging
 
+logging.basicConfig(level=logging.INFO)
+
+RECURSIVE_UPDATER = True
 
 def construct_mask_matrix(tree_depth=3):
   """Construct mask matrix for efficient DT training."""
@@ -51,6 +55,7 @@ class FairDecisionTree(tf.Module):
     super(FairDecisionTree, self).__init__()
     assert tree_depth > 1
     self.num_internal_nodes = 2**tree_depth - 1
+    self.tree_depth = tree_depth
 
     # internal node parameters
     self.weight = tf.Variable(
@@ -103,39 +108,67 @@ class FairDecisionTree(tf.Module):
         trainable=False,
         dtype=tf.float32
     )
-    self.compute_mode = compute_mode
+    self.compute_mode = compute_mode    
 
+  def _recursive_updater_(self, node_decisions, probs, depth):  
+    if depth == 0:
+        return probs
+    probs = self._recursive_updater_(node_decisions, probs, depth-1)
+    decisions = node_decisions[2**(depth-1)-1:2**depth-1] 
+    next_probs = [None] * (len(probs) * 2)
+    for i, decision in enumerate(decisions):
+        next_probs[2*i] = probs[i] * decision
+        next_probs[2*i+1] = probs[i] * (1 - decision)
+    return tf.stack(next_probs)
+  
   def __call__(self, inputs, training=False, pred_type='categorical'):
     logits = (tf.matmul(inputs, self.weight) + self.bias) / self.temperature
     raw_node_decisions = self.activation(logits)
-
-    y = tf.expand_dims(raw_node_decisions, axis=2)
-    y_repeated = tf.repeat(y, self.num_leaves, axis=2)
-    z = tf.multiply(y_repeated, self.mask_matrix)
-
-    # P \in [batch_size, num_internal_nodes, num_leaves]
-    probs = tf.nn.relu(z) + (self.ones_nodes - tf.nn.relu(-z)) + self.mask
-
-    # add numerical stability
-    probs += 1e-8
-
-    if self.compute_mode == 'log':
-      probs = tf.math.log(probs)
-
-      # axis=1 because it corresponds to internal nodes
-      leaf_probs = tf.math.reduce_sum(probs, axis=1)
-      theta = tf.expand_dims(self.theta, axis=0)
-
-      prediction = tf.math.exp(tf.expand_dims(leaf_probs, axis=2) + theta)
-      prediction = tf.reduce_sum(prediction, axis=1)
-
-      leaf_probs = tf.math.exp(leaf_probs)
-    else:
-      leaf_probs = tf.math.reduce_prod(probs, axis=1)
-      if pred_type == 'categorical':
-          prediction = tf.matmul(leaf_probs, self.theta)  # raw logits; softmax applied at output only
+    if RECURSIVE_UPDATER:
+      leaf_probs = self._recursive_updater_(
+        raw_node_decisions[0],
+        tf.ones([1], dtype=raw_node_decisions.dtype),
+        self.tree_depth,
+      )
+      leaf_probs = tf.expand_dims(leaf_probs, axis=0)
+      if self.compute_mode == 'log':
+        leaf_probs = tf.math.log(leaf_probs)
+        theta = tf.expand_dims(self.theta, axis=0)
+        prediction = tf.math.exp(tf.expand_dims(leaf_probs, axis=2) + theta)
+        prediction = tf.reduce_sum(prediction, axis=1)
+        leaf_probs = tf.math.exp(leaf_probs)
       else:
-          prediction = tf.matmul(leaf_probs, self.theta)
+        prediction = tf.matmul(leaf_probs, self.theta)  # raw logits; softmax applied at output only
+    else:
+      # add numerical stability
+      y = tf.expand_dims(raw_node_decisions, axis=2)
+      y_repeated = tf.repeat(y, self.num_leaves, axis=2)
+      z = tf.multiply(y_repeated, self.mask_matrix)
+
+      # P \in [batch_size, num_internal_nodes, num_leaves]
+      probs = tf.nn.relu(z) + (self.ones_nodes - tf.nn.relu(-z)) + self.mask 
+      probs += 1e-8
+
+
+      if self.compute_mode == 'log':
+        probs = tf.math.log(probs)
+
+        # axis=1 because it corresponds to internal nodes
+        leaf_probs = tf.math.reduce_sum(probs, axis=1)
+        theta = tf.expand_dims(self.theta, axis=0)
+
+        prediction = tf.math.exp(tf.expand_dims(leaf_probs, axis=2) + theta)
+        prediction = tf.reduce_sum(prediction, axis=1)
+
+        leaf_probs = tf.math.exp(leaf_probs)
+      else:
+        leaf_probs = tf.math.reduce_prod(probs, axis=1)
+        if pred_type == 'categorical':
+            prediction = tf.matmul(leaf_probs, self.theta)  # raw logits; softmax applied at output only
+        else:
+            prediction = tf.matmul(leaf_probs, self.theta)
+
+
 
     if training:
       return prediction, raw_node_decisions, leaf_probs

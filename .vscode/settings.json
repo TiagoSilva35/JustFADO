@@ -1,3 +1,10 @@
 {
-    "python-envs.defaultPackageManager": "ms-python.python:pip"
+    "python-envs.defaultPackageManager": "ms-python.python:pip",
+    "latex-workshop.formatting.latex": "tex-fmt",
+    "latex-workshop.formatting.latexindent.args": [
+        "--wraplen", "80",
+        "--wrapmin", "70"
+    ]
+
+
 }

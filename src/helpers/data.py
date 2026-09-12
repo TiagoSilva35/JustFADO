@@ -20,6 +20,7 @@ from glob import glob
 import pickle
 import numpy as np
 import pandas as pd
+import logging
 from folktables import ACSDataSource, BasicProblem
 
 from sklearn.model_selection import train_test_split
@@ -29,13 +30,11 @@ from src.drift.scenarios import get_scenario, SCENARIOS
 from src.drift.compas_scenarios import COMPAS_SCENARIOS, get_compas_scenario
 
 
-# %%
-
+logging.basicConfig(level=logging.INFO)
 
 IM_WIDTH = IM_HEIGHT = 160
 
 
-# %%
 
 
 def _normalize_categorical_values(values):
@@ -843,6 +842,13 @@ def read_compas_train_test(
       feature_transformer=transformer, fit=False,
   )
 
+  # limit to only 10 training and test samples
+  x_train = x_train[:10]
+  y_train = y_train[:10]
+  x_test = x_test[:10]
+  y_test = y_test[:10]
+  a_train = a_train[:10]
+  a_test = a_test[:10]
   if not intersectional:
     return x_train, x_test, y_train, y_test, a_train, a_test
 
@@ -869,6 +875,8 @@ def read_compas_train_test(
       'train': np.stack([a_race_train, a_sex_train], axis=1).astype(np.int32),
       'test': np.stack([a_race_test, a_sex_test], axis=1).astype(np.int32),
   }
+
+
   return (
       x_train, x_test, y_train, y_test,
       a_train_intersect.astype(np.int32),
