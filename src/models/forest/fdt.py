@@ -148,8 +148,6 @@ class FairDecisionTree(tf.Module):
       # P \in [batch_size, num_internal_nodes, num_leaves]
       probs = tf.nn.relu(z) + (self.ones_nodes - tf.nn.relu(-z)) + self.mask 
       probs += 1e-8
-
-
       if self.compute_mode == 'log':
         probs = tf.math.log(probs)
 

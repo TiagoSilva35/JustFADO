@@ -135,7 +135,7 @@ def run_tree_depth(depth):
     print(f"Fastest implementation: {winner}")
     return recursive_time, mask_time, winner
     
-tree_depths = [3, 4, 5, 6, 7, 8, 9, 10, 11]
+tree_depths = [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 results = []
 
 for depth in tree_depths:
