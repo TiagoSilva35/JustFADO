@@ -63,7 +63,6 @@ def train_online(
   gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count = \
       initializers.init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_attributes)
 
-  dp_function = utils.get_demographic_parity
   avg_loss = tf.keras.metrics.Mean()
   avg_auc = tf.keras.metrics.AUC()
   y_predictions = []
@@ -72,11 +71,8 @@ def train_online(
   equalized_odds = []
   accuracies = []
   
-  # Rolling-window buffers (fixed size, no O(n²) recomputation)
-  from collections import deque
-  pred_window = deque(maxlen=fairness_window)
-  true_window = deque(maxlen=fairness_window)
-  protected_window = deque(maxlen=fairness_window)
+  # Incremental rolling statistics avoid rescanning the full window.
+  fairness_window_state = utils.RollingFairnessWindow(fairness_window)
 
   # hyperparameters
   huber_loss_delta = 0.1
@@ -126,15 +122,14 @@ def train_online(
       y_predictions.extend(y_pred_np)
       y_true_all.extend(targets_np)
       
-      # Update rolling-window buffers (O(1) operation)
       for i in range(len(y_pred_np)):
-        pred_window.append(y_pred_np[i])
-        true_window.append(targets_np[i])
-        protected_window.append(protected_np[i])
+        fairness_window_state.append(
+          y_pred_np[i], protected_np[i], targets_np[i]
+        )
       
       # Compute fairness on rolling window only (no O(n²) recomputation)
-      dp, dp_sign = dp_function(list(pred_window), list(protected_window))
-      eo, eo_sign = utils.get_equalized_odds(list(pred_window), list(protected_window), list(true_window))
+      dp, dp_sign = fairness_window_state.demographic_parity()
+      eo, eo_sign = fairness_window_state.equalized_odds()
 
       demographic_parities.append(dp)
       equalized_odds.append(eo)

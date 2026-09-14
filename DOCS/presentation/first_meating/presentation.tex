@@ -210,8 +210,26 @@
   \ctitle{Tree depth: mask products vs. recursive \color{cred}\textit{\underline{performance}}}
   \centerimage{7}{2}{assets/probability_updater_performance.png}
   \slidefoot{We can now ablate how trees' depth affect the forest's predictive and fairness metrics}
-  \footnote{Stopeed at n = 14 because the mask's runtime became unbearable.}
+  \footnote{Stopped at n = 14 because the mask's runtime became unbearable.}
 
+\end{frame}
+
+\pageset{Online Fairness Metrics}{06}
+\begin{frame}
+  \ctitle{Rolling fairness metrics: incremental counters}
+  \dcolblk{0.85}{Legacy recomputation}{
+    Each sample rescans the complete fairness window for DP and EO.\\[5pt]
+    Complexity: \color{cred}$O(NW)$\color{body}, where $W$ is the window size.
+  }
+  \dcolblk{4.85}{Incremental window}{
+    Add the arriving sample and remove the expired sample from group counters.\\[5pt]
+    Complexity: \color{green}$O(NA)$\color{body}, where $A$ is the number of groups.
+  }
+  \dcolblk{8.85}{Benchmark}{
+    50,000 samples; window size 1,000; binary protected attribute.\\[5pt]
+    \textbf{15.39$\times$ faster} with identical DP and EO at every timestep.
+  }
+  \slidefoot{The counter-based window preserves the metric values while avoiding repeated scans of the same samples.}
 \end{frame}
 
 

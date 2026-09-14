@@ -8,6 +8,7 @@ from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+from collections import Counter, deque
 
 def construct_penalty_mask(tree_depth=4):
   num_internal_nodes = 2 ** tree_depth - 1
@@ -109,6 +110,85 @@ def display_confusion_matrix(y_true, y_pred, save_path='files/confusion_matrix.p
   print("="*80 + "\n")
   
   return cm
+
+
+class RollingFairnessWindow:
+  """Incrementally maintain DP and EO statistics for a bounded stream window."""
+
+  def __init__(self, maxlen):
+    self.maxlen = max(1, int(maxlen))
+    self.items = deque()
+    self.group_total = Counter()
+    self.group_predicted_positive = Counter()
+    self.subgroup_total = Counter()
+    self.subgroup_predicted_positive = Counter()
+
+  def append(self, prediction, protected, true_label):
+    item = (int(prediction), int(protected), int(true_label))
+    if len(self.items) == self.maxlen:
+      self._remove(self.items.popleft())
+    self.items.append(item)
+    self._add(item)
+
+  def _add(self, item):
+    prediction, protected, true_label = item
+    self.group_total[protected] += 1
+    self.group_predicted_positive[protected] += prediction
+    key = (protected, true_label)
+    self.subgroup_total[key] += 1
+    self.subgroup_predicted_positive[key] += prediction
+
+  def _remove(self, item):
+    prediction, protected, true_label = item
+    self.group_total[protected] -= 1
+    self.group_predicted_positive[protected] -= prediction
+    key = (protected, true_label)
+    self.subgroup_total[key] -= 1
+    self.subgroup_predicted_positive[key] -= prediction
+
+    if self.group_total[protected] == 0:
+      del self.group_total[protected]
+      del self.group_predicted_positive[protected]
+    if self.subgroup_total[key] == 0:
+      del self.subgroup_total[key]
+      del self.subgroup_predicted_positive[key]
+
+  @staticmethod
+  def _deviation(rates):
+    if not rates:
+      return 0.0, 1.0
+    mean_rate = float(np.mean(rates))
+    max_abs_diff = 0.0
+    dominant_raw_diff = 0.0
+    for rate in rates:
+      raw_diff = mean_rate - rate
+      if abs(raw_diff) > max_abs_diff:
+        max_abs_diff = abs(raw_diff)
+        dominant_raw_diff = raw_diff
+    return float(max_abs_diff), float(np.copysign(1, dominant_raw_diff))
+
+  def demographic_parity(self):
+    rates = [
+        self.group_predicted_positive[group] / self.group_total[group]
+        for group in self.group_total
+    ]
+    return self._deviation(rates)
+
+  def equalized_odds(self):
+    max_abs_diff = 0.0
+    dominant_raw_diff = 0.0
+    for true_label in (0, 1):
+      rates = [
+          self.subgroup_predicted_positive[(group, true_label)]
+          / self.subgroup_total[(group, true_label)]
+          for group in self.group_total
+          if self.subgroup_total[(group, true_label)] > 0
+      ]
+      eo, sign = self._deviation(rates)
+      if eo > max_abs_diff:
+        max_abs_diff = eo
+        dominant_raw_diff = sign
+    return float(max_abs_diff), float(dominant_raw_diff or 1.0)
 
 
 def get_demographic_parity(y_predictions, y_protected):

@@ -2,7 +2,6 @@ import numpy as np
 import tensorflow as tf
 from river import drift
 from src.models.forest.initializers import init_fairness_state, accumulate_fairness_stats, compute_fairness_gradients
-from collections import deque
 from src.helpers import utils
 
 def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
@@ -103,9 +102,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_attributes)
 
     print(f"Inferred tree depth: {tree_depth}, number of trees: {num_trees}, internal nodes per tree: {num_internal_nodes}")
-    pred_window = deque(maxlen=FAIRNESS_WINDOW)
-    true_window = deque(maxlen=FAIRNESS_WINDOW)
-    protected_window = deque(maxlen=FAIRNESS_WINDOW)
+    fairness_window = utils.RollingFairnessWindow(FAIRNESS_WINDOW)
     
     huber_loss_delta = 0.1
 
@@ -128,9 +125,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         y_preds_all.append(y_pred)
         y_true_all.append(y_t)
 
-        pred_window.append(y_pred)
-        true_window.append(y_t)
-        protected_window.append(a_t)
+        fairness_window.append(y_pred, a_t, y_t)
 
         correct_buffer.append(int(y_pred == y_t))
         if USE_ROLLING and len(correct_buffer) > accuracy_window:
@@ -177,8 +172,8 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             for tree in model.layers:
                 if hasattr(tree, 'temperature'):
                     tree.temperature.assign(TEMP_ON_DRIFT)
-        dp_val, dp_sign = utils.get_demographic_parity(list(pred_window), list(protected_window))
-        eo_val, eo_sign = utils.get_equalized_odds(list(pred_window), list(protected_window), list(true_window))
+        dp_val, dp_sign = fairness_window.demographic_parity()
+        eo_val, eo_sign = fairness_window.equalized_odds()
         dps.append(float(dp_val))
         eos.append(float(eo_val))
         

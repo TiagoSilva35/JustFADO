@@ -19,8 +19,6 @@ fairness monitoring, and the fairness-aware online updates (node-level
 running statistics + Aranyani gradient correction).
 """
 
-from collections import deque
-
 import numpy as np
 import tensorflow as tf
 
@@ -140,9 +138,7 @@ def evaluate_aranyani_baseline_over_timesteps(
             f"trees={num_trees}, internal_nodes={num_internal_nodes}"
         )
 
-    pred_window = deque(maxlen=FAIRNESS_WINDOW)
-    true_window = deque(maxlen=FAIRNESS_WINDOW)
-    protected_window = deque(maxlen=FAIRNESS_WINDOW)
+    fairness_window_state = utils.RollingFairnessWindow(FAIRNESS_WINDOW)
 
     huber_loss_delta = 0.1
 
@@ -168,9 +164,7 @@ def evaluate_aranyani_baseline_over_timesteps(
         y_true_all.append(y_t)
         a_all.append(a_t)
 
-        pred_window.append(y_pred)
-        true_window.append(y_t)
-        protected_window.append(a_t)
+        fairness_window_state.append(y_pred, a_t, y_t)
 
         correct_buffer.append(int(y_pred == y_t))
         if USE_ROLLING and len(correct_buffer) > accuracy_window:
@@ -178,12 +172,8 @@ def evaluate_aranyani_baseline_over_timesteps(
         accuracies.append(float(sum(correct_buffer)) / len(correct_buffer))
 
         # ---- Fairness monitoring on rolling window ----------------------
-        dp_val, dp_sign = utils.get_demographic_parity(
-            list(pred_window), list(protected_window)
-        )
-        eo_val, _ = utils.get_equalized_odds(
-            list(pred_window), list(protected_window), list(true_window)
-        )
+        dp_val, dp_sign = fairness_window_state.demographic_parity()
+        eo_val, _ = fairness_window_state.equalized_odds()
         dps.append(float(dp_val))
         eos.append(float(eo_val))
 
