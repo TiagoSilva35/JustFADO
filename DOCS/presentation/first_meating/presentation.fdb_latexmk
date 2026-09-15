@@ -1,6 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1789411640.53302 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentation.tex" "presentation.pdf" "presentation" 1789411641.24289 0
-  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentation.tex" 1789411639.45265 10437 f255d5b5c15e281a85cf0a08d6ecf898 ""
+["pdflatex"] 1789413797.48719 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentation.tex" "presentation.pdf" "presentation" 1789413798.25156 0
+  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentation.tex" 1789413797.33298 10630 0824ad2869e1489047059d39d316aadf ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/cm-super/cm-super-t1.enc" 1772380719 2971 def0b6c1f0b107b3b936def894055589 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/tex-gyre/q-ec.enc" 1772380719 2457 aaabbccba4df2a7f7371410ee4e075a3 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/tex-gyre/q-ts1.enc" 1772380719 3124 3813fd4c981d99822890a2861b0d274c ""
@@ -236,10 +236,10 @@
   "assets/cisuc_logo.png" 1789208901.44556 19925 1837c95a9a90b8b3739bbc8f894b6b5c ""
   "assets/mask_updates.png" 1789219245.99592 80897 9c1147ad542e80b26b59ae6f15b82fa5 ""
   "assets/probability_updater_performance.png" 1789220885.23926 50090 e24eb367f9b2fd323420b9fae0391329 ""
-  "presentation.aux" 1789411641.18701 2996 b411ce591962be0a5349502f88ee4d10 "pdflatex"
-  "presentation.nav" 1789411641.1876 923 02772eacdfe77d67b79e45a640fd18ab "pdflatex"
-  "presentation.out" 1789411640.8804 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "presentation.tex" 1789411639.45265 10437 f255d5b5c15e281a85cf0a08d6ecf898 ""
+  "presentation.aux" 1789413798.19176 3158 44235dbf20a208dce3e738deebfbc4e3 "pdflatex"
+  "presentation.nav" 1789413798.19238 1011 83c4ff004b77303d878240d0bcc95e05 "pdflatex"
+  "presentation.out" 1789413797.86257 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "presentation.tex" 1789413797.33298 10630 0824ad2869e1489047059d39d316aadf ""
   (generated)
   "presentation.aux"
   "presentation.log"
