@@ -44,8 +44,6 @@ Test DP: 0.017
 Test EO: 0.056
 Test AUC: 0.723
 Test F1-Score: 0.322
-[NSGA2-TREE] Selected hyperparameters: {'depth': 4, 'num_trees': 6, 'lambda_const': 2.766826434414502, 'objective': (0.3050000071525574, 0.0019791269330098338)}
-[NSGA2-TREE] Applying tuned settings for final training: depth=4, num_trees=6, lambda_const=2.7668
 DP in the original dataset: 0.054089836218504384
 EO in the original dataset: 0.0
 Fairness type: dp
@@ -193,7 +191,6 @@ folktables                 0.6070     0.0000     0.0000
 Using random seed: 2
 Sensitive attribute values in training set: {0, 1}
 SECOND TUNING ON VALIDATION SPLIT (TREE HYPERPARAMETERS)
-[NSGA2-TREE] Train size=149980, Val size=37495, base(depth=4, num_trees=3, lambda=1)
 Fairness type: dp
 lambda for fairness penalty: 0.5655136772680869
 
@@ -203,8 +200,6 @@ Test DP: 0.020
 Test EO: 0.039
 Test AUC: 0.650
 Test F1-Score: 0.151
-[NSGA2-TREE] Selected hyperparameters: {'depth': 8, 'num_trees': 8, 'lambda_const': 0.8759172790932113, 'objective': (0.29250001907348633, 0.014789258559310875)}
-[NSGA2-TREE] Applying tuned settings for final training: depth=8, num_trees=8, lambda_const=0.8759
 DP in the original dataset: 0.054089836218504384
 EO in the original dataset: 0.0
 Fairness type: dp

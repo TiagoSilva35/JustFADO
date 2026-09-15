@@ -1,0 +1,24 @@
+program: src/main.py
+method: grid
+name: tree-depth-ablation
+project: adult-tree-depth-ablation
+metric:
+  name: aranyani_accuracy_mean
+  goal: maximize
+parameters:
+  depth:
+    values: [3, 5, 7, 9]
+  num_trees:
+    values: [1, 3, 5, 7]
+command:
+  - ${env}
+  - .venv39/Scripts/python.exe
+  - -m
+  - src.main
+  - --pipeline_dataset=adult
+  - --pipeline_model=aranyani
+  - --drift_scenario=no_drift
+  - --seeds=1
+  - --wandb_log=true
+  - --wandb_project=adult-tree-depth-ablation
+  - ${args}

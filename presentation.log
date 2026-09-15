@@ -1,12 +1,12 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.5) (preloaded format=pdflatex 2026.9.15)  15 SEP 2026 10:52
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.5) (preloaded format=pdflatex 2026.9.15)  15 SEP 2026 10:48
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**c:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presenta
+**C:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presenta
 tion.tex
 
-(c:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentat
+(C:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentat
 ion.tex
 LaTeX2e <2026-06-01>
 L3 programming layer <2026-08-10>
@@ -14,8 +14,8 @@ L3 programming layer <2026-08-10>
 Document Class: beamer 2026/08/20 v3.78 A class for typesetting presentations
 
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamerbasemodes.
-sty
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.sty
+sty (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/etoolbox\etoolbox.s
+ty
 Package: etoolbox 2025/10/02 v2.5m e-TeX tools for LaTeX (JAW)
 \etb@tempcnta=\count276
 )
@@ -31,8 +31,7 @@ Package: etoolbox 2025/10/02 v2.5m e-TeX tools for LaTeX (JAW)
 )
 \beamer@commentbox=\box55
 \beamer@modecount=\count281
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/generic/iftex\iftex.sty
 Package: iftex 2024/12/12 v1.0g TeX engine tests
 )
 \headdp=\dimen150
@@ -80,17 +79,15 @@ Package: iftex 2024/12/12 v1.0g TeX engine tests
 \beamer@tocsectionnumber=\count301
 
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamerbaseoption
-s.sty
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty
+s.sty (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.s
+ty
 Package: keyval 2026-05-17 v1.15 key=value parser (DPC)
 \KV@toks@=\toks17
 ))
 \beamer@paperwidth=\skip50
 \beamer@paperheight=\skip51
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometry.sty
 Package: geometry 2026/03/07 v6.0 Page Geometry
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/generic/iftex\ifvtex.sty
 Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
 )
@@ -106,7 +103,6 @@ Package: ifvtex 2019/10/25 v1.7 ifvtex legacy package. Use iftex instead.
 \Gm@layouthoffset=\dimen172
 \Gm@layoutvoffset=\dimen173
 \Gm@dimlist=\toks18
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/geometry\geometry.cfg))
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/math\pgfmath.sty
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgfrcs.st
@@ -122,8 +118,8 @@ y
 \pgfutil@abb=\box62
 )
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/utilities\pgfrcs.
-code.tex
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/generic/pgf\pgf.revision.tex)
+code.tex (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/generic/pgf\pgf.revi
+sion.tex)
 Package: pgfrcs 2026-08-01 v3.1.12 (3.1.12)
 ))
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/utilities\pgfkeys.s
@@ -186,18 +182,15 @@ code.tex)
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/math\pgfmathfloat
 .code.tex
 \c@pgfmathroundto@lastzeros=\count310
-)))
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/base\size11.clo
+))) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/base\size11.clo
 File: size11.clo 2025/01/22 v1.4n Standard LaTeX file (size option)
 )
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pgfcore.
-sty
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.sty
+sty (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.s
+ty
 Package: graphicx 2026-05-17 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.sty
 Package: graphics 2026-05-17 v1.4h Standard LaTeX Graphics (DPC,SPQR)
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty
 Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
 )
@@ -262,10 +255,8 @@ File: pgfsyssoftpath.code.tex 2026-08-01 v3.1.12 (3.1.12)
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/systemlayer\pgfsy
 sprotocol.code.tex
 File: pgfsysprotocol.code.tex 2026-08-01 v3.1.12 (3.1.12)
-))
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
+)) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
 Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\color.cfg
 File: color.cfg 2016/01/02 v1.6 sample color configuration
 )
@@ -391,12 +382,10 @@ ty
 Package: xxcolor 2003/10/24 ver 0.1
 \XC@nummixins=\count321
 \XC@countmixins=\count322
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/base\atbegshi-ltx.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/base\atbegshi-ltx.sty
 Package: atbegshi-ltx 2021/01/10 v1.0c Emulation of the original atbegshi
 package with kernel methods
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hyperref.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hyperref.sty
 Package: hyperref 2026-06-17 v7.01r Hypertext links for LaTeX
 
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/kvsetkeys\kvsetkeys.sty
@@ -409,7 +398,6 @@ Package: kvdefinekeys 2019-12-19 v1.6 Define keys (HO)
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/generic/pdfescape\pdfescape.s
 ty
 Package: pdfescape 2019/12/09 v1.15 Implements pdfTeX's escape features (HO)
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/generic/ltxcmds\ltxcmds.sty
 Package: ltxcmds 2023-12-04 v1.26 LaTeX kernel commands for general use (HO)
 )
@@ -425,13 +413,10 @@ Package: infwarerr 2019/12/03 v1.5 Providing info/warning/error messages (HO)
 Package pdftexcmds Info: \pdf@primitive is available.
 Package pdftexcmds Info: \pdf@ifprimitive is available.
 Package pdftexcmds Info: \pdfdraftmode found.
-))
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.sty
+)) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/hycolor\hycolor.sty
 Package: hycolor 2020-01-27 v1.10 Color options for hyperref/bookmark (HO)
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\nameref.sty
 Package: nameref 2026-01-29 v2.58 Cross-referencing by name of section
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/refcount\refcount.sty
 Package: refcount 2019/12/15 v3.6 Data extraction from label references (HO)
 )
@@ -452,7 +437,7 @@ Package: stringenc 2019/11/29 v1.12 Convert strings between diff. encodings (HO
 \@linkdim=\dimen277
 \Hy@linkcounter=\count324
 \Hy@pagecounter=\count325
- (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.def
+(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\pd1enc.def
 File: pd1enc.def 2026-06-17 v7.01r Hyperref: PDFDocEncoding definition (HO)
 Now handling font encoding PD1 ...
 ... no UTF-8 mapping file for font encoding PD1
@@ -460,7 +445,7 @@ Now handling font encoding PD1 ...
 Package: intcalc 2019/12/15 v1.3 Expandable calculations with integers (HO)
 )
 \Hy@SavedSpaceFactor=\count326
- (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.def
+(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\puenc.def
 File: puenc.def 2026-06-17 v7.01r Hyperref: PDF Unicode definition (HO)
 Now handling font encoding PU ...
 ... no UTF-8 mapping file for font encoding PU
@@ -476,14 +461,12 @@ Package hyperref Info: Backreferencing OFF on input line 4219.
 Package hyperref Info: Implicit mode OFF; no redefinition of LaTeX internals.
 Package hyperref Info: Bookmarks ON on input line 4466.
 \c@Hy@tempcnt=\count327
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty
 \Urlmuskip=\muskip17
 Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
 )
 LaTeX Info: Redefining \url on input line 4805.
 \XeTeXLinkMargin=\dimen278
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/generic/bitset\bitset.sty
 Package: bitset 2019/12/09 v1.3 Handle bit-vector datatype (HO)
 
@@ -504,12 +487,11 @@ Package hyperref Info: Link coloring with OCG OFF on input line 6116.
 Package hyperref Info: PDF/A mode OFF on input line 6121.
 \Hy@abspage=\count329
 
-
 Package hyperref Message: Stopped early.
 
 )
 Package hyperref Info: Driver (autodetected): hpdftex.
- (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hpdftex.def
+(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/hyperref\hpdftex.def
 File: hpdftex.def 2026-06-17 v7.01r Hyperref driver for pdfTeX
 \Fld@listcount=\count330
 \c@bookmark@seq@number=\count331
@@ -646,8 +628,8 @@ sty
 \beamer@blockheadheight=\dimen291
 ))
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamerbaselocals
-tructure.sty
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/tools\enumerate.sty
+tructure.sty (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/tools\enum
+erate.sty
 Package: enumerate 2023/07/04 v3.00 enumerate extensions (DPC)
 \@enLab=\toks34
 )
@@ -664,25 +646,21 @@ tionsymbols.tex)
 \beamer@section@min@dim=\dimen292
 )
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beamerbasetheore
-ms.sty
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
+ms.sty (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.
+sty
 Package: amsmath 2026/05/19 v2.18d AMS math features
 \@mathmargin=\skip61
-
 For additional information on amsmath, use the `?' option.
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.sty
 Package: amstext 2024/11/17 v2.01 AMS text
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.sty
 File: amsgen.sty 1999/11/30 v2.0 generic functions
 \@emptytoks=\toks35
 \ex@=\dimen293
-))
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty
+)) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty
 Package: amsbsy 1999/11/29 v1.2d Bold Symbols
 \pmbraise@=\dimen294
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty
 Package: amsopn 2022/04/08 v2.04 operator names
 )
 \inf@bad=\count346
@@ -732,8 +710,7 @@ LaTeX Info: Redefining \Relbar on input line 970.
 \mathdisplay@stack=\toks39
 LaTeX Info: Redefining \[ on input line 2965.
 LaTeX Info: Redefining \] on input line 2966.
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amscls\amsthm.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amscls\amsthm.sty
 Package: amsthm 2020/05/29 v2.20.6
 \thm@style=\toks40
 \thm@bodyfont=\toks41
@@ -763,8 +740,8 @@ default.sty
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/beamer\beameroutertheme
 default.sty)))
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/frontendlayer\tikz.
+sty (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pgf.
 sty
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/pgf/basiclayer\pgf.sty
 Package: pgf 2026-08-01 v3.1.12 (3.1.12)
 
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/generic/pgf/modules\pgfmodule
@@ -843,8 +820,7 @@ File: pgflibraryarrows.meta.code.tex 2026-08-01 v3.1.12 (3.1.12)
 \pgfarrowlength=\dimen318
 \pgfarrowwidth=\dimen319
 \pgfarrowlinewidth=\dimen320
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty
 Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \heavyrulewidth=\dimen321
 \lightrulewidth=\dimen322
@@ -863,15 +839,13 @@ Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \@thisruleclass=\count370
 \@lastruleclass=\count371
 \@thisrulewidth=\dimen333
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty
 Package: multirow 2024/11/12 v2.9 Span multiple rows of a table
 \multirow@colwidth=\skip67
 \multirow@cntb=\count372
 \multirow@dima=\skip68
 \bigstrutjot=\dimen334
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty
 Package: array 2026/02/24 v2.7b Tabular extension package (FMi)
 \col@sep=\dimen335
 \ar@mcellbox=\box83
@@ -880,27 +854,21 @@ Package: array 2026/02/24 v2.7b Tabular extension package (FMi)
 \extratabsurround=\skip69
 \backup@length=\skip70
 \ar@cellbox=\box84
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/base\inputenc.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/base\inputenc.sty
 Package: inputenc 2024/02/08 v1.3d Input encoding file
 \inpenc@prehook=\toks49
 \inpenc@posthook=\toks50
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/base\fontenc.sty
 Package: fontenc 2025/07/18 v2.1d Standard LaTeX package
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/base\textcomp.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/base\textcomp.sty
 Package: textcomp 2024/04/24 v2.1b Standard LaTeX package
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/tex-gyre\tgheros.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/tex-gyre\tgheros.sty
 Package: tgheros 2009/09/27 v1.2 TeX Gyre Heros as default sans serif family
-)
-(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/tex-gyre\tgcursor.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/tex-gyre\tgcursor.sty
 Package: tgcursor 2009/09/10 v1.2 TeX Gyre Cursor as default typewriter family
 )
 LaTeX Font Info:    Trying to load font information for T1+qhv on input line 11
 7.
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/tex-gyre\t1qhv.fd
 File: t1qhv.fd 2009/09/25 v1.2 font definition file for T1/qhv
 )
@@ -929,7 +897,6 @@ LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 117.
 LaTeX Font Info:    ... okay on input line 117.
 LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 117.
 LaTeX Font Info:    ... okay on input line 117.
-
 *geometry* driver: auto-detecting
 *geometry* detected driver: pdftex
 *geometry* verbose mode - [ preamble ] result:
@@ -991,7 +958,6 @@ fg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
 Package hyperref Info: Link coloring OFF on input line 117.
- (presentation.out) (presentation.out)
 \@outlinefile=\write5
 \openout5 = `presentation.out'.
 
@@ -1064,44 +1030,76 @@ Dictionary: translator-theorem-dictionary, Language: English
 ) (presentation.nav)
 LaTeX Font Info:    Trying to load font information for T1+qcr on input line 11
 7.
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/tex-gyre\t1qcr.fd
 File: t1qcr.fd 2009/09/25 v1.2 font definition file for T1/qcr
 )
-<assets/cisuc_logo.png, id=12, 1778.645pt x 257.96375pt>
-File: assets/cisuc_logo.png Graphic file (type png)
-<use assets/cisuc_logo.png>
-Package pdftex.def Info: assets/cisuc_logo.png  used on input line 122.
-(pdftex.def)             Requested size: 332.44243pt x 48.21457pt.
+
+LaTeX Warning: File `assets/cisuc_logo.png' not found on input line 122.
+
+
+C:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentati
+on.tex:122: Package pdftex.def Error: File `assets/cisuc_logo.png' not found: u
+sing draft setting.
+
+See the pdftex.def package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.122 \end{frame}
+                 
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
 
 [1
 
- <./assets/cisuc_logo.png (PNG copy)>]
-File: assets/cisuc_logo.png Graphic file (type png)
-<use assets/cisuc_logo.png>
-Package pdftex.def Info: assets/cisuc_logo.png  used on input line 131.
-(pdftex.def)             Requested size: 180.67499pt x 26.20331pt.
+{C:/Users/tjcsi/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/tjcs
+i/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/tex-gyre/q-ec.enc}]
+
+LaTeX Warning: File `assets/cisuc_logo.png' not found on input line 131.
+
+
+C:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentati
+on.tex:131: Package pdftex.def Error: File `assets/cisuc_logo.png' not found: u
+sing draft setting.
+
+See the pdftex.def package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.131 \end{frame}
+                 
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
 LaTeX Font Info:    Trying to load font information for TS1+qhv on input line 1
 31.
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/tex-gyre\ts1qhv.fd
 File: ts1qhv.fd 2009/09/25 v1.2 font definition file for TS1/qhv
 )
-File: assets/cisuc_logo.png Graphic file (type png)
-<use assets/cisuc_logo.png>
-Package pdftex.def Info: assets/cisuc_logo.png  used on input line 131.
-(pdftex.def)             Requested size: 180.67499pt x 26.20331pt.
+
+LaTeX Warning: File `assets/cisuc_logo.png' not found on input line 131.
+
+
+C:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentati
+on.tex:131: Package pdftex.def Error: File `assets/cisuc_logo.png' not found: u
+sing draft setting.
+
+See the pdftex.def package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.131 \end{frame}
+                 
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
 
 [2
 
-{C:/Users/tjcsi/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/tjcs
-i/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/tex-gyre/q-ec.enc}{C:/Users/tjc
-si/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/tex-gyre/q-ts1.enc}]
-[3
+{C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/tex-gyre/q-ts1.en
+c}] [3
 
 ]
 LaTeX Font Info:    Calculating math sizes for size <17> on input line 167.
-
 
 LaTeX Font Warning: Font shape `OT1/cmss/m/n' in size <8.5> not available
 (Font)              size <8> substituted on input line 167.
@@ -1121,15 +1119,12 @@ File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
 LaTeX Font Info:    Trying to load font information for U+msb on input line 167
 .
-
 (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-)
-[4
+) [4
 
 ]
 LaTeX Font Info:    Calculating math sizes for size <28> on input line 177.
-
 
 LaTeX Font Warning: Font shape `OT1/cmss/m/n' in size <28> not available
 (Font)              size <29.86> substituted on input line 177.
@@ -1154,17 +1149,28 @@ LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <28> not available
 LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <19.59991> not available
 (Font)              size <20.74> substituted on input line 177.
 
-<assets/mask_updates.png, id=42, 917.4275pt x 712.6625pt>
-File: assets/mask_updates.png Graphic file (type png)
-<use assets/mask_updates.png>
-Package pdftex.def Info: assets/mask_updates.png  used on input line 177.
-(pdftex.def)             Requested size: 397.48499pt x 308.766pt.
+
+LaTeX Warning: File `assets/mask_updates.png' not found on input line 177.
+
+
+C:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentati
+on.tex:177: Package pdftex.def Error: File `assets/mask_updates.png' not found:
+ using draft setting.
+
+See the pdftex.def package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.177 \end{frame}
+                 
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
 [5
 
- <./assets/mask_updates.png>]
+]
 LaTeX Font Info:    Calculating math sizes for size <10.2> on input line 206.
 LaTeX Font Info:    Calculating math sizes for size <13> on input line 206.
-
 
 LaTeX Font Warning: Font shape `OT1/cmss/m/n' in size <13> not available
 (Font)              size <12> substituted on input line 206.
@@ -1192,17 +1198,29 @@ LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <6.5> not available
 [6
 
 ]
-<assets/probability_updater_performance.png, id=60, 650.43pt x 397.485pt>
-File: assets/probability_updater_performance.png Graphic file (type png)
-<use assets/probability_updater_performance.png>
-Package pdftex.def Info: assets/probability_updater_performance.png  used on in
-put line 215.
-(pdftex.def)             Requested size: 505.89pt x 309.16367pt.
- [7
 
- <./assets/probability_updater_performance.png>]
+LaTeX Warning: File `assets/probability_updater_performance.png' not found on i
+nput line 215.
+
+
+C:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentati
+on.tex:215: Package pdftex.def Error: File `assets/probability_updater_performa
+nce.png' not found: using draft setting.
+
+See the pdftex.def package documentation for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.215 \end{frame}
+                 
+Try typing  <return>  to proceed.
+If that doesn't work, type  X <return>  to quit.
+
+[7
+
+]
 LaTeX Font Info:    Calculating math sizes for size <14> on input line 233.
- [8
+[8
 
 ] [9
 
@@ -1216,25 +1234,32 @@ LaTeX Font Info:    Calculating math sizes for size <14> on input line 233.
 \tf@snm=\write8
 \openout8 = `presentation.snm'.
 
-
 (presentation.aux)
  ***********
 LaTeX2e <2026-06-01>
 L3 programming layer <2026-08-10>
  ***********
 
-
 LaTeX Font Warning: Size substitutions with differences
 (Font)              up to 3.12pt have occurred.
 
-Package rerunfilecheck Info: File `presentation.out' has not changed.
-(rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
+
+Package rerunfilecheck Warning: File `presentation.out' has changed.
+(rerunfilecheck)                Rerun to get outlines right
+(rerunfilecheck)                or use package `bookmark'.
+
+Package rerunfilecheck Info: Checksums for `presentation.out':
+(rerunfilecheck)             Before: <no file>
+(rerunfilecheck)             After:  D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 26071 strings out of 467441
- 520101 string characters out of 5407591
- 899612 words of memory out of 5000000
- 54840 multiletter control sequences out of 15000+600000
+ 26133 strings out of 467441
+ 522445 string characters out of 5407591
+ 897920 words of memory out of 5000000
+ 54906 multiletter control sequences out of 15000+600000
  813991 words of font info for 191 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  128i,14n,123p,478b,1095s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -1252,9 +1277,9 @@ si/AppData/Local/Programs/MiKTeX/fonts/type1/public/tex-gyre/qhvb.pfb><C:/Users
 Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/tex-gyre/qhvr.pfb>
 <C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/tex-gyre/qhvri
 .pfb>
-Output written on presentation.pdf (9 pages, 319038 bytes).
+Output written on presentation.pdf (9 pages, 200634 bytes).
 PDF statistics:
- 159 PDF objects out of 1000 (max. 8388607)
+ 153 PDF objects out of 1000 (max. 8388607)
  19 named destinations out of 1000 (max. 500000)
- 58 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 43 words of extra memory for PDF output out of 10000 (max. 10000000)
 

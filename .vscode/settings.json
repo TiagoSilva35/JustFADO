@@ -4,6 +4,29 @@
     "latex-workshop.formatting.latexindent.args": [
         "--wraplen", "80",
         "--wrapmin", "70"
+    ],
+    "latex-workshop.latex.tools": [
+        {
+            "name": "latexmk",
+            "command": "C:\\Strawberry\\perl\\bin\\perl.exe",
+            "args": [
+                "C:\\Users\\tjcsi\\AppData\\Local\\Programs\\MiKTeX\\scripts\\latexmk\\latexmk.pl",
+                "-pdf",
+                "-pdflatex=C:\\Users\\tjcsi\\AppData\\Local\\Programs\\MiKTeX\\miktex\\bin\\x64\\pdflatex.exe %O %S",
+                "-synctex=1",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "%DOC%"
+            ]
+        }
+    ],
+    "latex-workshop.latex.recipes": [
+        {
+            "name": "latexmk",
+            "tools": [
+                "latexmk"
+            ]
+        }
     ]
 
 

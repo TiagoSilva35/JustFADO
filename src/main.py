@@ -82,11 +82,6 @@ flags.DEFINE_string(
     'Path, directory, or glob for COMPAS CSV files. Defaults to data/compas/*.',
 )
 flags.DEFINE_bool(
-    'pipeline_tune_aranyani',
-    False,
-    'Enable NSGA-II tree hyperparameter tuning for Aranyani in train-then-test pipeline runs.',
-)
-flags.DEFINE_bool(
     'wandb_log',
     False,
     'Enable Weights & Biases logging for pipeline runs (useful for sweeps/ablations).',
@@ -116,108 +111,16 @@ def _dataset_name():
     return override if override else FLAGS.dataset
 
 
-# COMPAS uses a much smaller test stream than Adult (~2.1k vs ~16k
-# samples), so ADWIN's Hoeffding-bound detection floor is correspondingly
-# higher: a ~5pp drift-phase accuracy spike that ADWIN easily flags on
-# Adult sits right on the noise floor on COMPAS. We loosen
-# ``delta_warn`` / ``delta_confirm`` for this dataset so the FADO
-# controller has a chance to react to the (verified-real) drifts
-# injected by ``src/drift/compas_scenarios.py``. Baseline ``no_drift``
-# should still NOT trigger -- treat any false-positive there as a sign
-# the override is too loose and dial it back.
-# ``fairness_window`` and ``min_samples_per_stream`` are also scaled down
-# for COMPAS. The default W=1000 fairness deque is nearly half of the
-# entire ~2165-sample test stream: the warmup phase (~650 rows under the
-# 30/70/100 split) never fills the window, the drift onset is invisible to
-# the lambda-controller for ~1000 samples after it starts (the deque is
-# still 70% pre-drift content), and the recovery slice is never seen on a
-# clean window. The result is that FADO's fairness-regulariser pathway
-# receives a structurally blurred signal on this dataset and cannot
-# demonstrate measurable separation from Aranyani-Base. Setting W=250
-# (~10-15% of stream, matched to ADWIN's ~200-sample bucket scale) gives
-# both models a window that turns over fast enough to reflect actual
-# per-phase fairness behaviour. ``baseline_evaluator.py`` honours the
-# ``fairness_window`` key from ``static_params`` (lines 104-106), so the
-# override reaches Aranyani-Base too -- keeping the FADO-vs-Base comparison
-# apples-to-apples while removing the signal-blur confound from both arms.
-# Additional COMPAS overrides for the FADO reaction controller and the
-# fairness regulariser:
-#
-# * ``lr_decay_steps: 600`` (default 3000) -- the default decay window
-#   exceeds the entire COMPAS test stream (~2165 samples), so even if the
-#   evaluator's recovery branch ever transitions out of the LR-spike
-#   state, the decay back to base LR cannot complete within the stream.
-#   600 samples is ~28% of the stream and matches the recovery-phase
-#   length (~650 samples), so the decay schedule is in principle
-#   completable on COMPAS. See ``evaluator.py:201-217`` for the structural
-#   precondition (recovery flag must flip from True to False); the
-#   accuracy-based gate there currently prevents that transition on
-#   adversarial-drift streams, so this override is staged for the moment
-#   the recovery logic is fixed and is presently inactive on this dataset.
-#
-# * ``lambda_const: 10.0`` (default 0.1) -- aligns the code with the
-#   paper's documented value. With LR spiked 10x during the FADO drift
-#   response and lambda at the old 0.1, the fairness gradient was
-#   effectively 1000x smaller than the classification gradient -- no
-#   meaningful regularisation pressure during the response window. At
-#   lambda=10.0 the ratio is 1:1 with classification gradient even under
-#   the spike, giving the regulariser a chance to keep DP/EO from
-#   blowing out while the model adapts.
+
 _COMPAS_FADO_OVERRIDES = {
     'adwin_delta_warn': 1e-3,
-    # adwin_delta_confirm tuning history on COMPAS (Hoeffding):
-    #   eps_cut = sqrt((1/(2m))*ln(4/delta)). SMALLER delta -> LARGER
-    #   eps_cut -> needs MORE evidence before confirming. LARGER delta
-    #   -> looser bound -> ADWIN fires earlier and more often.
-    #     0.005 -> too conservative; 0 events even on abrupt_race seed 2.
-    #     0.05  -> ~9pp accuracy deficit floor; fires 0-2x per seed
-    #              (seed 5 silent, seeds 2/3/4 fire once, seed 42 twice).
-    #     0.2   -> looser, expected to fire more reliably across seeds.
     'adwin_delta_confirm': 0.2,
     'fairness_window': 250,
     'min_samples_per_stream': 20,
     'lr_decay_steps': 600,
-    # lambda_const tuning history on COMPAS (post-bug-fix):
-    #   10.0 -> regulariser dominated, suppressed accuracy drop during drift
-    #          -> ADWIN never fired -> FADO bit-identical to Base.
-    #    1.0 -> reduces regulariser pressure enough that drift error
-    #          surfaces (~5pp drop expected) and ADWIN can detect.
-    # Paper claim of lambda=10 was made when the regulariser was
-    # silently disabled (see DOCS/BUG_REPORT_fairness_regulariser.md),
-    # so it was never a tuned value. lambda=1 is the empirical
-    # post-fix calibration for COMPAS.
     'lambda_const': 1.0,
 }
 
-
-# Folktables-specific FADO overrides (Option A from the 2026-06 pilot).
-#
-# Background: pilot runs at the 10% subsample (~18.7k test samples) showed
-# FADO losing to Aranyani-Base on all three metrics across seeds 7 and 8.
-# Trajectory analysis: ADWIN fires once around the 2017/2018 boundary
-# (gradual cross-year shift, not abrupt), the controller spikes LR x10
-# and drops temperature to 0.1 (hard routing), which collapses the
-# soft-routing gradient flow that the node-level fairness regulariser
-# relies on. The result is a post-drift DP creep that does not occur in
-# the controller-free Aranyani-Base run.
-#
-# These overrides soften the reaction so it does not break the regulariser
-# on a gradual shift:
-#   * drift_lr_spike_mult 10 -> 3: still a meaningful boost on confirmation,
-#                                  but no longer dominates the steady-state
-#                                  gradient by an order of magnitude.
-#   * temperature_on_drift 0.1 -> 0.5: soft sharpening only. Gradient still
-#                                  flows through the sigmoids so the
-#                                  regulariser can keep adjusting per-group
-#                                  routing balance during the spike.
-#   * lr_decay_steps 3000 -> 1000: at 10% subsample (~18.7k samples) the
-#                                  3000-step decay only completes ~16% of
-#                                  the stream; 1000 steps fully unwinds
-#                                  within the post-drift portion.
-#
-# The ADWIN thresholds and rolling window are unchanged: the gradual-shift
-# detection floor at the default delta is still well below realistic
-# Folktables cross-year accuracy deficits.
 _FOLKTABLES_FADO_OVERRIDES = {
     'drift_lr_spike_mult': 3.0,
     'temperature_on_drift': 0.5,
@@ -459,17 +362,11 @@ def _maybe_subsample_folktables(
 
 
 def _load_dataset_splits(dataset_key, scenario_name, seed):
-    """Return ``(x_train, x_test, y_train, y_test, a_train, a_test, marginals)``.
-
-    ``marginals`` is ``None`` unless ``FLAGS.intersectional`` is set, in which
-    case it is a dict with keys ``'attr_names'`` (tuple of names), ``'train'``,
-    and ``'test'`` (each ``[N, 2]`` int32 arrays of per-attribute group codes,
-    aligned row-for-row with the split they belong to).
-    """
     intersectional = bool(FLAGS.intersectional)
     if dataset_key == 'adult':
         x_train, _, y_train, _, a_train, _ = read_adult(False, drift_scenario=None)
         x_test, y_test, a_test = load_drifted_test_set(scenario_name)
+        print("size of adult train/test splits:", len(y_train), len(y_test))
         x_train, x_test, y_train, y_test, a_train, a_test = _ensure_train_test(
             x_train, x_test, y_train, y_test, a_train, a_test, seed=seed)
         return x_train, x_test, y_train, y_test, a_train, a_test, None
@@ -615,23 +512,6 @@ def _run_aranyani_train_then_test(
     seed=None,
     use_drift_controller=True,
 ):
-    """Train a FairDecisionForest offline (Aranyani training) and evaluate prequentially.
-
-    When ``use_drift_controller=True`` (default), the test stream is evaluated with
-    the full FADO controller (`evaluate_over_timesteps`): ADWIN drift detection,
-    learning-rate reaction, and temperature modulation. When ``False``, the same
-    offline-trained model is evaluated with the pure Aranyani baseline
-    (`evaluate_aranyani_baseline_over_timesteps`), which keeps the prequential
-    test-then-train protocol and fairness-aware updates but disables every
-    component of the FADO reaction controller. This second mode is what we
-    report as the ``aranyani_base`` baseline in the paper.
-    """
-    # Pin the global RNG (random / numpy / tensorflow) before any model creation
-    # so that two runs that share the same `seed` produce bit-identical forest
-    # initialisations and training trajectories. Without this, the seed plumbed
-    # through the pipeline only controls the data split (via _smart_split) and
-    # the model weights diverge across method comparisons, even when the FADO
-    # controller never fires.
     if seed is not None:
         _set_global_seed(int(seed))
 
@@ -643,64 +523,9 @@ def _run_aranyani_train_then_test(
     a_test_arr = np.asarray(a_test, dtype=np.int32)
 
     data_dim = int(x_train_arr.shape[1])
-    tree_depth = 3
-    num_trees = 1
+    tree_depth = int(FLAGS.depth)
+    num_trees = int(FLAGS.num_trees)
     lambda_const = float(FLAGS.lambda_const)
-
-    if bool(FLAGS.pipeline_tune_aranyani) and len(x_train_arr) > 1:
-        from src.hpo import tuner as hpo_tuner
-
-        tree_cfg = dict(hpo_tuner._load_tree_nsga2_config())
-        tree_cfg['enabled'] = True
-        if seed is not None:
-            tree_cfg['seed'] = int(seed)
-
-        split_seed = int(tree_cfg.get('seed', 42))
-        validation_ratio = float(tree_cfg.get('validation_ratio', 0.2))
-        x_inner_train, x_val, y_inner_train, y_val, a_inner_train, a_val = _smart_split(
-            x_train_arr,
-            y_train_arr,
-            a_train_arr,
-            seed=split_seed,
-            test_size=validation_ratio,
-        )
-
-        base_gamma = (
-            float(FLAGS.base_gamma)
-            if FLAGS.base_gamma not in (None, '', 'None')
-            else 0.9
-        )
-        tuned_tree = hpo_tuner._tune_tree_hyperparameters_nsga2(
-            dataset=str(dataset_name).lower(),
-            x_train=x_inner_train,
-            y_train=y_inner_train,
-            a_train=a_inner_train,
-            x_val=x_val,
-            y_val=y_val,
-            a_val=a_val,
-            data_dim=data_dim,
-            num_class=2,
-            base_depth=tree_depth,
-            base_num_trees=num_trees,
-            compute_fairness=bool(FLAGS.compute_fairness),
-            base_lambda_const=lambda_const,
-            batch_size=max(1, int(FLAGS.batch_size)),
-            activation=FLAGS.activation,
-            compute_mode=FLAGS.compute_mode,
-            base_gamma=base_gamma,
-            constraint_type=FLAGS.constraint_type,
-            gradient_type=FLAGS.gradient_type,
-            local_run=True,
-            tree_cfg=tree_cfg,
-        )
-        if tuned_tree is not None:
-            tree_depth = int(tuned_tree['depth'])
-            num_trees = int(tuned_tree['num_trees'])
-            lambda_const = float(tuned_tree['lambda_const'])
-            print(
-                f"[PIPELINE][ARANYANI] Applying tuned settings: "
-                f"depth={tree_depth}, num_trees={num_trees}, lambda_const={lambda_const:.4f}"
-            )
 
     model = forest.FairDecisionForest(
         num_trees=num_trees,
@@ -723,14 +548,6 @@ def _run_aranyani_train_then_test(
         gradient_type=FLAGS.gradient_type,
         local_run=True,
     )
-    # Both branches use a true prequential test-then-train protocol so that the
-    # forest is a real online learner on the test stream: forward pass → metrics
-    # → (FADO controller, if enabled) → fairness-aware gradient step on
-    # (x_t, y_t, a_t). The offline `aranyani.train_online` call above only
-    # warm-starts the model; adaptation continues during evaluation. With
-    # test_then_train=True the FADO controller's LR-spike pathway is actually
-    # exercised (apply_gradients fires every step) and the baseline runs as a
-    # genuine fairness-aware online learner with a fixed LR / fixed temperature.
     if use_drift_controller:
         return evaluate_over_timesteps(
             model,
@@ -745,7 +562,6 @@ def _run_aranyani_train_then_test(
             static_params=_build_aranyani_static_params(),
         )
 
-    # Pure Aranyani baseline: same offline-trained model, no controller.
     print(
         "[PIPELINE][ARANYANI-BASE] Drift controller disabled; "
         "evaluating with pure Aranyani prequential loop (test-then-train)."
@@ -761,14 +577,6 @@ def _run_aranyani_train_then_test(
         tree_depth=tree_depth,
         num_trees=num_trees,
         fairness_window=int(FLAGS.drift_fairness_window),
-        # Pass the same static_params dict FADO receives so the dataset-specific
-        # overrides (e.g. _COMPAS_FADO_OVERRIDES) apply to BOTH models. The
-        # baseline evaluator only honours ``fairness_window`` and
-        # ``lambda_const`` from this dict (see baseline_evaluator.py lines
-        # 104-106) and silently ignores the drift-controller keys, so it is
-        # safe to pass the full dict. Without this, Base on COMPAS runs with
-        # lambda=0.1 / W=1000 while FADO runs with lambda=10.0 / W=250 -- an
-        # apples-to-oranges comparison that hides any real FADO-vs-Base gap.
         static_params=_build_aranyani_static_params(),
     )
 
@@ -800,10 +608,6 @@ def _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, 
 
 
 def _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, seed=None):
-    # See note in _run_aranyani_train_then_test: RFR also creates models with
-    # untracked RNG draws (np.random.choice for batching, TF default for nets),
-    # so we pin the global seed here to make seeded runs reproducible and to
-    # keep paired comparisons against FADO sharing identical initial conditions.
     if seed is not None:
         _set_global_seed(int(seed))
     fairness_window = int(FLAGS.drift_fairness_window)
@@ -967,10 +771,6 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
         scenarios = ['diabetes']
         print(' Running single Diabetes evaluation')
     elif dataset_key == 'compas':
-        # COMPAS now supports the same per-scenario drift sweep as Adult
-        # (see src/drift/compas_scenarios.py). The single 'no_drift'
-        # scenario reproduces the previous behaviour; the additional
-        # virtual drifts test recovery vs the warm-started model.
         scenarios = list(COMPAS_SCENARIOS.keys())
         print(f' Running all {len(scenarios)} COMPAS drift scenarios')
     else:
@@ -1116,6 +916,8 @@ def main(_):
                 'dataset': dataset_name,
                 'models': models_to_run,
                 'batch_size': int(FLAGS.batch_size),
+                'depth': int(FLAGS.depth),
+                'num_trees': int(FLAGS.num_trees),
                 'lambda_const': float(FLAGS.lambda_const),
                 'drift_scenario': FLAGS.drift_scenario,
                 'drift_adwin_delta_warn': float(FLAGS.drift_adwin_delta_warn),

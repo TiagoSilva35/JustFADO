@@ -1,5 +1,5 @@
 # Fdb version 4
-["pdflatex"] 1789465935.03258 "c:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentation.tex" "presentation.pdf" "presentation" 1789465937.91575 0
+["pdflatex"] 1789465720.60474 "C:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentation.tex" "presentation.pdf" "presentation" 1789465723.91364 2
   "C:/Users/tjcsi/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1789465520 121600 2fc97bcf6d29c33e81405e0e22cba629 ""
   "C:/Users/tjcsi/AppData/Local/MiKTeX/fonts/pk/ljfour/jknappen/ec/dpi600/ecti1000.pk" 1789465526 31892 7ac29aaf24c5c58d40af777445766f12 ""
   "C:/Users/tjcsi/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1789465423 13373065 3237c6d3d0b160170eda9431cc41c9e7 ""
@@ -230,14 +230,15 @@
   "C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/tex/latex/translator/translator.sty" 1622471510 8765 56d370785f0143111ff9898b5adfe08e ""
   "C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/tex/latex/url/url.sty" 1388490452 12796 8edb7d69a20b857904dd0ea757c14ec9 ""
   "C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1729265222 55384 b454dec21c2d9f45ec0b793f0995b992 ""
-  "assets/cisuc_logo.png" 1789462689 19925 e3a705adcd3caac739b8b73e19b68782 ""
-  "assets/mask_updates.png" 1789462689 80897 73c29e0d4040668ee71bda722dcd7b4a ""
-  "assets/probability_updater_performance.png" 1789462689 50090 0e0f6f2daf7b96c20d8937624534c77f ""
-  "c:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentation.tex" 1789465936 11067 01c443360c275c669610521832645622 ""
-  "presentation.aux" 1789465937 3244 b115305d6ac07ada5b933022808cfb2a "pdflatex"
-  "presentation.nav" 1789465937 1011 83c4ff004b77303d878240d0bcc95e05 "pdflatex"
-  "presentation.out" 1789465936 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "presentation.tex" 1789465936 11067 01c443360c275c669610521832645622 ""
+  "C:/Users/tjcsi/Documents/Aranyani2.0/DOCS/presentation/first_meating/presentation.tex" 1789465607 10990 92ac483b7d6fe9362dfd61433f1055f4 ""
+  "DOCS/presentation/first_meating/presentation.tex" 1789465607 10990 92ac483b7d6fe9362dfd61433f1055f4 ""
+  "`assets/mask_updates.png'" 0 -1 0 ""
+  "assets/cisuc_logo.png" 0 -1 0 ""
+  "assets/mask_updates.png" 0 -1 0 ""
+  "assets/probability_updater_performance.png" 0 -1 0 ""
+  "presentation.aux" 1789465723 3201 92b23ff0a24766a73c10ee1e16f74621 "pdflatex"
+  "presentation.nav" 1789465723 1011 83c4ff004b77303d878240d0bcc95e05 "pdflatex"
+  "presentation.out" 1789465722 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
   (generated)
   "presentation.aux"
   "presentation.log"

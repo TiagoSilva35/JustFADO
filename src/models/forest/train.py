@@ -2,7 +2,6 @@
 
 
 import os
-import yaml
 import copy
 import random
 import src.helpers.data as data
@@ -11,9 +10,7 @@ import src.models.forest.aranyani as aranyani
 import numpy as np
 import tensorflow as tf
 from src.helpers import utils
-from src.helpers.constants import NSGA2_PREQ_CONFIG_PATH
 import src.models.forest.clip_forest as clip_forest
-from sklearn.model_selection import train_test_split
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
@@ -142,46 +139,6 @@ def _set_global_seed(seed):
   np.random.seed(seed)
   tf.random.set_seed(seed)
 
-def _load_prequential_nsga2_config():
-  cfg = {
-      'enabled': False,
-      'fairness_type': 'dp',
-      'population_size': 8,
-      'generations': 4,
-      'sample_size': 800,
-      'seed': 42,
-      'target_drift_rate': 0.01,
-      'static_params': {},
-  }
-  if not os.path.exists(NSGA2_PREQ_CONFIG_PATH):
-    return cfg
-  with open(NSGA2_PREQ_CONFIG_PATH) as f:
-    loaded = yaml.safe_load(f) or {}
-  if not isinstance(loaded, dict):
-    return cfg
-  section = loaded.get('nsga2_prequential', loaded)
-  if not isinstance(section, dict):
-    return cfg
-  cfg.update(section)
-  cfg['fairness_type'] = str(cfg.get('fairness_type', 'dp')).lower()
-  if cfg['fairness_type'] not in ['dp', 'eo']:
-    cfg['fairness_type'] = 'dp'
-
-  static_params = cfg.get('static_params', {})
-  if not isinstance(static_params, dict):
-    static_params = {}
-
-  int_keys = ['lr_decay_steps', 'fairness_window', 'cooldown', 'min_samples_per_stream']
-  normalized_static_params = {}
-  for key, value in static_params.items():
-    if key in int_keys:
-      normalized_static_params[key] = int(round(float(value)))
-    else:
-      normalized_static_params[key] = float(value)
-  cfg['static_params'] = normalized_static_params
-  return cfg
-
-
 def _build_forest_model(dataset, data_dim, num_class, depth, num_trees, activation,
                         compute_mode):
   if dataset in ['celeba']:
@@ -201,25 +158,6 @@ def _build_forest_model(dataset, data_dim, num_class, depth, num_trees, activati
       activation=activation,
       compute_mode=compute_mode,
   )
-
-
-def _split_train_validation(x_train, y_train, a_train, validation_ratio, seed):
-  n = len(x_train)
-  if n <= 5:
-    return x_train, y_train, a_train, [], [], []
-  val_n = max(1, int(round(float(validation_ratio) * n)))
-  val_n = min(val_n, n - 1)
-  x_arr = np.asarray(x_train)
-  y_arr = np.asarray(y_train)
-  a_arr = np.asarray(a_train)
-  x_tr, x_val, y_tr, y_val, a_tr, a_val = train_test_split(
-      x_arr, y_arr, a_arr,
-      test_size=val_n,
-      random_state=int(seed),
-      shuffle=True,
-  )
-  return x_tr, y_tr, a_tr, x_val, y_val, a_val
-
 
 
 def train(
@@ -251,9 +189,6 @@ def train(
     folktables_horizon='1-Year',
     seed=42,
 ):
-  # Import tuner lazily to avoid circular imports with src.hpo.tuner.
-  from src.hpo import tuner as hpo_tuner
-
   effective_seed = None if seed is None else int(seed)
   if effective_seed is not None:
     _set_global_seed(effective_seed)
@@ -360,15 +295,6 @@ def train(
             print(f"  Test F1-Score: {test_metrics['f1']:.4f}")
             print(f"{'='*80}\n")
           if prequential:
-              preq_cfg = _load_prequential_nsga2_config()
-              if effective_seed is not None:
-                preq_cfg['seed'] = effective_seed
-              tuned_static_params = hpo_tuner._tune_prequential_static_params(
-                  loaded_model, x_train, y_train, a_train, data_dim,
-                  compute_fairness, lambda_const, depth, num_trees,
-                  constraint_type, gradient_type, effective_base_gamma, preq_cfg,
-              )
-              static_params_to_use = tuned_static_params or preq_cfg.get('static_params') or None
               print("\nRunning prequential (test-then-train) evaluation...")
               # Reload a fresh copy so baseline and prequential start from
               # the same weights and we can compare fairly.
@@ -380,14 +306,14 @@ def train(
                   preq_model, x_test, y_test, a_test, data_dim=data_dim,
                   test_then_train=True,
                   compute_fairness=compute_fairness,
-                  fairness_type=preq_cfg['fairness_type'],
+                  fairness_type='dp',
                   lambda_const=lambda_const,
                   tree_depth=depth,
                   num_trees=num_trees,
                   constraint_type=constraint_type,
                   gradient_type=gradient_type,
                   base_gamma=effective_base_gamma,
-                  static_params=static_params_to_use,
+                  static_params=None,
               )
               plot_metrics_over_timesteps(preq_results,
                                           save_path='files/metrics_prequential.png')
@@ -457,48 +383,6 @@ def train(
   if data_dim is None or num_class is None:
     raise ValueError(f'Unsupported or misconfigured dataset: {dataset}')
 
-  tree_cfg = hpo_tuner._load_tree_nsga2_config()
-  if effective_seed is not None:
-    tree_cfg = dict(tree_cfg)
-    tree_cfg['seed'] = effective_seed
-  if bool(tree_cfg['enabled']) and len(x_train) > 1:
-    split_seed = int(tree_cfg['seed'])
-    x_inner_train, y_inner_train, a_inner_train, x_val, y_val, a_val = _split_train_validation(
-        x_train, y_train, a_train, tree_cfg['validation_ratio'], split_seed
-    )
-    tuned_tree = hpo_tuner._tune_tree_hyperparameters_nsga2(
-        dataset=dataset,
-        x_train=x_inner_train,
-        y_train=y_inner_train,
-        a_train=a_inner_train,
-        x_val=x_val,
-        y_val=y_val,
-        a_val=a_val,
-        data_dim=data_dim,
-        num_class=num_class,
-        base_depth=depth,
-        base_num_trees=num_trees,
-        compute_fairness=compute_fairness,
-        base_lambda_const=lambda_const,
-        batch_size=batch_size,
-        activation=activation,
-        compute_mode=compute_mode,
-        base_gamma=effective_base_gamma,
-        constraint_type=constraint_type,
-        gradient_type=gradient_type,
-        local_run=local_run,
-        tree_cfg=tree_cfg,
-    )
-    if tuned_tree is not None:
-      depth = int(tuned_tree['depth'])
-      num_trees = int(tuned_tree['num_trees'])
-      lambda_const = float(tuned_tree['lambda_const'])
-      print(
-          f"[NSGA2-TREE] Applying tuned settings for final training: "
-          f"depth={depth}, num_trees={num_trees}, lambda_const={lambda_const:.4f}"
-      )
-
-
   print(f'DP in the original dataset: {utils.get_demographic_parity(y_train, a_train)[0]}')
   print(f"EO in the original dataset: {utils.get_equalized_odds(y_train, a_train, y_train)[0]}")
   
@@ -560,29 +444,20 @@ def train(
   timestep_results = None
   if drift and x_test is not None and len(x_test) > 0:
     if prequential:
-      preq_cfg = _load_prequential_nsga2_config()
-      if effective_seed is not None:
-        preq_cfg['seed'] = effective_seed
-      tuned_static_params = hpo_tuner._tune_prequential_static_params(
-          trained_model, x_train, y_train, a_train, data_dim,
-          compute_fairness, lambda_const, depth, num_trees,
-            constraint_type, gradient_type, effective_base_gamma, preq_cfg,
-      )
-      static_params_to_use = tuned_static_params or preq_cfg.get('static_params') or None
       print("\nRunning prequential (test-then-train) evaluation...")
       preq_model = copy.deepcopy(trained_model)
       preq_results = utils.evaluate_over_timesteps(
           preq_model, x_test, y_test, a_test, data_dim=data_dim,
           test_then_train=True,
           compute_fairness=compute_fairness,
-          fairness_type=preq_cfg['fairness_type'],
+          fairness_type='dp',
           lambda_const=lambda_const,
           tree_depth=depth,
           num_trees=num_trees,
           constraint_type=constraint_type,
           gradient_type=gradient_type,
           base_gamma=effective_base_gamma,
-          static_params=static_params_to_use,
+          static_params=None,
       )
       plot_metrics_over_timesteps(preq_results,
                                   save_path='files/metrics_prequential.png')
