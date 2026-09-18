@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.5) (preloaded format=pdflatex 2026.9.15)  15 SEP 2026 10:52
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.5) (preloaded format=pdflatex 2026.9.15)  18 SEP 2026 10:41
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -1196,12 +1196,20 @@ LaTeX Font Warning: Font shape `OMS/cmsy/m/n' in size <6.5> not available
 File: assets/probability_updater_performance.png Graphic file (type png)
 <use assets/probability_updater_performance.png>
 Package pdftex.def Info: assets/probability_updater_performance.png  used on in
-put line 215.
-(pdftex.def)             Requested size: 505.89pt x 309.16367pt.
+put line 220.
+(pdftex.def)             Requested size: 448.07378pt x 273.82825pt.
+<assets/leaf_probability_update_performance.pdf, id=61, 513.15778pt x 309.82312
+pt>
+File: assets/leaf_probability_update_performance.pdf Graphic file (type pdf)
+<use assets/leaf_probability_update_performance.pdf>
+Package pdftex.def Info: assets/leaf_probability_update_performance.pdf  used o
+n input line 220.
+(pdftex.def)             Requested size: 448.07378pt x 270.52725pt.
  [7
 
- <./assets/probability_updater_performance.png>]
-LaTeX Font Info:    Calculating math sizes for size <14> on input line 233.
+ <./assets/probability_updater_performance.png> <./assets/leaf_probability_upda
+te_performance.pdf>]
+LaTeX Font Info:    Calculating math sizes for size <14> on input line 238.
  [8
 
 ] [9
@@ -1216,8 +1224,7 @@ LaTeX Font Info:    Calculating math sizes for size <14> on input line 233.
 \tf@snm=\write8
 \openout8 = `presentation.snm'.
 
-
-(presentation.aux)
+ (presentation.aux)
  ***********
 LaTeX2e <2026-06-01>
 L3 programming layer <2026-08-10>
@@ -1231,10 +1238,10 @@ Package rerunfilecheck Info: File `presentation.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 26071 strings out of 467441
- 520101 string characters out of 5407591
- 899612 words of memory out of 5000000
- 54840 multiletter control sequences out of 15000+600000
+ 26076 strings out of 467441
+ 520458 string characters out of 5407591
+ 899657 words of memory out of 5000000
+ 54845 multiletter control sequences out of 15000+600000
  813991 words of font info for 191 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  128i,14n,123p,478b,1095s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -1252,9 +1259,9 @@ si/AppData/Local/Programs/MiKTeX/fonts/type1/public/tex-gyre/qhvb.pfb><C:/Users
 Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/tex-gyre/qhvr.pfb>
 <C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/tex-gyre/qhvri
 .pfb>
-Output written on presentation.pdf (9 pages, 319038 bytes).
+Output written on presentation.pdf (9 pages, 340913 bytes).
 PDF statistics:
- 159 PDF objects out of 1000 (max. 8388607)
+ 224 PDF objects out of 1000 (max. 8388607)
  19 named destinations out of 1000 (max. 500000)
- 58 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 63 words of extra memory for PDF output out of 10000 (max. 10000000)
 

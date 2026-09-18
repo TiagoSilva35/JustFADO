@@ -2,13 +2,13 @@
   {
     "model": "aranyani",
     "scenario": "no_drift",
-    "accuracy": 0.8522216382117093,
-    "dp": 0.07865375241098937,
-    "eo": 0.0434062227171985,
-    "stream_final_accuracy": 0.8522216382117093,
-    "stream_final_dp": 0.07865375241098937,
-    "stream_final_eo": 0.0434062227171985,
-    "elapsed_seconds": 4620.1,
+    "accuracy": 0.8506831771700463,
+    "dp": 0.0889615007392157,
+    "eo": 0.052715554062405474,
+    "stream_final_accuracy": 0.8506831771700463,
+    "stream_final_dp": 0.0889615007392157,
+    "stream_final_eo": 0.052715554062405474,
+    "elapsed_seconds": 39663.7,
     "error": null
   }
 ]

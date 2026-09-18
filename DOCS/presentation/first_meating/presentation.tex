@@ -208,9 +208,14 @@
 \pageset{Tree Depth}{05}
 \begin{frame}
   \ctitle{Tree depth: mask products vs. recursive \color{cred}\textit{\underline{performance}}}
-  \centerimage{7}{2}{assets/probability_updater_performance.png}
+  \tb{6.2}{0.85}{2.0}{
+    \includegraphics[width=6.2in]{assets/probability_updater_performance.png}
+  }
+  \tb{6.2}{7.0}{2.0}{
+    \includegraphics[width=6.2in]{assets/leaf_probability_update_performance.pdf}
+  }
   \slidefoot{We can now ablate how trees' depth affect the forest's predictive and fairness metrics}
-  \footnote{Stopped at n = 14 because the mask's runtime became unbearable.}
+  \footnote{Stopped at n = 14 for GPU and n = 11 for CPU because the mask's runtime became unbearable.}
 
 \end{frame}
 
