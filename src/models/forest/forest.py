@@ -16,25 +16,20 @@ class FairDecisionForest(tf.Module):
                tree_depth,
                num_classes,
                activation='sigmoid',
-               compute_mode='default'):
-    """Constructor.
-
-    Args:
-      num_trees: number of trees in the forest.
-      data_dim: dimension of the data. 
-      tree_depth: depth of the binary tree. 
-      num_classes: number of target task classes.
-      activation: activation function.
-      compute_mode: log or default.
-    """
-
+               compute_mode='default',
+               use_recursive_updater=None):
     super(FairDecisionForest, self).__init__()
     assert tree_depth > 1
     assert num_trees >= 1
+    self.use_recursive_updater = (
+        fdt.RECURSIVE_UPDATER if use_recursive_updater is None
+        else bool(use_recursive_updater)
+    )
     self.layers = []
     for _ in range(num_trees):
       self.layers.append(fdt.FairDecisionTree(
-          data_dim, tree_depth, num_classes, activation, compute_mode))
+          data_dim, tree_depth, num_classes, activation, compute_mode,
+          use_recursive_updater=self.use_recursive_updater))
 
   def __call__(self, inputs, training=False):
     all_predictions = []
@@ -60,15 +55,6 @@ class FairDecisionForest(tf.Module):
     return final_prediction
   
   def predict_per_tree(self, inputs):
-    """Run inference and return per-tree predictions.
-
-    Args:
-      inputs: Input tensor of shape [batch_size, data_dim].
-
-    Returns:
-      stacked_predictions: Tensor of shape [num_trees, batch_size, num_classes].
-      final_prediction: Averaged prediction of shape [batch_size, num_classes].
-    """
     all_predictions = []
     for layer in self.layers:
       prediction = layer(inputs, training=False)
@@ -78,16 +64,6 @@ class FairDecisionForest(tf.Module):
     return stacked_predictions, final_prediction
 
   def reset_tree(self, tree_id):
-    """Reinitialise only the leaf parameters (theta) of a single tree.
-
-    The routing structure (weight, bias) is preserved so the tree keeps
-    its learned split decisions. Only the leaf class distributions are
-    re-randomised, allowing the tree to quickly adapt to a new target
-    distribution after drift without discarding routing knowledge.
-
-    Args:
-      tree_id: Index into self.layers of the tree to reset.
-    """
     tree = self.layers[tree_id]
     num_leaves  = tree.theta.shape[0]
     num_classes = tree.theta.shape[1]
@@ -119,6 +95,7 @@ class FairDecisionForest(tf.Module):
           'num_classes': tree.theta.shape[1],
           'activation': tree.activation.__name__,
           'compute_mode': tree.compute_mode,
+          'use_recursive_updater': bool(tree.use_recursive_updater),
       }
       model_data['weights'].append(tree_data)
     
@@ -151,6 +128,9 @@ class FairDecisionForest(tf.Module):
         num_classes=first_tree['num_classes'],
         activation=first_tree['activation'],
         compute_mode=first_tree['compute_mode'],
+        # Older checkpoints predate the per-model code-path switch; they were
+        # produced on the recursive path, which is also the module default.
+        use_recursive_updater=first_tree.get('use_recursive_updater', None),
     )
     
     # Load weights for each tree

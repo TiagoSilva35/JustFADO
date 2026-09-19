@@ -24,6 +24,26 @@ def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
     return inferred_tree_depth, inferred_num_trees
 
 
+def _warn_unexpected_code_path(model, expected_recursive, tag):
+    """Warn (without mutating the model) if the forest is on the wrong path.
+
+    The leaf-probability code path is fixed when the forest is built, so a
+    mismatch here means the caller wired FADO and Aranyani-Base to the same
+    model configuration and the comparison is no longer isolated.
+    """
+    trees = getattr(model, 'layers', None)
+    if not trees:
+        return
+    actual = {bool(getattr(tree, 'use_recursive_updater', True)) for tree in trees}
+    if actual != {bool(expected_recursive)}:
+        print(
+            f"[{tag}][WARN] forest was built with use_recursive_updater="
+            f"{sorted(actual)} but this evaluator expects "
+            f"{bool(expected_recursive)}. The FADO vs Aranyani-Base efficiency "
+            f"comparison will not be isolated."
+        )
+
+
 def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                             test_then_train=True, learning_rate=2e-3,
                             accuracy_window=200,
@@ -102,7 +122,12 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_attributes)
 
     print(f"Inferred tree depth: {tree_depth}, number of trees: {num_trees}, internal nodes per tree: {num_internal_nodes}")
-    fairness_window = utils.RollingFairnessWindow(FAIRNESS_WINDOW)
+    # FADO runs the optimised monitors: incremental O(NA) counters here and the
+    # recursive O(B x 2^n) leaf-probability updater in the forest. The
+    # Aranyani-Base evaluator deliberately keeps the legacy paths so the
+    # efficiency gain is attributable to FADO alone.
+    fairness_window = utils.make_fairness_window(FAIRNESS_WINDOW, incremental=True)
+    _warn_unexpected_code_path(model, expected_recursive=True, tag='FADO')
     
     huber_loss_delta = 0.1
 

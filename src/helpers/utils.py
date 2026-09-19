@@ -170,7 +170,7 @@ class RollingFairnessWindow:
   def demographic_parity(self):
     rates = [
         self.group_predicted_positive[group] / self.group_total[group]
-        for group in self.group_total
+        for group in sorted(self.group_total)
     ]
     return self._deviation(rates)
 
@@ -181,7 +181,7 @@ class RollingFairnessWindow:
       rates = [
           self.subgroup_predicted_positive[(group, true_label)]
           / self.subgroup_total[(group, true_label)]
-          for group in self.group_total
+          for group in sorted(self.group_total)
           if self.subgroup_total[(group, true_label)] > 0
       ]
       eo, sign = self._deviation(rates)
@@ -202,8 +202,6 @@ def get_demographic_parity(y_predictions, y_protected):
   if unique_groups.size == 0:
     return 0.0, 1.0
 
-  # Keep parity reporting aligned with the fairness objective:
-  # compare each group against the unweighted mean of group rates.
   group_rates = {}
   for group_value in unique_groups:
     group_mask = protected_group == group_value
@@ -269,6 +267,57 @@ def get_equalized_odds(y_predictions, y_protected, y_true):
         dominant_raw_diff = raw_diff
 
   return float(max_abs_diff), float(np.copysign(1, dominant_raw_diff))
+
+
+class LegacyFairnessWindow:
+  """Full-window recomputation of DP and EO (pre-optimisation path).
+
+  This is the fairness monitor Aranyani used *before* the incremental-counter
+  optimisation. It is kept deliberately so the pure-Aranyani baseline can run
+  on the original code path, leaving ``RollingFairnessWindow`` exclusive to the
+  FADO pipeline and making the reported efficiency gain attributable to FADO
+  alone.
+
+  The reported values are identical to ``RollingFairnessWindow``; only the cost
+  differs -- O(NW) rescans of the window instead of O(NA) counter updates.
+  Exposes the same ``append`` / ``demographic_parity`` / ``equalized_odds``
+  interface so call sites are interchangeable.
+  """
+
+  def __init__(self, maxlen):
+    self.maxlen = max(1, int(maxlen))
+    self.predictions = deque(maxlen=self.maxlen)
+    self.protected = deque(maxlen=self.maxlen)
+    self.true_labels = deque(maxlen=self.maxlen)
+
+  def append(self, prediction, protected, true_label):
+    self.predictions.append(int(prediction))
+    self.protected.append(int(protected))
+    self.true_labels.append(int(true_label))
+
+  def demographic_parity(self):
+    return get_demographic_parity(
+        list(self.predictions), list(self.protected)
+    )
+
+  def equalized_odds(self):
+    return get_equalized_odds(
+        list(self.predictions), list(self.protected), list(self.true_labels)
+    )
+
+
+def make_fairness_window(maxlen, incremental=True):
+  """Return the fairness monitor for the requested code path.
+
+  Args:
+    maxlen: fairness window size.
+    incremental: ``True`` selects the O(NA) counter-based window (FADO only),
+      ``False`` the legacy O(NW) full-window recomputation (Aranyani-Base and
+      any other untouched baseline).
+  """
+  if incremental:
+    return RollingFairnessWindow(maxlen)
+  return LegacyFairnessWindow(maxlen)
 
 
 def get_test_performance(model, x_test, y_test, a_test, data_dim,

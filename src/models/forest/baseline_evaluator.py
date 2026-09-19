@@ -12,7 +12,14 @@ Specifically, this evaluator:
   * does NOT modulate the optimizer learning rate (fixed at ``learning_rate``),
   * does NOT modulate the soft-routing temperature (left untouched),
   * does NOT apply the label-noise guard or cooldown logic,
-  * does NOT track drift events.
+  * does NOT track drift events,
+  * does NOT use any of the FADO efficiency optimisations: fairness metrics are
+    recomputed over the full window (legacy O(NW)) instead of maintained with
+    incremental counters, and the forest is expected to run the original
+    mask-product leaf-probability path (O(B x 4^n)) rather than the recursive
+    updater. Both legacy paths are numerically identical to their optimised
+    counterparts, so only runtime differs -- which is exactly what makes the
+    reported speed-up attributable to FADO alone.
 
 It keeps the prequential test-then-train protocol, the rolling-window
 fairness monitoring, and the fairness-aware online updates (node-level
@@ -54,6 +61,21 @@ def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
     return inferred_tree_depth, inferred_num_trees
 
 
+def _warn_unexpected_code_path(model, expected_recursive, tag):
+    """Warn (without mutating the model) if the forest is on the wrong path."""
+    trees = getattr(model, 'layers', None)
+    if not trees:
+        return
+    actual = {bool(getattr(tree, 'use_recursive_updater', True)) for tree in trees}
+    if actual != {bool(expected_recursive)}:
+        print(
+            f"[{tag}][WARN] forest was built with use_recursive_updater="
+            f"{sorted(actual)} but this evaluator expects "
+            f"{bool(expected_recursive)}. The FADO vs Aranyani-Base efficiency "
+            f"comparison will not be isolated."
+        )
+
+
 def evaluate_aranyani_baseline_over_timesteps(
     model,
     x_test,
@@ -73,6 +95,7 @@ def evaluate_aranyani_baseline_over_timesteps(
     base_gamma=0.9,
     fairness_window=1000,
     static_params=None,
+    use_incremental_fairness=False,
 ):
     """Run the Aranyani base learner prequentially without any drift response.
 
@@ -138,7 +161,17 @@ def evaluate_aranyani_baseline_over_timesteps(
             f"trees={num_trees}, internal_nodes={num_internal_nodes}"
         )
 
-    fairness_window_state = utils.RollingFairnessWindow(FAIRNESS_WINDOW)
+    # Legacy O(NW) recomputation by default: the incremental counter window is
+    # a FADO-only optimisation. Values are identical either way.
+    fairness_window_state = utils.make_fairness_window(
+        FAIRNESS_WINDOW, incremental=use_incremental_fairness
+    )
+    print(
+        "[ARANYANI-BASELINE] fairness monitor: "
+        + ("incremental counters (O(NA))" if use_incremental_fairness
+           else "legacy full-window recomputation (O(NW))")
+    )
+    _warn_unexpected_code_path(model, expected_recursive=False, tag='ARANYANI-BASELINE')
 
     huber_loss_delta = 0.1
 

@@ -526,12 +526,13 @@ def _run_aranyani_train_then_test(
     tree_depth = int(FLAGS.depth)
     num_trees = int(FLAGS.num_trees)
     lambda_const = float(FLAGS.lambda_const)
-
+    use_fado_optimisations = bool(use_drift_controller)
     model = forest.FairDecisionForest(
         num_trees=num_trees,
         tree_depth=tree_depth,
         data_dim=data_dim,
         num_classes=2,
+        use_recursive_updater=use_fado_optimisations,
     )
     aranyani.train_online(
         model,
@@ -547,6 +548,7 @@ def _run_aranyani_train_then_test(
         constraint_type=FLAGS.constraint_type,
         gradient_type=FLAGS.gradient_type,
         local_run=True,
+        use_incremental_fairness=use_fado_optimisations,
     )
     if use_drift_controller:
         return evaluate_over_timesteps(
@@ -578,6 +580,7 @@ def _run_aranyani_train_then_test(
         num_trees=num_trees,
         fairness_window=int(FLAGS.drift_fairness_window),
         static_params=_build_aranyani_static_params(),
+        use_incremental_fairness=False,
     )
 
 

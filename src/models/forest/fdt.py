@@ -6,7 +6,6 @@ import tensorflow_probability as tfp
 import logging
 
 logging.basicConfig(level=logging.INFO)
-
 RECURSIVE_UPDATER = True
 
 def construct_mask_matrix(tree_depth=3):
@@ -41,16 +40,8 @@ class FairDecisionTree(tf.Module):
                tree_depth,
                num_classes,
                activation='sigmoid',
-               compute_mode='log'):
-    """Constructor.
-
-    Args: 
-      data_dim: dimension of the data. 
-      tree_depth: depth of the binary tree. 
-      num_classes: number of target task classes.
-      activation: activation function.
-      compute_mode: log domain or normal.
-    """
+               compute_mode='log',
+               use_recursive_updater=None):
 
     super(FairDecisionTree, self).__init__()
     assert tree_depth > 1
@@ -109,6 +100,10 @@ class FairDecisionTree(tf.Module):
         dtype=tf.float32
     )
     self.compute_mode = compute_mode    
+    self.use_recursive_updater = (
+        RECURSIVE_UPDATER if use_recursive_updater is None
+        else bool(use_recursive_updater)
+    )
 
   def _recursive_updater_(self, node_decisions, probs, depth):  
     if depth == 0:
@@ -124,7 +119,7 @@ class FairDecisionTree(tf.Module):
   def __call__(self, inputs, training=False, pred_type='categorical'):
     logits = (tf.matmul(inputs, self.weight) + self.bias) / self.temperature
     raw_node_decisions = self.activation(logits)
-    if RECURSIVE_UPDATER:
+    if self.use_recursive_updater:
       leaf_probs = self._recursive_updater_(
         raw_node_decisions[0],
         tf.ones([1], dtype=raw_node_decisions.dtype),

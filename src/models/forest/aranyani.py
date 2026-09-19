@@ -26,6 +26,7 @@ def train_online(
     local_run=False,
     fairness_type='dp',
     fairness_window=1000,
+    use_incremental_fairness=True,
 ):
   if fairness_type not in SUPPORTED_FAIRNESS_TYPES:
     raise ValueError(f"Fairness type {fairness_type} not supported. Choose from {SUPPORTED_FAIRNESS_TYPES}.")
@@ -71,8 +72,18 @@ def train_online(
   equalized_odds = []
   accuracies = []
   
-  # Incremental rolling statistics avoid rescanning the full window.
-  fairness_window_state = utils.RollingFairnessWindow(fairness_window)
+  # Fairness monitor. The incremental O(NA) counter window is a FADO-pipeline
+  # optimisation; the pure-Aranyani baseline passes
+  # ``use_incremental_fairness=False`` and runs the legacy O(NW) full-window
+  # recomputation instead, so the speed-up stays attributable to FADO.
+  fairness_window_state = utils.make_fairness_window(
+      fairness_window, incremental=use_incremental_fairness
+  )
+  print(
+      "fairness monitor:",
+      "incremental counters (O(NA))" if use_incremental_fairness
+      else "legacy full-window recomputation (O(NW))",
+  )
 
   # hyperparameters
   huber_loss_delta = 0.1
