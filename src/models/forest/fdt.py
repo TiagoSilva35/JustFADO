@@ -6,7 +6,34 @@ import tensorflow_probability as tfp
 import logging
 
 logging.basicConfig(level=logging.INFO)
+
+LEAF_PROBABILITY_MODES = ('auto', 'recursive', 'mask')
+DEFAULT_LEAF_PROBABILITY = 'auto'
+
+# Depth at or above which the recursive path (O(B x 2^n)) beats the mask path
+# (O(B x 4^n)). The asymptotics are about FLOPs, but in eager mode at batch 1
+# the runtime is dominated by the NUMBER of dispatched ops: the mask path
+# issues a constant handful regardless of depth, the recursive path ~4 per
+# level. Measured at batch 1 (TESTS/rec_leaf_prob.py): mask wins up to depth 8,
+# recursive takes over around 9-10. Hardware-dependent -- re-measure and update.
+RECURSIVE_UPDATER_MIN_DEPTH = 9
+
+# Legacy boolean alias for leaf_probability (True -> 'recursive').
 RECURSIVE_UPDATER = True
+
+
+def resolve_leaf_probability(mode, tree_depth):
+  """Resolve a requested mode to 'recursive' or 'mask'."""
+  if mode is None:
+    mode = DEFAULT_LEAF_PROBABILITY
+  if isinstance(mode, bool):
+    return 'recursive' if mode else 'mask'
+  mode = str(mode).lower()
+  if mode not in LEAF_PROBABILITY_MODES:
+    raise ValueError(f"leaf_probability must be one of {LEAF_PROBABILITY_MODES}, got {mode!r}")
+  if mode == 'auto':
+    return 'recursive' if int(tree_depth) >= RECURSIVE_UPDATER_MIN_DEPTH else 'mask'
+  return mode
 
 def construct_mask_matrix(tree_depth=3):
   """Construct mask matrix for efficient DT training."""
@@ -41,6 +68,7 @@ class FairDecisionTree(tf.Module):
                num_classes,
                activation='sigmoid',
                compute_mode='log',
+               leaf_probability=None,
                use_recursive_updater=None):
 
     super(FairDecisionTree, self).__init__()
@@ -100,34 +128,56 @@ class FairDecisionTree(tf.Module):
         dtype=tf.float32
     )
     self.compute_mode = compute_mode    
-    self.use_recursive_updater = (
-        RECURSIVE_UPDATER if use_recursive_updater is None
-        else bool(use_recursive_updater)
+    requested = leaf_probability if leaf_probability is not None else use_recursive_updater
+    self.leaf_probability_mode = (
+        DEFAULT_LEAF_PROBABILITY if requested is None else requested
     )
+    self.leaf_probability = resolve_leaf_probability(requested, tree_depth)
+    # Resolved boolean, kept for call sites and checkpoints that speak in
+    # terms of use_recursive_updater.
+    self.use_recursive_updater = (self.leaf_probability == 'recursive')
 
-  def _recursive_updater_(self, node_decisions, probs, depth):  
-    if depth == 0:
-        return probs
-    probs = self._recursive_updater_(node_decisions, probs, depth-1)
-    decisions = node_decisions[2**(depth-1)-1:2**depth-1] 
-    next_probs = [None] * (len(probs) * 2)
-    for i, decision in enumerate(decisions):
-        next_probs[2*i] = probs[i] * decision
-        next_probs[2*i+1] = probs[i] * (1 - decision)
-    return tf.stack(next_probs)
+  def set_leaf_probability(self, mode):
+    """Switch the leaf-probability path on an existing tree."""
+    self.leaf_probability_mode = mode
+    self.leaf_probability = resolve_leaf_probability(mode, self.tree_depth)
+    self.use_recursive_updater = (self.leaf_probability == 'recursive')
+
+  def _recursive_updater_(self, node_decisions):
+    """Leaf probabilities by level-wise propagation.
+
+    Walks one LEVEL at a time rather than one leaf at a time, so each partial
+    path probability is computed once and reused by both children. Replaces a
+    version that built a Python list of 2^depth scalar products per call (~100x
+    slower at depth 10) and indexed node_decisions[0], silently dropping every
+    sample of a batch but the first.
+
+    Args:
+      node_decisions: [batch, num_internal_nodes].
+    Returns:
+      [batch, num_leaves], each row summing to 1.
+    """
+    batch = tf.shape(node_decisions)[0]
+    probs = tf.ones([batch, 1], dtype=node_decisions.dtype)
+    for level in range(self.tree_depth):
+      start = 2 ** level - 1
+      end = 2 ** (level + 1) - 1
+      decisions = node_decisions[:, start:end]
+      probs = tf.reshape(
+          tf.stack([probs * decisions, probs * (1.0 - decisions)], axis=-1),
+          [batch, -1],
+      )
+    return probs
   
   def __call__(self, inputs, training=False, pred_type='categorical'):
     logits = (tf.matmul(inputs, self.weight) + self.bias) / self.temperature
     raw_node_decisions = self.activation(logits)
     if self.use_recursive_updater:
-      leaf_probs = self._recursive_updater_(
-        raw_node_decisions[0],
-        tf.ones([1], dtype=raw_node_decisions.dtype),
-        self.tree_depth,
-      )
-      leaf_probs = tf.expand_dims(leaf_probs, axis=0)
+      leaf_probs = self._recursive_updater_(raw_node_decisions)
       if self.compute_mode == 'log':
-        leaf_probs = tf.math.log(leaf_probs)
+        # mask path adds 1e-8 per node probability; equivalent guard here is
+        # on the product, so an underflowed leaf does not give log(0).
+        leaf_probs = tf.math.log(leaf_probs + 1e-8)
         theta = tf.expand_dims(self.theta, axis=0)
         prediction = tf.math.exp(tf.expand_dims(leaf_probs, axis=2) + theta)
         prediction = tf.reduce_sum(prediction, axis=1)

@@ -1,8 +1,11 @@
 """Script for online training."""
+import time
+
 import numpy as np
 import tensorflow as tf
 import tqdm
 import src.models.forest.initializers as initializers
+from src.models.forest.initializers import build_variable_layout
 import src.helpers.utils as utils
 from src.helpers.weight_monitor import ClassWeightMonitor
 
@@ -27,6 +30,7 @@ def train_online(
     fairness_type='dp',
     fairness_window=1000,
     use_incremental_fairness=True,
+    timing_sink=None,
 ):
   if fairness_type not in SUPPORTED_FAIRNESS_TYPES:
     raise ValueError(f"Fairness type {fairness_type} not supported. Choose from {SUPPORTED_FAIRNESS_TYPES}.")
@@ -85,6 +89,17 @@ def train_online(
       else "legacy full-window recomputation (O(NW))",
   )
 
+  # Pre-training runtime is measured too: with the FADO-only optimisations the
+  # pre-training phase runs on different code paths in the two arms, so its
+  # cost has to be reported alongside the prequential phase rather than
+  # assumed. ``timing_sink`` is an optional dict the caller passes in to
+  # receive the report without changing this function's return signature.
+  timer = utils.PhaseTimer()
+  n_train_samples = int(np.asarray(inputs).shape[0])
+
+  # D2: resolve the fairness penalty onto variables by identity, not by
+  # tensor shape (theta collides with weight when data_dim == num_leaves).
+  variable_layout = build_variable_layout(model)
   # hyperparameters
   huber_loss_delta = 0.1
   all_tree_trainable_vars = []
@@ -96,6 +111,7 @@ def train_online(
       inputs_batch,
       targets_batch,
       protected_batch) in enumerate(iterations):
+    _iter_t0 = time.perf_counter()
     # ``persistent`` is only needed when ``.gradient`` is called more than once.
     # The 'node' fairness gradient is now analytic (see
     # ``initializers.accumulate_fairness_stats``), so the only tape traversal
@@ -133,14 +149,13 @@ def train_online(
       y_predictions.extend(y_pred_np)
       y_true_all.extend(targets_np)
       
-      for i in range(len(y_pred_np)):
-        fairness_window_state.append(
-          y_pred_np[i], protected_np[i], targets_np[i]
-        )
-      
-      # Compute fairness on rolling window only (no O(n²) recomputation)
-      dp, dp_sign = fairness_window_state.demographic_parity()
-      eo, eo_sign = fairness_window_state.equalized_odds()
+      with timer.phase('fairness_metrics'):
+        for i in range(len(y_pred_np)):
+          fairness_window_state.append(
+            y_pred_np[i], protected_np[i], targets_np[i]
+          )
+        dp, dp_sign = fairness_window_state.demographic_parity()
+        eo, eo_sign = fairness_window_state.equalized_odds()
 
       demographic_parities.append(dp)
       equalized_odds.append(eo)
@@ -184,10 +199,28 @@ def train_online(
           subgroup_count, protected_class_count,
           fairness_type, lambda_const,
           num_internal_nodes, data_dim, number_of_attributes,
-          gradient_type, base_gamma, huber_loss_delta, dp_sign=dp_sign, constraint_type=constraint_type
+          gradient_type, base_gamma, huber_loss_delta,
+          dp_sign=dp_sign, constraint_type=constraint_type,
+          variable_layout=variable_layout,
       )
     del tape
     optimizer.apply_gradients(zip(total_gradients, model.trainable_variables))
+    timer.add('train_step', time.perf_counter() - _iter_t0)
+
+  timing_report = timer.report(
+      n_samples=n_train_samples,
+      extra={'code_paths': {
+          'leaf_probability': sorted({
+              str(getattr(tr, 'leaf_probability', 'recursive'))
+              for tr in getattr(model, 'layers', [])
+          }),
+          'fairness_metrics': type(fairness_window_state).__name__,
+      }},
+  )
+  print(utils.format_timing_report(timing_report, tag='PRETRAIN'))
+  if timing_sink is not None:
+      timing_sink.clear()
+      timing_sink.update(timing_report)
 
   y_true_array = np.array(y_true_all)
   y_pred_array = np.array(y_predictions)

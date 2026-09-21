@@ -1,7 +1,11 @@
+import atexit
+import hashlib
 import json
 import numbers
 import os
 import random
+import shutil
+import tempfile
 import time
 
 import numpy as np
@@ -39,6 +43,7 @@ from src.helpers.data import (
 from src.models.arf.arf import evaluate_arf_over_timesteps
 from src.models.forest.baseline_evaluator import evaluate_aranyani_baseline_over_timesteps
 from src.models.forest.evaluator import evaluate_over_timesteps
+from src.models.forest.controller import ControllerConfig, PRESETS as CONTROLLER_PRESETS
 from src.models.forest.train import FLAGS, _set_global_seed
 from src.models.rfr.evaluator import evaluate_rfr_over_timesteps
 
@@ -113,8 +118,10 @@ def _dataset_name():
 
 
 _COMPAS_FADO_OVERRIDES = {
-    'adwin_delta_warn': 1e-3,
-    'adwin_delta_confirm': 0.2,
+    # A1: warning must be the MORE sensitive detector (larger delta in river),
+    # so these two were swapped relative to the previous values.
+    'adwin_delta_warn': 0.2,
+    'adwin_delta_confirm': 1e-3,
     'fairness_window': 250,
     'min_samples_per_stream': 20,
     'lr_decay_steps': 600,
@@ -128,6 +135,18 @@ _FOLKTABLES_FADO_OVERRIDES = {
 }
 
 
+def _effective_accuracy_window():
+    """Rolling window for the reported prequential accuracy, shared by every arm.
+
+    B1/B2: accuracy used to be reported as a cumulative curve while DP/EO were
+    windowed. Every evaluator now reports a rolling accuracy, and they all use
+    this window so the arms stay comparable on one time scale. 0 means "follow
+    the fairness window".
+    """
+    window = int(FLAGS.drift_accuracy_window)
+    return window if window > 0 else int(FLAGS.drift_fairness_window)
+
+
 def _build_aranyani_static_params():
     params = {
         'adwin_delta_warn': float(FLAGS.drift_adwin_delta_warn),
@@ -136,6 +155,8 @@ def _build_aranyani_static_params():
         'drift_lr_spike_mult': float(FLAGS.drift_lr_spike_mult),
         'lr_decay_steps': int(FLAGS.drift_lr_decay_steps),
         'fairness_window': int(FLAGS.drift_fairness_window),
+        # 0 -> evaluators fall back to the fairness window (B2).
+        'accuracy_window': int(FLAGS.drift_accuracy_window),
         'cooldown': int(FLAGS.drift_cooldown),
         'min_samples_per_stream': int(FLAGS.drift_min_samples_per_stream),
         'temperature_on_drift': float(FLAGS.drift_temperature_on_drift),
@@ -149,6 +170,24 @@ def _build_aranyani_static_params():
     elif dataset_key == 'folktables':
         params.update(_FOLKTABLES_FADO_OVERRIDES)
     return params
+
+
+# Ablation arms. These are NOT part of the default model set -- running every
+# preset on every scenario would multiply the pipeline cost. Request one with
+# --pipeline_model=fado_lr_only, or several with --pipeline_model=fado_lr_only,
+# fado_temp_only, or build one ad hoc with --controller_components.
+_ABLATION_MODELS = sorted(name for name in CONTROLLER_PRESETS if name.startswith('fado'))
+
+
+def _controller_for_model(model_name):
+    """Controller configuration for a pipeline model name."""
+    name = str(model_name).strip().lower()
+    spec = str(FLAGS.controller_components).strip()
+    if name in ('aranyani', 'fado', 'fado_full'):
+        return ControllerConfig.from_spec(spec) if spec else ControllerConfig()
+    if name in CONTROLLER_PRESETS:
+        return CONTROLLER_PRESETS[name]
+    raise ValueError(f"No controller configuration for model '{model_name}'.")
 
 
 def _supported_models_for_dataset(dataset_name):
@@ -167,16 +206,19 @@ def _supported_models_for_dataset(dataset_name):
 
 
 def _resolve_pipeline_models(dataset_name):
-    requested_model = str(FLAGS.pipeline_model).strip().lower()
+    requested = str(FLAGS.pipeline_model).strip().lower()
     supported_models = _supported_models_for_dataset(dataset_name)
-    if not requested_model:
+    if not requested:
         return supported_models
-    if requested_model not in supported_models:
-        raise ValueError(
-            f"Model '{requested_model}' is not supported for dataset '{dataset_name}'. "
-            f"Supported models: {supported_models}"
-        )
-    return [requested_model]
+    selectable = supported_models + _ABLATION_MODELS
+    models = [token.strip() for token in requested.split(',') if token.strip()]
+    for model in models:
+        if model not in selectable:
+            raise ValueError(
+                f"Model '{model}' is not supported for dataset '{dataset_name}'. "
+                f"Supported models: {supported_models}; ablation arms: {_ABLATION_MODELS}"
+            )
+    return models
 
 
 def _parse_seed_list():
@@ -501,6 +543,81 @@ def _numeric_or_nan(value):
     return float(np.nan)
 
 
+_PRETRAIN_CACHE = {}
+_PRETRAIN_DIR = None
+
+
+def _pretrain_dir():
+    global _PRETRAIN_DIR
+    if _PRETRAIN_DIR is None:
+        _PRETRAIN_DIR = tempfile.mkdtemp(prefix='fado_pretrain_')
+        atexit.register(shutil.rmtree, _PRETRAIN_DIR, True)
+    return _PRETRAIN_DIR
+
+
+def _pretrain_cache_key(x_train, y_train, a_train, seed):
+    digest = hashlib.sha1()
+    for array in (x_train, y_train, a_train):
+        digest.update(np.ascontiguousarray(array).tobytes())
+    return (
+        digest.hexdigest(), int(seed if seed is not None else -1),
+        int(FLAGS.depth), int(FLAGS.num_trees), float(FLAGS.lambda_const),
+        int(FLAGS.batch_size), str(FLAGS.constraint_type),
+        str(FLAGS.gradient_type), bool(FLAGS.compute_fairness),
+        int(FLAGS.drift_fairness_window),
+    )
+
+
+def _pretrain_aranyani(x_train, y_train, a_train, data_dim, seed):
+    """Pre-train the forest once and hand every arm an identical copy.
+
+    D1: the arms used to re-train independently and rely on seed determinism to
+    land on the same starting weights. Training once and reloading removes that
+    assumption entirely (and halves the cost of a two-arm run). The shared
+    pre-training necessarily runs on ONE leaf-probability path -- 'auto' -- so
+    it sits outside the FADO-vs-Base comparison; its cost is reported
+    separately as ``pretrain_timing``.
+    """
+    key = _pretrain_cache_key(x_train, y_train, a_train, seed)
+    if key in _PRETRAIN_CACHE:
+        checkpoint, timing = _PRETRAIN_CACHE[key]
+        print(f"[PIPELINE] Reusing the pre-trained forest at {checkpoint}.pkl")
+        return forest.FairDecisionForest.load(checkpoint), dict(timing)
+
+    model = forest.FairDecisionForest(
+        num_trees=int(FLAGS.num_trees),
+        tree_depth=int(FLAGS.depth),
+        data_dim=data_dim,
+        num_classes=2,
+        leaf_probability='auto',
+    )
+    timing = {}
+    aranyani.train_online(
+        model,
+        x_train,
+        y_train,
+        a_train,
+        data_dim=data_dim,
+        batch_size=max(1, int(FLAGS.batch_size)),
+        tree_depth=int(FLAGS.depth),
+        compute_fairness=bool(FLAGS.compute_fairness),
+        lambda_const=float(FLAGS.lambda_const),
+        num_trees=int(FLAGS.num_trees),
+        constraint_type=FLAGS.constraint_type,
+        gradient_type=FLAGS.gradient_type,
+        local_run=True,
+        # D3: the same window the evaluators use, so pre-training and
+        # prequential evaluation regularise against one fairness signal.
+        fairness_window=int(_build_aranyani_static_params()['fairness_window']),
+        use_incremental_fairness=True,
+        timing_sink=timing,
+    )
+    checkpoint = os.path.join(_pretrain_dir(), f'pretrain_{abs(hash(key)):x}')
+    model.save(checkpoint)
+    _PRETRAIN_CACHE[key] = (checkpoint, dict(timing))
+    return model, dict(timing)
+
+
 def _run_aranyani_train_then_test(
     x_train,
     y_train,
@@ -511,6 +628,7 @@ def _run_aranyani_train_then_test(
     dataset_name,
     seed=None,
     use_drift_controller=True,
+    controller=None,
 ):
     if seed is not None:
         _set_global_seed(int(seed))
@@ -526,32 +644,27 @@ def _run_aranyani_train_then_test(
     tree_depth = int(FLAGS.depth)
     num_trees = int(FLAGS.num_trees)
     lambda_const = float(FLAGS.lambda_const)
-    use_fado_optimisations = bool(use_drift_controller)
-    model = forest.FairDecisionForest(
-        num_trees=num_trees,
-        tree_depth=tree_depth,
-        data_dim=data_dim,
-        num_classes=2,
-        use_recursive_updater=use_fado_optimisations,
-    )
-    aranyani.train_online(
-        model,
-        x_train_arr,
-        y_train_arr,
-        a_train_arr,
-        data_dim=data_dim,
-        batch_size=max(1, int(FLAGS.batch_size)),
-        tree_depth=tree_depth,
-        compute_fairness=bool(FLAGS.compute_fairness),
-        lambda_const=lambda_const,
-        num_trees=num_trees,
-        constraint_type=FLAGS.constraint_type,
-        gradient_type=FLAGS.gradient_type,
-        local_run=True,
-        use_incremental_fairness=use_fado_optimisations,
-    )
+
+    model, pretrain_timing = _pretrain_aranyani(
+        x_train_arr, y_train_arr, a_train_arr, data_dim, seed)
+
+    # The efficiency optimisations stay FADO-only for the prequential phase:
+    # the baseline arm is pinned to the original mask path, FADO takes the
+    # faster path for this depth.
+    model.set_leaf_probability('auto' if use_drift_controller else 'mask')
+
+    # Re-seed so both arms enter evaluation with the same RNG state regardless
+    # of whether this call had to pre-train or reused the cached forest.
+    if seed is not None:
+        _set_global_seed(int(seed))
+
+    def _with_pretrain_timing(stream):
+        if isinstance(stream, dict) and pretrain_timing:
+            stream['pretrain_timing'] = dict(pretrain_timing)
+        return stream
+
     if use_drift_controller:
-        return evaluate_over_timesteps(
+        return _with_pretrain_timing(evaluate_over_timesteps(
             model,
             x_test_arr,
             y_test_arr,
@@ -562,13 +675,14 @@ def _run_aranyani_train_then_test(
             tree_depth=tree_depth,
             num_trees=num_trees,
             static_params=_build_aranyani_static_params(),
-        )
+            controller=controller,
+        ))
 
     print(
         "[PIPELINE][ARANYANI-BASE] Drift controller disabled; "
         "evaluating with pure Aranyani prequential loop (test-then-train)."
     )
-    return evaluate_aranyani_baseline_over_timesteps(
+    return _with_pretrain_timing(evaluate_aranyani_baseline_over_timesteps(
         model,
         x_test_arr,
         y_test_arr,
@@ -581,7 +695,7 @@ def _run_aranyani_train_then_test(
         fairness_window=int(FLAGS.drift_fairness_window),
         static_params=_build_aranyani_static_params(),
         use_incremental_fairness=False,
-    )
+    ))
 
 
 def _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, seed):
@@ -592,7 +706,7 @@ def _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, 
         np.asarray(a_train, dtype=np.int32),
         seed=seed,
         online_batch_size=1,
-        accuracy_window=None,
+        accuracy_window=_effective_accuracy_window(),
         fairness_window=fairness_window,
         test_then_train=True,
         return_model=True,
@@ -603,7 +717,7 @@ def _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, 
         np.asarray(a_test, dtype=np.int32),
         seed=seed,
         online_batch_size=1,
-        accuracy_window=None,
+        accuracy_window=_effective_accuracy_window(),
         fairness_window=fairness_window,
         model=trained_model,
         test_then_train=True,
@@ -629,7 +743,7 @@ def _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, 
         train_batch_size=1,
         buffer_size=RFR_CONFIG['buffer_size'],
         adv_hidden_dim=RFR_CONFIG['adv_hidden_dim'],
-        accuracy_window=None,
+        accuracy_window=_effective_accuracy_window(),
         fairness_window=fairness_window,
         test_then_train=True,
         return_model=True,
@@ -649,7 +763,7 @@ def _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, 
         train_batch_size=1,
         buffer_size=RFR_CONFIG['buffer_size'],
         adv_hidden_dim=RFR_CONFIG['adv_hidden_dim'],
-        accuracy_window=None,
+        accuracy_window=_effective_accuracy_window(),
         fairness_window=fairness_window,
         model=trained_model,
         test_then_train=True,
@@ -667,7 +781,7 @@ def _evaluate_selected_model(
     a_test,
     seed=None,
 ):
-    if model_name == 'aranyani':
+    if model_name == 'aranyani' or model_name in CONTROLLER_PRESETS:
         return _run_aranyani_train_then_test(
             x_train,
             y_train,
@@ -678,6 +792,7 @@ def _evaluate_selected_model(
             dataset_name=dataset_name,
             seed=seed,
             use_drift_controller=True,
+            controller=_controller_for_model(model_name),
         )
     if model_name == 'aranyani_base':
         return _run_aranyani_train_then_test(
@@ -827,6 +942,9 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
             'dp': float(tm.get('dp')),
             'eo': float(tm.get('eo')),
             'stream_final_accuracy': _mean_stream_metric(ts.get('accuracy')),
+            'stream_final_accuracy_cumulative': _mean_stream_metric(
+                ts.get('accuracy_cumulative')
+            ),
             'stream_final_dp': _mean_stream_metric(ts.get('dp')),
             'stream_final_eo': _mean_stream_metric(ts.get('eo')),
             'elapsed_seconds': result.get('elapsed_seconds'),
@@ -834,6 +952,22 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
             'test_metrics': tm,
             'timestep_results': ts,
         }
+        # Runtime columns, so the FADO-only efficiency work (recursive leaf
+        # probabilities + incremental fairness counters) is measurable in the
+        # same results table as accuracy/DP/EO instead of being asserted.
+        timing = ts.get('timing') if isinstance(ts, dict) else None
+        if isinstance(timing, dict):
+            row['timing'] = timing
+            row['wall_seconds'] = timing.get('wall_seconds')
+            row['ms_per_sample'] = timing.get('ms_per_sample')
+            row['samples_per_second'] = timing.get('samples_per_second')
+            for phase_name, phase_stats in (timing.get('phases') or {}).items():
+                if isinstance(phase_stats, dict):
+                    row[f'seconds_{phase_name}'] = phase_stats.get('seconds')
+        pretrain_timing = ts.get('pretrain_timing') if isinstance(ts, dict) else None
+        if isinstance(pretrain_timing, dict):
+            row['pretrain_timing'] = pretrain_timing
+            row['pretrain_wall_seconds'] = pretrain_timing.get('wall_seconds')
         if marginal:
             row['marginal'] = marginal
             # Flatten marginal DP/EO into top-level keys so significance_tests
@@ -860,13 +994,23 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
     print(f"\n{'=' * 80}")
     print(' SUMMARY')
     print(f"{'=' * 80}")
-    print(f"{'Scenario':<36s} {'Acc':>10s} {'DP':>10s} {'EO':>10s}")
+    print(
+        f"{'Scenario':<36s} {'Acc':>10s} {'DP':>10s} {'EO':>10s} "
+        f"{'ms/sample':>11s} {'wall(s)':>9s}"
+    )
     print('-' * 80)
     for row in rows:
         acc = f"{row['accuracy']:.4f}"
         dp = f"{row['dp']:.4f}"
         eo = f"{row['eo']:.4f}"
-        print(f"{str(row['scenario']):<36s} {acc:>10s} {dp:>10s} {eo:>10s}")
+        mps = row.get('ms_per_sample')
+        wall = row.get('wall_seconds')
+        mps_s = f"{mps:.3f}" if isinstance(mps, numbers.Number) else '-'
+        wall_s = f"{wall:.1f}" if isinstance(wall, numbers.Number) else '-'
+        print(
+            f"{str(row['scenario']):<36s} {acc:>10s} {dp:>10s} {eo:>10s} "
+            f"{mps_s:>11s} {wall_s:>9s}"
+        )
 
     return rows
 
@@ -1013,6 +1157,10 @@ def main(_):
         metric_names = [
             'accuracy', 'dp', 'eo',
             'stream_final_accuracy', 'stream_final_dp', 'stream_final_eo',
+            'stream_final_accuracy_cumulative',
+            'wall_seconds', 'ms_per_sample', 'samples_per_second',
+            'seconds_predict', 'seconds_fairness_metrics', 'seconds_train_step',
+            'pretrain_wall_seconds',
         ]
         grouped = {}
         for run in seed_runs:
@@ -1038,6 +1186,10 @@ def main(_):
         metric_names = [
             'accuracy', 'dp', 'eo',
             'stream_final_accuracy', 'stream_final_dp', 'stream_final_eo',
+            'stream_final_accuracy_cumulative',
+            'wall_seconds', 'ms_per_sample', 'samples_per_second',
+            'seconds_predict', 'seconds_fairness_metrics', 'seconds_train_step',
+            'pretrain_wall_seconds',
         ]
         metrics_by_model = {}
         for model_name in models_to_run:

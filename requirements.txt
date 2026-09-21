@@ -16,3 +16,4 @@ seaborn
 absl-py
 folktables
 setuptools<81
+capymoa[torch]

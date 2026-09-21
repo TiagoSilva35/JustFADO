@@ -17,19 +17,35 @@ class FairDecisionForest(tf.Module):
                num_classes,
                activation='sigmoid',
                compute_mode='default',
+               leaf_probability=None,
                use_recursive_updater=None):
     super(FairDecisionForest, self).__init__()
     assert tree_depth > 1
     assert num_trees >= 1
-    self.use_recursive_updater = (
-        fdt.RECURSIVE_UPDATER if use_recursive_updater is None
-        else bool(use_recursive_updater)
+    requested = leaf_probability if leaf_probability is not None else use_recursive_updater
+    self.leaf_probability_mode = (
+        fdt.DEFAULT_LEAF_PROBABILITY if requested is None else requested
     )
+    self.leaf_probability = fdt.resolve_leaf_probability(requested, tree_depth)
+    self.use_recursive_updater = (self.leaf_probability == 'recursive')
     self.layers = []
     for _ in range(num_trees):
       self.layers.append(fdt.FairDecisionTree(
           data_dim, tree_depth, num_classes, activation, compute_mode,
-          use_recursive_updater=self.use_recursive_updater))
+          leaf_probability=self.leaf_probability))
+
+  def set_leaf_probability(self, mode):
+    """Switch every tree onto a leaf-probability path.
+
+    Needed because the pre-trained forest is built once and then handed to each
+    evaluation arm, which pick their own path.
+    """
+    self.leaf_probability_mode = mode
+    for tree in self.layers:
+      tree.set_leaf_probability(mode)
+    self.leaf_probability = self.layers[0].leaf_probability
+    self.use_recursive_updater = (self.leaf_probability == 'recursive')
+    return self
 
   def __call__(self, inputs, training=False):
     all_predictions = []
@@ -95,7 +111,7 @@ class FairDecisionForest(tf.Module):
           'num_classes': tree.theta.shape[1],
           'activation': tree.activation.__name__,
           'compute_mode': tree.compute_mode,
-          'use_recursive_updater': bool(tree.use_recursive_updater),
+          'leaf_probability': str(tree.leaf_probability_mode),
       }
       model_data['weights'].append(tree_data)
     
@@ -130,7 +146,8 @@ class FairDecisionForest(tf.Module):
         compute_mode=first_tree['compute_mode'],
         # Older checkpoints predate the per-model code-path switch; they were
         # produced on the recursive path, which is also the module default.
-        use_recursive_updater=first_tree.get('use_recursive_updater', None),
+        leaf_probability=first_tree.get(
+            'leaf_probability', first_tree.get('use_recursive_updater', None)),
     )
     
     # Load weights for each tree

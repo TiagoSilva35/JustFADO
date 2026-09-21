@@ -26,11 +26,15 @@ fairness monitoring, and the fairness-aware online updates (node-level
 running statistics + Aranyani gradient correction).
 """
 
+import time
+from collections import deque
+
 import numpy as np
 import tensorflow as tf
 
 from src.helpers import utils
 from src.models.forest.initializers import (
+    build_variable_layout,
     accumulate_fairness_stats,
     compute_fairness_gradients,
     init_fairness_state,
@@ -61,18 +65,26 @@ def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
     return inferred_tree_depth, inferred_num_trees
 
 
-def _warn_unexpected_code_path(model, expected_recursive, tag):
-    """Warn (without mutating the model) if the forest is on the wrong path."""
+def _warn_expected_leaf_path(model, expected, tag):
+    """Warn (without mutating the model) if the forest is on the wrong path.
+
+    ``expected`` is a resolved path name ('mask' / 'recursive') or None to skip
+    the check. Only the baseline arm has a hard expectation: it must stay on
+    the original mask path for the comparison to isolate the FADO-only
+    optimisations. The FADO arm runs 'auto', which legitimately resolves to
+    either path depending on tree depth.
+    """
+    if expected is None:
+        return
     trees = getattr(model, 'layers', None)
     if not trees:
         return
-    actual = {bool(getattr(tree, 'use_recursive_updater', True)) for tree in trees}
-    if actual != {bool(expected_recursive)}:
+    actual = {str(getattr(tree, 'leaf_probability', 'recursive')) for tree in trees}
+    if actual != {expected}:
         print(
-            f"[{tag}][WARN] forest was built with use_recursive_updater="
-            f"{sorted(actual)} but this evaluator expects "
-            f"{bool(expected_recursive)}. The FADO vs Aranyani-Base efficiency "
-            f"comparison will not be isolated."
+            f"[{tag}][WARN] forest is on leaf path {sorted(actual)} but this "
+            f"evaluator expects {expected!r}. The FADO vs Aranyani-Base "
+            f"efficiency comparison will not be isolated."
         )
 
 
@@ -84,7 +96,7 @@ def evaluate_aranyani_baseline_over_timesteps(
     data_dim,
     test_then_train=True,
     learning_rate=2e-3,
-    accuracy_window=200,
+    accuracy_window=None,
     compute_fairness=True,
     fairness_type='dp',
     lambda_const=0.1,
@@ -117,17 +129,23 @@ def evaluate_aranyani_baseline_over_timesteps(
     defaults = {
         'fairness_window': int(fairness_window),
         'lambda_const': float(lambda_const),
+        # None -> follow ``fairness_window`` (B2: one time scale for all
+        # stream metrics). Must mirror the FADO evaluator exactly, otherwise
+        # the two arms are compared on differently-smoothed accuracy curves.
+        'accuracy_window': accuracy_window,
     }
     if static_params:
         # Only the two knobs that apply to a controller-free Aranyani run are
         # honoured. We silently ignore drift-controller keys so callers can
         # reuse `_build_aranyani_static_params()` unchanged.
-        for key in ('fairness_window', 'lambda_const'):
+        for key in ('fairness_window', 'lambda_const', 'accuracy_window'):
             if key in static_params:
                 defaults[key] = static_params[key]
 
     FAIRNESS_WINDOW = max(1, int(defaults['fairness_window']))
     lambda_const = float(defaults['lambda_const'])
+    _acc_window = defaults.get('accuracy_window')
+    ACCURACY_WINDOW = FAIRNESS_WINDOW if not _acc_window else max(1, int(_acc_window))
 
     print(
         f"[ARANYANI-BASELINE] Evaluating model over {len(x_test)} timesteps "
@@ -135,8 +153,15 @@ def evaluate_aranyani_baseline_over_timesteps(
         f"window={FAIRNESS_WINDOW}). No drift detection / no reaction controller."
     )
 
-    USE_ROLLING = bool(accuracy_window) and False  # cumulative accuracy, like FADO evaluator default
-    correct_buffer = []
+    # B1/B2 fix: rolling accuracy on the same window as the fairness metrics,
+    # matching the FADO evaluator. The cumulative curve is still returned as
+    # ``accuracy_cumulative`` for continuity with earlier results.
+    USE_ROLLING = True
+    correct_buffer = deque()
+    rolling_correct = 0
+    cumulative_correct = 0
+    accuracies_cumulative = []
+    timer = utils.PhaseTimer()
     y_preds_all = []
     y_true_all = []
     a_all = []
@@ -171,8 +196,11 @@ def evaluate_aranyani_baseline_over_timesteps(
         + ("incremental counters (O(NA))" if use_incremental_fairness
            else "legacy full-window recomputation (O(NW))")
     )
-    _warn_unexpected_code_path(model, expected_recursive=False, tag='ARANYANI-BASELINE')
+    _warn_expected_leaf_path(model, expected='mask', tag='ARANYANI-BASELINE')
 
+    # D2: resolve the fairness penalty onto variables by identity, not by
+    # tensor shape (theta collides with weight when data_dim == num_leaves).
+    variable_layout = build_variable_layout(model)
     huber_loss_delta = 0.1
 
     for t in range(n_samples):
@@ -190,28 +218,36 @@ def evaluate_aranyani_baseline_over_timesteps(
         a_t = int(a_test[t])
 
         # ---- Test phase --------------------------------------------------
-        y_probs = model(x_t, training=False)
-        y_pred = int(tf.math.argmax(y_probs, axis=-1).numpy()[0])
+        with timer.phase('predict'):
+            y_probs = model(x_t, training=False)
+            y_pred = int(tf.math.argmax(y_probs, axis=-1).numpy()[0])
 
         y_preds_all.append(y_pred)
         y_true_all.append(y_t)
         a_all.append(a_t)
 
-        fairness_window_state.append(y_pred, a_t, y_t)
+        with timer.phase('fairness_metrics'):
+            fairness_window_state.append(y_pred, a_t, y_t)
 
-        correct_buffer.append(int(y_pred == y_t))
-        if USE_ROLLING and len(correct_buffer) > accuracy_window:
-            correct_buffer.pop(0)
-        accuracies.append(float(sum(correct_buffer)) / len(correct_buffer))
+        correct = int(y_pred == y_t)
+        cumulative_correct += correct
+        correct_buffer.append(correct)
+        rolling_correct += correct
+        if USE_ROLLING and len(correct_buffer) > ACCURACY_WINDOW:
+            rolling_correct -= correct_buffer.popleft()
+        accuracies.append(rolling_correct / len(correct_buffer))
+        accuracies_cumulative.append(cumulative_correct / (t + 1))
 
         # ---- Fairness monitoring on rolling window ----------------------
-        dp_val, dp_sign = fairness_window_state.demographic_parity()
-        eo_val, _ = fairness_window_state.equalized_odds()
+        with timer.phase('fairness_metrics'):
+            dp_val, dp_sign = fairness_window_state.demographic_parity()
+            eo_val, _ = fairness_window_state.equalized_odds()
         dps.append(float(dp_val))
         eos.append(float(eo_val))
 
         # ---- Train phase (fairness-aware Aranyani update) ---------------
         if test_then_train:
+            _train_t0 = time.perf_counter()
             y_t_tensor = tf.convert_to_tensor([y_t], dtype=tf.int32)
             # The 'node' fairness gradient is analytic (no tape traversal), so
             # only 'leaf' needs a second ``.gradient`` call and thus a
@@ -255,6 +291,7 @@ def evaluate_aranyani_baseline_over_timesteps(
                     huber_loss_delta=huber_loss_delta,
                     dp_sign=dp_sign,
                     constraint_type=constraint_type,
+                    variable_layout=variable_layout,
                 )
             if compute_fairness:
                 del tape
@@ -263,19 +300,36 @@ def evaluate_aranyani_baseline_over_timesteps(
                 "Problem with loss gradients"
             # Fixed learning rate, fixed temperature, no controller.
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
+            timer.add('train_step', time.perf_counter() - _train_t0)
 
     print("[ARANYANI-BASELINE] Evaluation complete (no drift events tracked).")
 
+    timing_report = timer.report(
+        n_samples=n_samples,
+        extra={'code_paths': {
+            'leaf_probability': sorted({
+                str(getattr(tr, 'leaf_probability', 'recursive'))
+                for tr in getattr(model, 'layers', [])
+            }),
+            'fairness_metrics': type(fairness_window_state).__name__,
+            'accuracy_window': ACCURACY_WINDOW,
+        }},
+    )
+    print(utils.format_timing_report(timing_report, tag='ARANYANI-BASELINE'))
+
     return {
         'accuracy': accuracies,
+        'accuracy_cumulative': accuracies_cumulative,
         'dp': dps,
         'eo': eos,
         'n_samples': n_samples,
         'drifted_points': [],
         'y_preds_all': list(y_preds_all),
         'y_true_all': list(y_true_all),
+        'timing': timing_report,
         'static_params_used': {
             'fairness_window': FAIRNESS_WINDOW,
+            'accuracy_window': ACCURACY_WINDOW,
             'lambda_const': lambda_const,
             'controller_enabled': False,
         },

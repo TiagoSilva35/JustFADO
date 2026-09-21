@@ -76,13 +76,30 @@ flags.DEFINE_string('seeds', '',
                     'Comma-separated seed list for --run_seed_pipeline (e.g., "11,22,33").')
 flags.DEFINE_float(
     'drift_adwin_delta_warn',
-    0.00001,
-    'ADWIN warning detector delta (higher = more sensitive).',
+    0.02,
+    'ADWIN warning detector delta (higher = more sensitive). MUST be larger '
+    'than --drift_adwin_delta_confirm, otherwise the warning stage trips after '
+    'confirmation and the pre-warm phase never runs.',
 )
 flags.DEFINE_float(
     'drift_adwin_delta_confirm',
-    0.02,
-    'ADWIN confirm detector delta (higher = more sensitive).',
+    0.00001,
+    'ADWIN confirm detector delta (higher = more sensitive). MUST be smaller '
+    'than --drift_adwin_delta_warn.',
+)
+flags.DEFINE_string(
+    'controller_components',
+    '',
+    'Ad-hoc reaction-controller ablation, e.g. "react_lr,prewarm" or '
+    '"fado_full,-react_temperature". Empty means the full controller. Applies '
+    'to --pipeline_model=aranyani; the fado_* model names carry their own '
+    'preset. See src/models/forest/controller.py.',
+)
+flags.DEFINE_integer(
+    'drift_accuracy_window',
+    0,
+    'Rolling window for the reported prequential accuracy. 0 means "use '
+    '--drift_fairness_window", so accuracy and DP/EO share one time scale.',
 )
 flags.DEFINE_float(
     'drift_lr_prewarm_mult',

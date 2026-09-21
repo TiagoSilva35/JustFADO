@@ -8,6 +8,8 @@ from sklearn.metrics import confusion_matrix, classification_report
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+import time
+import contextlib
 from collections import Counter, deque
 
 def construct_penalty_mask(tree_depth=4):
@@ -110,6 +112,105 @@ def display_confusion_matrix(y_true, y_pred, save_path='files/confusion_matrix.p
   print("="*80 + "\n")
   
   return cm
+
+
+class PhaseTimer:
+  """Accumulate wall-clock time and call counts for named phases of a run.
+
+  Added so the FADO efficiency work is *measurable* rather than asserted: the
+  recursive leaf-probability updater and the incremental fairness counters are
+  FADO-only code paths, and this timer is what lets a FADO run and an
+  Aranyani-Base run be compared on runtime, broken down by where the time
+  actually goes, instead of only on accuracy/DP/EO.
+
+  Usage:
+
+      timer = PhaseTimer()
+      with timer.phase('predict'):
+          ...
+      report = timer.report(n_samples=n)
+
+  Overhead is one ``perf_counter`` pair per phase entry (tens of nanoseconds),
+  which is negligible next to the TensorFlow ops being measured. Pass
+  ``enabled=False`` to make every ``phase`` a no-op.
+  """
+
+  def __init__(self, enabled=True):
+    self.enabled = bool(enabled)
+    self.totals = {}
+    self.counts = {}
+    self._wall_start = time.perf_counter()
+
+  @contextlib.contextmanager
+  def phase(self, name):
+    if not self.enabled:
+      yield
+      return
+    start = time.perf_counter()
+    try:
+      yield
+    finally:
+      elapsed = time.perf_counter() - start
+      self.totals[name] = self.totals.get(name, 0.0) + elapsed
+      self.counts[name] = self.counts.get(name, 0) + 1
+
+  def add(self, name, seconds, calls=1):
+    """Record time measured elsewhere (e.g. a phase that cannot be wrapped)."""
+    if not self.enabled:
+      return
+    self.totals[name] = self.totals.get(name, 0.0) + float(seconds)
+    self.counts[name] = self.counts.get(name, 0) + int(calls)
+
+  def report(self, n_samples=None, extra=None):
+    """Return a JSON-serialisable timing breakdown."""
+    wall = max(time.perf_counter() - self._wall_start, 1e-12)
+    phases = {}
+    for name in sorted(self.totals):
+      total = self.totals[name]
+      calls = self.counts.get(name, 0)
+      phases[name] = {
+          'seconds': float(total),
+          'calls': int(calls),
+          'us_per_call': float(total / calls * 1e6) if calls else None,
+          'pct_of_wall': float(100.0 * total / wall),
+      }
+    out = {'wall_seconds': float(wall), 'phases': phases}
+    if n_samples:
+      out['n_samples'] = int(n_samples)
+      out['ms_per_sample'] = float(wall / int(n_samples) * 1000.0)
+      out['samples_per_second'] = float(int(n_samples) / wall)
+    if extra:
+      out.update(extra)
+    return out
+
+
+def format_timing_report(report, tag=''):
+  """Render a ``PhaseTimer.report()`` dict as a short printable table."""
+  if not isinstance(report, dict):
+    return ''
+  lines = []
+  head = f"[{tag}] timing" if tag else "timing"
+  wall = report.get('wall_seconds')
+  n = report.get('n_samples')
+  summary = f"{head}: {wall:.2f}s wall"
+  if n:
+    summary += (
+        f" over {n} samples"
+        f" ({report.get('ms_per_sample', 0.0):.3f} ms/sample,"
+        f" {report.get('samples_per_second', 0.0):.1f} samples/s)"
+    )
+  lines.append(summary)
+  for name, stats in (report.get('phases') or {}).items():
+    lines.append(
+        f"    {name:<20} {stats['seconds']:>8.2f}s"
+        f" {stats['pct_of_wall']:>6.1f}%"
+        f" {stats['calls']:>8d} calls"
+        + (f" {stats['us_per_call']:>9.1f} us/call" if stats['us_per_call'] is not None else "")
+    )
+  for key in ('code_paths',):
+    if report.get(key):
+      lines.append(f"    {key}: {report[key]}")
+  return "\n".join(lines)
 
 
 class RollingFairnessWindow:
@@ -270,18 +371,14 @@ def get_equalized_odds(y_predictions, y_protected, y_true):
 
 
 class LegacyFairnessWindow:
-  """Full-window recomputation of DP and EO (pre-optimisation path).
+  """
+  Full-window recomputation of DP and EO (pre-optimisation path).
 
   This is the fairness monitor Aranyani used *before* the incremental-counter
   optimisation. It is kept deliberately so the pure-Aranyani baseline can run
   on the original code path, leaving ``RollingFairnessWindow`` exclusive to the
   FADO pipeline and making the reported efficiency gain attributable to FADO
   alone.
-
-  The reported values are identical to ``RollingFairnessWindow``; only the cost
-  differs -- O(NW) rescans of the window instead of O(NA) counter updates.
-  Exposes the same ``append`` / ``demographic_parity`` / ``equalized_odds``
-  interface so call sites are interchangeable.
   """
 
   def __init__(self, maxlen):

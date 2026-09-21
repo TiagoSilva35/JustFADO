@@ -1,8 +1,15 @@
+import time
+from collections import deque
+
 import numpy as np
 import tensorflow as tf
 from river import drift
-from src.models.forest.initializers import init_fairness_state, accumulate_fairness_stats, compute_fairness_gradients
+from src.models.forest.initializers import (
+    init_fairness_state, accumulate_fairness_stats,
+    compute_fairness_gradients, build_variable_layout,
+)
 from src.helpers import utils
+from src.models.forest.controller import ControllerConfig
 
 def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
     """Infer tree depth and number of trees from a trained forest model."""
@@ -24,42 +31,52 @@ def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
     return inferred_tree_depth, inferred_num_trees
 
 
-def _warn_unexpected_code_path(model, expected_recursive, tag):
+def _warn_expected_leaf_path(model, expected, tag):
     """Warn (without mutating the model) if the forest is on the wrong path.
 
-    The leaf-probability code path is fixed when the forest is built, so a
-    mismatch here means the caller wired FADO and Aranyani-Base to the same
-    model configuration and the comparison is no longer isolated.
+    ``expected`` is a resolved path name ('mask' / 'recursive') or None to skip
+    the check. Only the baseline arm has a hard expectation: it must stay on
+    the original mask path for the comparison to isolate the FADO-only
+    optimisations. The FADO arm runs 'auto', which legitimately resolves to
+    either path depending on tree depth.
     """
+    if expected is None:
+        return
     trees = getattr(model, 'layers', None)
     if not trees:
         return
-    actual = {bool(getattr(tree, 'use_recursive_updater', True)) for tree in trees}
-    if actual != {bool(expected_recursive)}:
+    actual = {str(getattr(tree, 'leaf_probability', 'recursive')) for tree in trees}
+    if actual != {expected}:
         print(
-            f"[{tag}][WARN] forest was built with use_recursive_updater="
-            f"{sorted(actual)} but this evaluator expects "
-            f"{bool(expected_recursive)}. The FADO vs Aranyani-Base efficiency "
-            f"comparison will not be isolated."
+            f"[{tag}][WARN] forest is on leaf path {sorted(actual)} but this "
+            f"evaluator expects {expected!r}. The FADO vs Aranyani-Base "
+            f"efficiency comparison will not be isolated."
         )
 
 
 def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                             test_then_train=True, learning_rate=2e-3,
-                            accuracy_window=200,
+                            accuracy_window=None,
                             compute_fairness=True, fairness_type='dp',
                             lambda_const=0.1, tree_depth=3, num_trees=3,
                             constraint_type='node', gradient_type='vanilla',
                             base_gamma=0.9,
-                            static_params=None):
+                            static_params=None,
+                            controller=None):
     accuracies = []
     dps = []
     eos = []
     drifted_points = []
 
     defaults = {
-        'adwin_delta_warn': 0.00001,
-        'adwin_delta_confirm': 0.02,
+        # A1 fix: in river, a LARGER delta means a MORE sensitive detector.
+        # The warning stage must therefore have the larger delta so it trips
+        # before the confirmation stage. The previous values were the other way
+        # round (warn=1e-5, confirm=0.02), which made confirmation fire ~2x
+        # earlier than the warning and left the pre-warm stage -- and
+        # ``drift_lr_prewarm_mult`` -- dead code.
+        'adwin_delta_warn': 0.02,
+        'adwin_delta_confirm': 0.00001,
         'drift_lr_prewarm_mult': 5.0,
         'drift_lr_spike_mult': 10.0,
         'lr_decay_steps': 3000,
@@ -70,6 +87,12 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         'temperature_on_drift': 0.1,
         'temperature_recovery_target': 1.0,
         'temperature_recovery_step': 0.002,
+        # None -> follow ``fairness_window`` so every stream metric shares one
+        # time scale (B2).
+        'accuracy_window': accuracy_window,
+        # None -> 2 x lr_decay_steps. Upper bound on how long the controller
+        # may stay in the post-drift recovery regime (A3 safety net).
+        'max_recovery_steps': None,
     }
     if static_params:
         print("Overriding default static parameters with provided values:")
@@ -89,12 +112,40 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     TEMP_RECOVERY_TARGET = max(TEMP_ON_DRIFT, float(defaults['temperature_recovery_target']))
     TEMP_RECOVERY_STEP = max(1e-6, float(defaults['temperature_recovery_step']))
     lambda_const = float(defaults['lambda_const'])
-    
+    controller = ControllerConfig.from_spec(controller)
+    _acc_window = defaults.get('accuracy_window')
+    ACCURACY_WINDOW = FAIRNESS_WINDOW if not _acc_window else max(1, int(_acc_window))
+    _max_rec = defaults.get('max_recovery_steps')
+    MAX_RECOVERY_STEPS = (2 * LR_DECAY_STEPS) if not _max_rec else max(1, int(_max_rec))
+
+    if ADWIN_DELTA_WARN <= ADWIN_DELTA_CONFIRM:
+        print(
+            f"[FADO][WARN] adwin_delta_warn={ADWIN_DELTA_WARN:g} <= "
+            f"adwin_delta_confirm={ADWIN_DELTA_CONFIRM:g}. In river a larger delta is "
+            f"MORE sensitive, so the warning stage will not trip before confirmation "
+            f"and the pre-warm phase (drift_lr_prewarm_mult) will never run."
+        )
+
     print(f"Evaluating model over {len(x_test)} timesteps with test-then-train={test_then_train}\n\
           Fairness penalty lambda: {lambda_const}, fairness type: {fairness_type}")
-    
-    USE_ROLLING = False
-    correct_buffer = []
+    print(f"Accuracy window: {ACCURACY_WINDOW} (rolling), max recovery steps: {MAX_RECOVERY_STEPS}")
+    print(f"Controller components: {controller.describe()}")
+
+    # B1 fix: report a ROLLING accuracy, not the cumulative curve. Averaging a
+    # cumulative curve gives sample i a weight ~ ln(N/i), so everything after
+    # 60% of the stream -- the only region where the controller can differ from
+    # the baseline -- was worth under 10% of the reported number.
+    # B2 fix: it defaults to the fairness window, so accuracy and DP/EO finally
+    # share one time scale. The cumulative curve is still returned as
+    # ``accuracy_cumulative`` for continuity with earlier results.
+    USE_ROLLING = True
+    correct_buffer = deque()
+    rolling_correct = 0
+    cumulative_correct = 0
+    accuracies_cumulative = []
+    recovery_deadline = 0
+    just_confirmed_drift = False
+    timer = utils.PhaseTimer()
     warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
     acc_det   = drift.ADWIN(delta=ADWIN_DELTA_CONFIRM)
     acc_det_n = 0
@@ -127,15 +178,18 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     # Aranyani-Base evaluator deliberately keeps the legacy paths so the
     # efficiency gain is attributable to FADO alone.
     fairness_window = utils.make_fairness_window(FAIRNESS_WINDOW, incremental=True)
-    _warn_unexpected_code_path(model, expected_recursive=True, tag='FADO')
+    _warn_expected_leaf_path(model, expected=None, tag='FADO')
     
+    # D2: resolve the fairness penalty onto variables by identity, not by
+    # tensor shape (theta collides with weight when data_dim == num_leaves).
+    variable_layout = build_variable_layout(model)
     huber_loss_delta = 0.1
 
     for t in range(n_samples):
         if (t + 1) % 1000 == 0 or t == 0:
             print(f"[DBG] Processing sample {t + 1}/{n_samples}...")
             print(f"Avg accuracy until now: {np.mean(accuracies) if accuracies else 0}")
-            print(f"Last mean accuracy over window: {np.mean(accuracies[-accuracy_window:]) if accuracies else 0}")
+            print(f"Last mean accuracy over window: {np.mean(accuracies[-ACCURACY_WINDOW:]) if accuracies else 0}")
             print(f"Avg DP until now: {np.mean(dps) if dps else 0}")
         x_t = tf.convert_to_tensor(
             np.array(x_test[t], dtype=np.float32).reshape(1, data_dim)
@@ -143,31 +197,46 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         y_t = int(y_test[t])
         a_t = int(a_test[t])
 
-        y_probs = model(x_t, training=False)
-        y_pred  = int(tf.math.argmax(y_probs, axis=-1).numpy()[0])
+        with timer.phase('predict'):
+            y_probs = model(x_t, training=False)
+            y_pred  = int(tf.math.argmax(y_probs, axis=-1).numpy()[0])
         error   = int(y_pred != y_t)
 
         y_preds_all.append(y_pred)
         y_true_all.append(y_t)
 
-        fairness_window.append(y_pred, a_t, y_t)
+        with timer.phase('fairness_metrics'):
+            fairness_window.append(y_pred, a_t, y_t)
 
-        correct_buffer.append(int(y_pred == y_t))
-        if USE_ROLLING and len(correct_buffer) > accuracy_window:
-            correct_buffer.pop(0)
-        acc_val = float(sum(correct_buffer)) / len(correct_buffer)
+        # Rolling accuracy kept with an incremental counter so the reporting
+        # fix does not reintroduce an O(N*W) rescan of the window.
+        correct = int(y_pred == y_t)
+        cumulative_correct += correct
+        correct_buffer.append(correct)
+        rolling_correct += correct
+        if USE_ROLLING and len(correct_buffer) > ACCURACY_WINDOW:
+            rolling_correct -= correct_buffer.popleft()
+        acc_val = rolling_correct / len(correct_buffer)
         accuracies.append(acc_val)
+        accuracies_cumulative.append(cumulative_correct / (t + 1))
 
         y_probs_np  = tf.nn.softmax(y_probs, axis=-1).numpy()[0]
         model_conf  = float(y_probs_np[y_pred])   
         is_label_noise = (error == 1) and (model_conf > 0.70)
 
         
-        warn_det.update(error) #type: ignore
-        acc_det.update(error) #type: ignore
-        acc_det_n += 1
+        just_confirmed_drift = False
+        if controller.detect_accuracy_drift:
+            with timer.phase('drift_detect'):
+                warn_det.update(error) #type: ignore
+                acc_det.update(error) #type: ignore
+            acc_det_n += 1
+        if not controller.label_noise_guard:
+            is_label_noise = False
 
-        if (warn_det.change_detected
+        if (controller.detect_accuracy_drift
+                and controller.prewarm
+                and warn_det.change_detected
                 and not in_warning
                 and acc_det_n >= MIN_SAMPLES_PER_STREAM
                 and t - last_detected_acc >= COOLDOWN
@@ -179,53 +248,95 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
             print(f"[WARN] Drift warning at sample {t} — pre-warming LR to {DRIFT_LR_PREWARM:.2e}")
 
-        if (acc_det.change_detected
+        if (controller.detect_accuracy_drift
+                and acc_det.change_detected
                 and acc_det_n >= MIN_SAMPLES_PER_STREAM
-                and t - last_detected_acc >= COOLDOWN):
+                and t - last_detected_acc >= COOLDOWN
+                # A2 fix: the label-noise guard used to sit only on the warning
+                # branch. Since (pre-A1) confirmation always fired first, the
+                # guard was unreachable and a single high-confidence
+                # mislabelled sample could trigger a full LR spike. The
+                # scenarios inject Bernoulli label flips by design, so this
+                # branch needs the guard at least as much as the warning one.
+                and not is_label_noise):
             drifted_points.append(t)
             last_detected_acc = t
             in_warning = False
             acc_det   = drift.ADWIN(delta=ADWIN_DELTA_CONFIRM)
             warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
             acc_det_n = 0
-            optimizer = tf.keras.optimizers.Adam(learning_rate=DRIFT_LR_SPIKE)
+            if controller.react_lr:
+                optimizer = tf.keras.optimizers.Adam(learning_rate=DRIFT_LR_SPIKE)
             steps_since_drift = LR_DECAY_STEPS
-            baseline_accuracy = np.mean(accuracies[max(0, t - 1000):t]) if t > 1000 else np.mean(accuracies)
+            # A3 fix: the recovery reference must come from BEFORE the drift.
+            # ADWIN confirms with a lag, so a window ending at ``t`` is already
+            # contaminated by the post-drift samples that triggered it; the
+            # reference is taken one further accuracy window back. The old
+            # version compared the *cumulative* accuracy curve against its own
+            # trailing mean -- a test that in practice never passed, leaving
+            # the controller pinned at DRIFT_LR_SPIKE for the rest of the
+            # stream and making ``lr_decay_steps`` dead code.
+            ref_end = max(1, t - ACCURACY_WINDOW)
+            ref_start = max(0, ref_end - ACCURACY_WINDOW)
+            baseline_accuracy = float(np.mean(accuracies[ref_start:ref_end]))
             recovering_from_drift = True
+            just_confirmed_drift = True
+            recovery_deadline = t + MAX_RECOVERY_STEPS
             
             print(f"[DRIFT] Concept drift confirmed at sample {t} — spiking LR to {DRIFT_LR_SPIKE:.2e} and making hard routing decisions")
-            for tree in model.layers:
-                if hasattr(tree, 'temperature'):
-                    tree.temperature.assign(TEMP_ON_DRIFT)
-        dp_val, dp_sign = fairness_window.demographic_parity()
-        eo_val, eo_sign = fairness_window.equalized_odds()
+            if controller.react_temperature:
+                for tree in model.layers:
+                    if hasattr(tree, 'temperature'):
+                        tree.temperature.assign(TEMP_ON_DRIFT)
+        with timer.phase('fairness_metrics'):
+            dp_val, dp_sign = fairness_window.demographic_parity()
+            eo_val, eo_sign = fairness_window.equalized_odds()
         dps.append(float(dp_val))
         eos.append(float(eo_val))
         
-        if steps_since_drift > 0 and not recovering_from_drift:
+        if just_confirmed_drift:
+            # A4 fix: hold TEMP_ON_DRIFT for this timestep. Previously the
+            # recovery ramp ran in the same iteration as the confirmation, so
+            # the configured drift temperature was overwritten (0.1 -> 0.102)
+            # before any forward or backward pass ever used it.
+            pass
+        elif steps_since_drift > 0 and not recovering_from_drift:
             alpha = steps_since_drift / LR_DECAY_STEPS
             current_lr = learning_rate + alpha * (decay_from_lr - learning_rate)
-            optimizer.learning_rate.assign(float(current_lr))
+            if controller.react_lr:
+                optimizer.learning_rate.assign(float(current_lr))
             steps_since_drift -= 1
         elif recovering_from_drift:
             current_acc = acc_val
-            if current_acc >= baseline_accuracy:
+            recovery_timed_out = t >= recovery_deadline
+            if current_acc >= baseline_accuracy or recovery_timed_out:
                 recovering_from_drift = False
+                if recovery_timed_out:
+                    print(
+                        f"[RECOVERY] Timed out at sample {t} after "
+                        f"{MAX_RECOVERY_STEPS} steps without regaining the "
+                        f"pre-drift accuracy ({baseline_accuracy:.4f}); leaving "
+                        f"the recovery regime anyway."
+                    )
                 decay_from_lr = float(optimizer.learning_rate)
                 steps_since_drift = LR_DECAY_STEPS
-                for tree in model.layers:
-                    if hasattr(tree, 'temperature'):
-                        tree.temperature.assign(TEMP_RECOVERY_TARGET)
+                if controller.react_temperature:
+                    for tree in model.layers:
+                        if hasattr(tree, 'temperature'):
+                            tree.temperature.assign(TEMP_RECOVERY_TARGET)
                 print(f"[RECOVERY] Performance restored at sample {t}. Decaying LR from {decay_from_lr:.2e} to {learning_rate:.2e} over {LR_DECAY_STEPS} steps.")
             else:
-                optimizer.learning_rate.assign(float(DRIFT_LR_SPIKE))
-                for tree in model.layers:
-                    if hasattr(tree, 'temperature'):
-                        current_temp = float(tree.temperature.value())
-                        new_temp = min(TEMP_RECOVERY_TARGET, current_temp + TEMP_RECOVERY_STEP)
-                        tree.temperature.assign(new_temp)
+                if controller.react_lr:
+                    optimizer.learning_rate.assign(float(DRIFT_LR_SPIKE))
+                if controller.react_temperature:
+                    for tree in model.layers:
+                        if hasattr(tree, 'temperature'):
+                            current_temp = float(tree.temperature.value())
+                            new_temp = min(TEMP_RECOVERY_TARGET, current_temp + TEMP_RECOVERY_STEP)
+                            tree.temperature.assign(new_temp)
 
         if test_then_train:
+            _train_t0 = time.perf_counter()
             y_t_tensor = tf.convert_to_tensor([y_t], dtype=tf.int32)
             # The 'node' fairness gradient is analytic (no tape traversal), so
             # only 'leaf' needs a second ``.gradient`` call and thus a
@@ -270,27 +381,44 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                     subgroup_count, protected_class_count,
                     fairness_type, lambda_const,
                     num_internal_nodes, data_dim, number_of_attributes,
-                    gradient_type, base_gamma, huber_loss_delta=huber_loss_delta, dp_sign=dp_sign, constraint_type=constraint_type
+                    gradient_type, base_gamma, huber_loss_delta=huber_loss_delta, dp_sign=dp_sign, constraint_type=constraint_type,
+                    variable_layout=variable_layout,
                 )
             if compute_fairness:
                 del tape
 
             assert len(grads) == len(model.trainable_variables) and len(grads) > 0, "Problem with loss gradients"
             optimizer.apply_gradients(zip(grads, model.trainable_variables))
+            timer.add('train_step', time.perf_counter() - _train_t0)
 
     if drifted_points:
         print(f"Accuracy drift detected at samples: {drifted_points}")
     else:
         print("No accuracy drift detected over the test set.")
 
+    timing_report = timer.report(
+        n_samples=n_samples,
+        extra={'code_paths': {
+            'leaf_probability': sorted({
+                str(getattr(tr, 'leaf_probability', 'recursive'))
+                for tr in getattr(model, 'layers', [])
+            }),
+            'fairness_metrics': type(fairness_window).__name__,
+            'accuracy_window': ACCURACY_WINDOW,
+        }},
+    )
+    print(utils.format_timing_report(timing_report, tag='FADO'))
+
     return {
         'accuracy': accuracies,
+        'accuracy_cumulative': accuracies_cumulative,
         'dp': dps,
         'eo': eos,
         'n_samples': n_samples,
         'drifted_points': drifted_points,
         'y_preds_all': list(y_preds_all),
         'y_true_all': list(y_true_all),
+        'timing': timing_report,
         'static_params_used': {
             'adwin_delta_warn': ADWIN_DELTA_WARN,
             'adwin_delta_confirm': ADWIN_DELTA_CONFIRM,
@@ -304,5 +432,8 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             'temperature_on_drift': TEMP_ON_DRIFT,
             'temperature_recovery_target': TEMP_RECOVERY_TARGET,
             'temperature_recovery_step': TEMP_RECOVERY_STEP,
+            'accuracy_window': ACCURACY_WINDOW,
+            'max_recovery_steps': MAX_RECOVERY_STEPS,
         },
+        'controller': controller.as_dict(),
     }
