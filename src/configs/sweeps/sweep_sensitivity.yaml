@@ -1,0 +1,71 @@
+# Is the FADO-over-baseline gain a basin, or a knife edge?
+#
+# RANDOM search, not grid, and not bayes.
+#
+#   bayes  reports an argmax. An argmax is the single most overfitted point in
+#          the space and carries no error bar. It answers "how good can this
+#          get", which is not the question.
+#   grid   the fraction of cells that beat the baseline depends entirely on the
+#          levels you happened to pick, so the headline number is an artifact
+#          of the grid design.
+#   random draws i.i.d. from a prior you state in the paper, so "X% of sampled
+#          configurations beat the baseline, 95% CI [a, b]" is a real estimate
+#          of a real quantity, and the CI shrinks with run_cap. It also spends
+#          its budget better than a grid in the dimensions that matter
+#          (Bergstra & Bengio, JMLR 2012).
+#
+# Report the DISTRIBUTION of delta_dp over the sampled configurations, not the
+# best one. The claim to make is "the controller helps across the prior", not
+# "the controller helps at these five numbers".
+#
+# ADWIN invariant: the warning detector must be MORE sensitive than the
+# confirmation detector, which in river means a LARGER delta. A sweep cannot
+# express that constraint, so we sample the confirm delta and a multiplier > 1;
+# main.py derives warn = confirm * multiplier.
+program: src/main.py
+method: random
+name: fado-sensitivity
+run_cap: 120
+metric:
+  name: delta_dp
+  goal: maximize
+parameters:
+  pipeline_model:
+    values: ['aranyani,aranyani_base']
+  pipeline_dataset:
+    values: ['compas']
+  drift_scenario:
+    values: ['abrupt_race']
+  seeds:
+    values: ['11,22,33,44,55']
+  run_seed_pipeline:
+    values: [true]
+  drift_adwin_delta_confirm:
+    distribution: log_uniform_values
+    min: 0.000001
+    max: 0.01
+  drift_adwin_delta_warn_multiplier:
+    distribution: log_uniform_values
+    min: 10.0
+    max: 5000.0
+  drift_lr_spike_mult:
+    distribution: uniform
+    min: 2.0
+    max: 15.0
+  drift_lr_decay_steps:
+    distribution: int_uniform
+    min: 300
+    max: 4000
+  drift_temperature_on_drift:
+    distribution: uniform
+    min: 0.05
+    max: 0.8
+  deterministic:
+    values: [true]
+  wandb_log:
+    values: [true]
+command:
+  - ${env}
+  - python
+  - ${program}
+  - ${args}

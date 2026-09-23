@@ -3,13 +3,14 @@ from collections import deque
 
 import numpy as np
 import tensorflow as tf
-from river import drift
 from src.models.forest.initializers import (
     init_fairness_state, accumulate_fairness_stats,
     compute_fairness_gradients, build_variable_layout,
 )
 from src.helpers import utils
 from src.models.forest.controller import ControllerConfig
+from src.models.forest.detectors import make_detector, DEFAULT_SPEC
+from src.models.forest.fairness_signal import FairnessSignal, DEFAULT_MODE
 
 def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
     """Infer tree depth and number of trees from a trained forest model."""
@@ -93,6 +94,12 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         # None -> 2 x lr_decay_steps. Upper bound on how long the controller
         # may stay in the post-drift recovery regime (A3 safety net).
         'max_recovery_steps': None,
+        # Detector backends, so the monitor is an experimental factor rather
+        # than a hard-coded river ADWIN. See src/models/forest/detectors.py.
+        'accuracy_detector': DEFAULT_SPEC,
+        'fairness_detector': DEFAULT_SPEC,
+        'fairness_signal_mode': DEFAULT_MODE,
+        'fairness_detector_params': None,
     }
     if static_params:
         print("Overriding default static parameters with provided values:")
@@ -118,6 +125,11 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     _max_rec = defaults.get('max_recovery_steps')
     MAX_RECOVERY_STEPS = (2 * LR_DECAY_STEPS) if not _max_rec else max(1, int(_max_rec))
 
+    ACC_DETECTOR = str(defaults.get('accuracy_detector') or DEFAULT_SPEC)
+    FAIR_DETECTOR = str(defaults.get('fairness_detector') or DEFAULT_SPEC)
+    FAIR_SIGNAL_MODE = str(defaults.get('fairness_signal_mode') or DEFAULT_MODE)
+    FAIR_PARAMS = dict(defaults.get('fairness_detector_params') or {})
+
     if ADWIN_DELTA_WARN <= ADWIN_DELTA_CONFIRM:
         print(
             f"[FADO][WARN] adwin_delta_warn={ADWIN_DELTA_WARN:g} <= "
@@ -139,6 +151,9 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     # share one time scale. The cumulative curve is still returned as
     # ``accuracy_cumulative`` for continuity with earlier results.
     USE_ROLLING = True
+    fairness_drift_points = []
+    fairness_signal = None
+    fairness_detectors = None
     correct_buffer = deque()
     rolling_correct = 0
     cumulative_correct = 0
@@ -146,8 +161,8 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     recovery_deadline = 0
     just_confirmed_drift = False
     timer = utils.PhaseTimer()
-    warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
-    acc_det   = drift.ADWIN(delta=ADWIN_DELTA_CONFIRM)
+    warn_det = make_detector(ACC_DETECTOR, delta=ADWIN_DELTA_WARN)
+    acc_det  = make_detector(ACC_DETECTOR, delta=ADWIN_DELTA_CONFIRM)
     acc_det_n = 0
     in_warning = False           
     last_detected_acc = -COOLDOWN
@@ -162,13 +177,14 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     decay_from_lr = float(DRIFT_LR_PREWARM)
     fairness_start = 0
     print(f"Fairness window: {FAIRNESS_WINDOW}, starting fairness computations at sample index: {fairness_start}")
+    # Needed by the fairness monitor whether or not the regulariser is on.
+    number_of_attributes = int(np.unique(np.array(a_test)).size)
     if compute_fairness:
         tree_depth, num_trees = _infer_forest_geometry(model, tree_depth, num_trees)    
         num_internal_nodes = 2 ** tree_depth - 1
         all_tree_trainable_vars = []
         for tree in model.layers:
             all_tree_trainable_vars.extend(tree.trainable_variables)
-        number_of_attributes = int(np.unique(np.array(a_test)).size)
         gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count = \
             init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_attributes)
 
@@ -226,17 +242,18 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
 
         
         just_confirmed_drift = False
+        warn_fired = acc_fired = False
         if controller.detect_accuracy_drift:
             with timer.phase('drift_detect'):
-                warn_det.update(error) #type: ignore
-                acc_det.update(error) #type: ignore
+                warn_fired = warn_det.update(error)
+                acc_fired = acc_det.update(error)
             acc_det_n += 1
         if not controller.label_noise_guard:
             is_label_noise = False
 
         if (controller.detect_accuracy_drift
                 and controller.prewarm
-                and warn_det.change_detected
+                and warn_fired
                 and not in_warning
                 and acc_det_n >= MIN_SAMPLES_PER_STREAM
                 and t - last_detected_acc >= COOLDOWN
@@ -245,11 +262,11 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             optimizer.learning_rate.assign(float(DRIFT_LR_PREWARM))
             decay_from_lr = float(DRIFT_LR_PREWARM)
             steps_since_drift = LR_DECAY_STEPS
-            warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
+            warn_det.reset()
             print(f"[WARN] Drift warning at sample {t} — pre-warming LR to {DRIFT_LR_PREWARM:.2e}")
 
         if (controller.detect_accuracy_drift
-                and acc_det.change_detected
+                and acc_fired
                 and acc_det_n >= MIN_SAMPLES_PER_STREAM
                 and t - last_detected_acc >= COOLDOWN
                 # A2 fix: the label-noise guard used to sit only on the warning
@@ -262,8 +279,8 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             drifted_points.append(t)
             last_detected_acc = t
             in_warning = False
-            acc_det   = drift.ADWIN(delta=ADWIN_DELTA_CONFIRM)
-            warn_det  = drift.ADWIN(delta=ADWIN_DELTA_WARN)
+            acc_det.reset()
+            warn_det.reset()
             acc_det_n = 0
             if controller.react_lr:
                 optimizer = tf.keras.optimizers.Adam(learning_rate=DRIFT_LR_SPIKE)
@@ -293,6 +310,30 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             eo_val, eo_sign = fairness_window.equalized_odds()
         dps.append(float(dp_val))
         eos.append(float(eo_val))
+
+        # Fairness monitoring. Observation only for now: it records when a
+        # fairness drift would have been signalled, so detector/signal choices
+        # can be compared on detection quality before any reaction is wired to
+        # them. The signal design matters more than the detector -- see
+        # src/models/forest/fairness_signal.py.
+        if fairness_detectors is None and controller.detect_fairness_drift:
+            fairness_signal = FairnessSignal(
+                FAIR_SIGNAL_MODE, num_groups=number_of_attributes,
+                window=FAIRNESS_WINDOW)
+            fairness_detectors = {
+                channel: make_detector(FAIR_DETECTOR, **FAIR_PARAMS)
+                for channel in fairness_signal.channels
+            }
+            print(f"Fairness monitor: signal={FAIR_SIGNAL_MODE}, "
+                  f"detector={FAIR_DETECTOR}, channels={fairness_signal.channels}")
+        if fairness_detectors is not None:
+            with timer.phase('fairness_detect'):
+                observed = fairness_signal.observe(y_pred, a_t, dp_value=dp_val)
+                if observed:
+                    for channel, value in observed.items():
+                        if fairness_detectors[channel].update(value):
+                            fairness_drift_points.append(t)
+                            break
         
         if just_confirmed_drift:
             # A4 fix: hold TEMP_ON_DRIFT for this timestep. Previously the
@@ -416,6 +457,15 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         'eo': eos,
         'n_samples': n_samples,
         'drifted_points': drifted_points,
+        'fairness_drifted_points': fairness_drift_points,
+        'detectors': {
+            'accuracy_warn': warn_det.describe(),
+            'accuracy_confirm': acc_det.describe(),
+            'fairness': (
+                {ch: d.describe() for ch, d in fairness_detectors.items()}
+                if fairness_detectors else None),
+            'fairness_signal': fairness_signal.describe() if fairness_signal else None,
+        },
         'y_preds_all': list(y_preds_all),
         'y_true_all': list(y_true_all),
         'timing': timing_report,
@@ -434,6 +484,9 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             'temperature_recovery_step': TEMP_RECOVERY_STEP,
             'accuracy_window': ACCURACY_WINDOW,
             'max_recovery_steps': MAX_RECOVERY_STEPS,
+            'accuracy_detector': ACC_DETECTOR,
+            'fairness_detector': FAIR_DETECTOR,
+            'fairness_signal_mode': FAIR_SIGNAL_MODE,
         },
         'controller': controller.as_dict(),
     }

@@ -1,0 +1,63 @@
+# Which monitor should watch fairness: which SIGNAL, and which DETECTOR?
+#
+# Two factors, fully crossed:
+#
+#   --fairness_signal_mode
+#       raw_dp         feed the rolling DP directly. Autocorrelation ~0.99, so
+#                      the detector's independence assumption is violated. The
+#                      negative control.
+#       subsampled_dp  feed DP once per window. Independent again, at the cost
+#                      of up to one window of latency.
+#       per_sample     feed a per-sample statistic whose expectation is the
+#                      fairness gap. i.i.d., no latency. See
+#                      src/models/forest/fairness_signal.py.
+#
+#   --fairness_detector   river and CapyMOA backends (CapyMOA needs JDK 17+).
+#
+# Primary metric: fairness_false_alarms on no_drift, where every detection is
+# by construction a false alarm. Report fairness_detection_delay on the drifted
+# scenarios alongside it -- a detector that never fires wins on false alarms
+# and is useless.
+program: src/main.py
+method: grid
+name: fado-monitor-ablation
+metric:
+  # False alarms per sample on the fairness detector. FAR rather than a raw
+  # count because it is defined with a single false alarm (MTFA needs two) and
+  # is comparable across streams of different lengths. Report fairness_mtd
+  # (detection delay) and fairness_mdr (missed detections) alongside it: a
+  # detector that never fires wins on FAR and is useless.
+  name: fairness_far
+  goal: minimize
+parameters:
+  pipeline_model:
+    values: ['fado_monitor_only,aranyani_base']
+  pipeline_dataset:
+    values: ['compas']
+  drift_scenario:
+    values: ['no_drift', 'abrupt_race', 'gradual_race']
+  fairness_signal_mode:
+    values: ['raw_dp', 'subsampled_dp', 'per_sample']
+  fairness_detector:
+    values:
+      - 'river:adwin'
+      - 'capymoa:adwin'
+      - 'capymoa:seed'
+      - 'capymoa:stepd'
+      - 'capymoa:hddm_a'
+      - 'capymoa:page_hinkley'
+      - 'capymoa:cusum'
+      - 'capymoa:rddm'
+  seeds:
+    values: ['11,22,33,44,55']
+  run_seed_pipeline:
+    values: [true]
+  deterministic:
+    values: [true]
+  wandb_log:
+    values: [true]
+command:
+  - ${env}
+  - python
+  - ${program}
+  - ${args}

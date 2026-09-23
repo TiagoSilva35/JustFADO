@@ -87,6 +87,47 @@ flags.DEFINE_float(
     'ADWIN confirm detector delta (higher = more sensitive). MUST be smaller '
     'than --drift_adwin_delta_warn.',
 )
+flags.DEFINE_integer(
+    'detection_tolerance',
+    0,
+    'Acceptable delay (samples) for a detection to count as a true positive '
+    'for a change point, i.e. the acceptable window is [cp, cp + tolerance]. '
+    '0 means "one accuracy window", since a detector cannot see a change '
+    'before its own window has refilled.',
+)
+flags.DEFINE_float(
+    'drift_adwin_delta_warn_multiplier',
+    0.0,
+    'If > 0, derive the warning delta as confirm_delta * multiplier instead of '
+    'using --drift_adwin_delta_warn directly. A sweep cannot express the '
+    'constraint "warn must be more sensitive than confirm" (i.e. a larger '
+    'delta), so sweeps vary the confirm delta and this multiplier (> 1).',
+)
+flags.DEFINE_string(
+    'accuracy_detector',
+    'river:adwin',
+    'Drift detector for the accuracy/error stream, as "backend:name" '
+    '(river:adwin, capymoa:seed, capymoa:stepd, ...). '
+    'See src/models/forest/detectors.py for the full list.',
+)
+flags.DEFINE_string(
+    'fairness_detector',
+    'river:adwin',
+    'Drift detector for the fairness signal, as "backend:name".',
+)
+flags.DEFINE_string(
+    'fairness_signal_mode',
+    'per_sample',
+    'What the fairness detector consumes: per_sample (i.i.d. surrogate, '
+    'default), subsampled_dp, or raw_dp (the autocorrelated negative control). '
+    'See src/models/forest/fairness_signal.py.',
+)
+flags.DEFINE_bool(
+    'deterministic',
+    True,
+    'Pin TensorFlow op determinism (tf.config.experimental.enable_op_determinism). '
+    'Costs some speed; required for byte-identical reruns.',
+)
 flags.DEFINE_string(
     'controller_components',
     '',
@@ -151,10 +192,38 @@ flags.DEFINE_float(
 FLAGS = flags.FLAGS
 
 
-def _set_global_seed(seed):
+def _set_global_seed(seed, deterministic=None):
+  """Seed every RNG the pipeline touches, and optionally pin TF op determinism.
+
+  Previously this covered ``random``, ``numpy`` and ``tensorflow`` only, so the
+  RFR arm (torch) was not reproducible at all. ``PYTHONHASHSEED`` has to be set
+  before the interpreter starts, so it is only reported here, not set.
+  """
+  seed = int(seed)
   random.seed(seed)
   np.random.seed(seed)
   tf.random.set_seed(seed)
+  os.environ['TF_DETERMINISTIC_OPS'] = '1'
+  try:
+    import torch
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+      torch.cuda.manual_seed_all(seed)
+    torch.use_deterministic_algorithms(True, warn_only=True)
+  except Exception:
+    pass  # torch is only needed by the RFR arm
+
+  if deterministic is None:
+    deterministic = bool(getattr(FLAGS, 'deterministic', True))
+  if deterministic:
+    try:
+      tf.config.experimental.enable_op_determinism()
+    except Exception as exc:
+      print(f"[SEED] op determinism unavailable on this build: {exc}")
+
+  if os.environ.get('PYTHONHASHSEED') is None:
+    print("[SEED] PYTHONHASHSEED is unset; export PYTHONHASHSEED=0 before "
+          "launching for byte-identical runs.")
 
 def _build_forest_model(dataset, data_dim, num_class, depth, num_trees, activation,
                         compute_mode):

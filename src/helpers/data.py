@@ -48,6 +48,7 @@ def _fit_tabular_transformer(
     categorical_columns,
     frequency_encode_columns=None,
     rare_category_min_count=1,
+  return_dataframe=False,
 ):
   """Fit a train-only tabular transformer and transform features."""
   work = features.copy()
@@ -119,6 +120,8 @@ def _fit_tabular_transformer(
       'categorical_frequency_maps': categorical_frequency_maps,
       'categorical_rare_min_count': min_count,
   }
+  if return_dataframe:
+    return transformed, transformer
   return transformed.to_numpy(dtype=np.float32), transformer
 
 
@@ -667,13 +670,17 @@ def _compas_sex_to_binary(values):
   return _normalize_binary_series(series, 'sex attribute')
 
 
-def _encode_compas_features(work_df, target_col, feature_transformer=None, fit=False):
-  """Encode only the feature columns of a COMPAS frame and return x + transformer.
+def _encode_compas_features(
+    work_df, target_col, feature_transformer=None, fit=False,
+    return_dataframe=False,
+):
+  """Encode COMPAS features and return x + transformer.
 
   Split out from ``_encode_compas_frame`` so callers that pre-encode the
   binary target and sensitive labels globally (to avoid order-dependent
   ``pd.factorize`` between disjoint train/test halves) can reuse the
-  same tabular transformer for features alone.
+  same tabular transformer for features alone. Set ``return_dataframe`` to
+  return numeric features as a pandas DataFrame instead of a NumPy array.
   """
   features = work_df.drop(columns=[target_col]).copy()
   if features.empty:
@@ -689,15 +696,22 @@ def _encode_compas_features(work_df, target_col, feature_transformer=None, fit=F
         categorical_features,
         frequency_encode_columns=['c_charge_desc'],
         rare_category_min_count=10,
+        return_dataframe=return_dataframe,
     )
   else:
     x = _transform_tabular_features(features, feature_transformer)
+  if return_dataframe:
+    return pd.DataFrame(
+        np.asarray(x, dtype=np.float32),
+        columns=feature_transformer['feature_columns'],
+        index=work_df.index,
+    ), feature_transformer
   return np.asarray(x, dtype=np.float32), feature_transformer
 
 
 def _encode_compas_frame(
     work_df, target_col, sensitive_col,
-    feature_transformer=None, fit=False,
+  feature_transformer=None, fit=False, return_dataframe=False,
 ):
   """Encode a COMPAS frame end-to-end (x, y, a) using the tabular transformer.
 
@@ -719,11 +733,12 @@ def _encode_compas_frame(
       target_col=target_col,
       feature_transformer=feature_transformer,
       fit=fit,
+      return_dataframe=return_dataframe,
   )
   return x, y, a, feature_transformer
 
 
-def read_compas(path="data/compas/*"):
+def read_compas(path="data/compas/*", return_dataframe=False):
   """Legacy COMPAS loader: encode the full dataset, return (x, y, a).
 
   Used by code paths that build train/test via post-hoc array splits
@@ -734,7 +749,11 @@ def read_compas(path="data/compas/*"):
   work_df, feature_columns, target_col, sensitive_col = _read_compas_work_df(path)
   print(f"Using {len(feature_columns)} features: {feature_columns}")
   x, y, a, _ = _encode_compas_frame(
-      work_df, target_col=target_col, sensitive_col=sensitive_col, fit=True,
+      work_df,
+      target_col=target_col,
+      sensitive_col=sensitive_col,
+      fit=True,
+      return_dataframe=return_dataframe,
   )
   return x, y, a
 

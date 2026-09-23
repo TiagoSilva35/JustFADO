@@ -1,7 +1,10 @@
 import numpy as np
 from numpy.random import RandomState
 from src.helpers.utils import _compute_window_fairness
-from river.ensemble import AdaptiveRandomForestClassifier
+try:  # river >= 0.21 moved ARF out of river.ensemble
+    from river.forest import ARFClassifier as AdaptiveRandomForestClassifier
+except ImportError:
+    from river.ensemble import AdaptiveRandomForestClassifier
 
 def evaluate_arf_over_timesteps(
     x_test,

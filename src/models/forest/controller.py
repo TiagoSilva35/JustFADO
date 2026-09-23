@@ -114,6 +114,13 @@ PRESETS = {
     'fado_temp_only': ControllerConfig(prewarm=False, react_lr=False),
     'fado_no_prewarm': ControllerConfig(prewarm=False),
     'fado_no_noise_guard': ControllerConfig(label_noise_guard=False),
+    # Monitor arms: the fairness detector runs and records what it *would*
+    # have signalled, without reacting. Used by the monitor ablation to compare
+    # detector backends and signal designs on detection quality alone.
+    'fado_monitor': ControllerConfig(detect_fairness_drift=True),
+    'fado_monitor_only': ControllerConfig(
+        detect_accuracy_drift=False, prewarm=False, react_lr=False,
+        react_temperature=False, detect_fairness_drift=True),
     # No controller at all; the pure-Aranyani arm routes to the baseline
     # evaluator rather than to this config.
     'none': ControllerConfig.none(),

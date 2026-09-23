@@ -2,7 +2,6 @@
 
 import numpy as np
 import tensorflow as tf
-import tensorflow_probability as tfp
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -92,6 +91,9 @@ class FairDecisionTree(tf.Module):
     if activation == 'sigmoid':
       self.activation = tf.keras.activations.sigmoid
     elif activation == 'smoother':
+      # Optional: tensorflow-probability is no longer a hard dependency, this
+      # is its only use in the repo.
+      import tensorflow_probability as tfp
       self.activation = tfp.math.smootherstep
     elif activation == 'relu':
       self.activation = tf.keras.activations.relu

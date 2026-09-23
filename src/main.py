@@ -1,6 +1,7 @@
 import atexit
 import hashlib
 import json
+import math
 import numbers
 import os
 import random
@@ -19,6 +20,8 @@ from src.drift.compas_scenarios import (
     COMPAS_SCENARIOS,
 )
 from src.drift.scenarios import SCENARIO_DESCRIPTIONS, SCENARIOS
+from src.drift import compas_scenarios as _compas_scenarios
+from src.drift import scenarios as _adult_scenarios
 
 # Unified description map for printing per-scenario headers regardless of dataset.
 ALL_SCENARIO_DESCRIPTIONS = {
@@ -148,9 +151,13 @@ def _effective_accuracy_window():
 
 
 def _build_aranyani_static_params():
+    confirm_delta = float(FLAGS.drift_adwin_delta_confirm)
+    warn_multiplier = float(FLAGS.drift_adwin_delta_warn_multiplier)
+    warn_delta = (confirm_delta * warn_multiplier if warn_multiplier > 0
+                  else float(FLAGS.drift_adwin_delta_warn))
     params = {
-        'adwin_delta_warn': float(FLAGS.drift_adwin_delta_warn),
-        'adwin_delta_confirm': float(FLAGS.drift_adwin_delta_confirm),
+        'adwin_delta_warn': warn_delta,
+        'adwin_delta_confirm': confirm_delta,
         'drift_lr_prewarm_mult': float(FLAGS.drift_lr_prewarm_mult),
         'drift_lr_spike_mult': float(FLAGS.drift_lr_spike_mult),
         'lr_decay_steps': int(FLAGS.drift_lr_decay_steps),
@@ -163,6 +170,9 @@ def _build_aranyani_static_params():
         'temperature_recovery_target': float(FLAGS.drift_temperature_recovery_target),
         'temperature_recovery_step': float(FLAGS.drift_temperature_recovery_step),
         'lambda_const': float(FLAGS.lambda_const),
+        'accuracy_detector': str(FLAGS.accuracy_detector),
+        'fairness_detector': str(FLAGS.fairness_detector),
+        'fairness_signal_mode': str(FLAGS.fairness_signal_mode),
     }
     dataset_key = _dataset_name().lower()
     if dataset_key == 'compas':
@@ -221,18 +231,26 @@ def _resolve_pipeline_models(dataset_name):
     return models
 
 
+# Fixed default seeds. Drawing them from SystemRandom made a default run
+# irreproducible unless results.json survived; the paper runs should pass
+# --seeds explicitly anyway.
+DEFAULT_SEEDS = (11, 22, 33, 44, 55, 66, 77, 88, 99, 101,
+                 111, 122, 133, 144, 155, 166, 177, 188, 199, 202)
+
+
 def _parse_seed_list():
     runs = int(DEFAULT_SEED_RUNS)
     seed_tokens = [
         s.strip() for s in str(FLAGS.seeds).strip().split(',') if s.strip()
     ]
-    seeds = []
-    for token in seed_tokens:
-        seeds.append(int(token))
-    rng = random.SystemRandom()
-    while len(seeds) < runs:
-        seeds.append(rng.randint(DEFAULT_RANDOM_SEED_MIN, DEFAULT_RANDOM_SEED_MAX))
-    return list(dict.fromkeys(seeds))
+    seeds = [int(token) for token in seed_tokens]
+    if not seeds:
+        seeds = list(DEFAULT_SEEDS[:max(1, runs)])
+        print(f"[PIPELINE] --seeds not given; using the fixed default seeds {seeds}. "
+              f"Pass --seeds explicitly for the reported runs.")
+    seeds = list(dict.fromkeys(seeds))
+    print(f"[PIPELINE] seeds: {seeds}")
+    return seeds
 
 
 def _stats(values):
@@ -474,6 +492,136 @@ def _load_dataset_splits(dataset_key, scenario_name, seed):
     raise ValueError(f"Unsupported dataset for pipeline evaluation: '{dataset_key}'.")
 
 
+def _change_points(dataset_key, n_samples):
+    """Sample indices at which the concept actually changes.
+
+    The scenario generators lay a stream out as phases (``SPLITS`` holds the
+    phase END fractions), so every boundary except the last is a change event:
+    COMPAS ``[0.30, 0.70, 1.0]`` changes at 30% (drift onset) and again at 70%
+    (the recovery edge, where the concept reverts). Scoring against a single
+    onset would count a detection at the recovery edge as a very late detection
+    of the first drift instead of a prompt detection of the second.
+    """
+    module = (_compas_scenarios if str(dataset_key).lower() == 'compas'
+              else _adult_scenarios)
+    splits = list(getattr(module, 'SPLITS', []) or [])
+    n_samples = int(n_samples or 0)
+    if len(splits) < 2 or not n_samples:
+        return []
+    return [int(float(s) * n_samples) for s in splits[:-1]]
+
+
+def _detector_metrics(points, change_points, n_samples, tolerance, precedence=0):
+    """Stream-learning detection quality for ONE detector's event list.
+
+    Follows the usual drift-detection convention: a detection inside the
+    acceptable window ``[cp - precedence, cp + tolerance]`` around a change
+    point is a true positive for that change point, everything else is a false
+    alarm. Returns, for that detector:
+
+      detections    raw number of alarms raised
+      true_positives / false_alarms
+      mdr    Missed Detection Rate -- change points never detected (lower better)
+      mtd    Mean Time to Detection -- mean delay over detected change points,
+             in samples (lower better)
+      mtfa   Mean Time between False Alarms, in samples. Needs >= 2 false
+             alarms to be defined; NaN otherwise (higher better)
+      far    False Alarm Rate, false alarms per sample. Defined whenever there
+             is at least one, so it is the metric to optimise a sweep on
+             (lower better)
+      mtr    Mean Time Ratio, (MTFA / MTD) * (1 - MDR), the aggregate from the
+             drift-detection literature (higher better). NaN when MTFA or MTD
+             is undefined.
+
+    ``change_points`` empty (a no-drift stream) means every alarm is a false
+    alarm by construction -- which is what makes the no_drift arm the clean
+    measurement of the false-alarm rate.
+    """
+    points = sorted(int(v) for v in (points or []))
+    n_samples = int(n_samples or 0)
+    tolerance = max(1, int(tolerance))
+    out = {'detections': len(points)}
+
+    matched, used = {}, set()
+    for cp in change_points:
+        lo, hi = cp - int(precedence), cp + tolerance
+        for i, point in enumerate(points):
+            if i in used:
+                continue
+            if lo <= point <= hi:
+                matched[cp] = point
+                used.add(i)
+                break
+    false_alarms = [p for i, p in enumerate(points) if i not in used]
+
+    out['true_positives'] = len(matched)
+    out['false_alarms'] = len(false_alarms)
+    out['far'] = (len(false_alarms) / n_samples) if n_samples else float('nan')
+
+    if change_points:
+        out['mdr'] = 1.0 - len(matched) / len(change_points)
+        delays = [max(0, matched[cp] - cp) for cp in matched]
+        out['mtd'] = float(np.mean(delays)) if delays else float('nan')
+    else:
+        out['mdr'] = float('nan')
+        out['mtd'] = float('nan')
+
+    if len(false_alarms) >= 2:
+        gaps = np.diff(false_alarms)
+        out['mtfa'] = float(np.mean(gaps))
+    else:
+        out['mtfa'] = float('nan')
+
+    if (not math.isnan(out['mtfa']) and not math.isnan(out['mtd'])
+            and out['mtd'] > 0 and not math.isnan(out['mdr'])):
+        out['mtr'] = float(out['mtfa'] / out['mtd'] * (1.0 - out['mdr']))
+    else:
+        out['mtr'] = float('nan')
+    return out
+
+
+def _detection_metrics(stream, dataset_key, scenario_name):
+    """Detection quality for BOTH detectors in a run, reported separately.
+
+    The two detectors watch different things and are scored independently:
+
+      ``accuracy_*``   the ADWIN pair on the prequential error stream -- the
+                       drift detector that drives the LR/temperature reaction.
+      ``fairness_*``   the fairness monitor (detector x signal design, see
+                       src/models/forest/fairness_signal.py) -- observation
+                       only, it records what it would have signalled.
+
+    Every metric name is prefixed, so nothing in the results table is ambiguous
+    about which detector it describes.
+    """
+    if not isinstance(stream, dict):
+        return {}
+    n_samples = int(stream.get('n_samples') or 0)
+    no_drift = 'no_drift' in str(scenario_name).lower()
+    change_points = [] if no_drift else _change_points(dataset_key, n_samples)
+
+    # A detector cannot see a change before its own window has refilled, so the
+    # acceptable delay defaults to one window rather than an arbitrary constant.
+    used = stream.get('static_params_used') or {}
+    tolerance = int(FLAGS.detection_tolerance)
+    if tolerance <= 0:
+        tolerance = int(used.get('accuracy_window')
+                        or used.get('fairness_window')
+                        or FLAGS.drift_fairness_window)
+
+    out = {'n_change_points': len(change_points),
+           'detection_tolerance': int(tolerance)}
+    for label, key in (('accuracy', 'drifted_points'),
+                       ('fairness', 'fairness_drifted_points')):
+        points = stream.get(key)
+        if points is None:
+            continue
+        for metric, value in _detector_metrics(
+                points, change_points, n_samples, tolerance).items():
+            out[f'{label}_{metric}'] = value
+    return out
+
+
 def _extract_test_metrics(stream):
     return {
         'accuracy': _mean_stream_metric(stream.get('accuracy')),
@@ -699,6 +847,10 @@ def _run_aranyani_train_then_test(
 
 
 def _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, seed):
+    # The ARF arm used to skip this, so it entered evaluation with whatever RNG
+    # state the previous arm happened to leave behind.
+    if seed is not None:
+        _set_global_seed(int(seed))
     fairness_window = int(FLAGS.drift_fairness_window)
     _, trained_model = evaluate_arf_over_timesteps(
         np.asarray(x_train, dtype=np.float32),
@@ -955,6 +1107,7 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
         # Runtime columns, so the FADO-only efficiency work (recursive leaf
         # probabilities + incremental fairness counters) is measurable in the
         # same results table as accuracy/DP/EO instead of being asserted.
+        row.update(_detection_metrics(ts, dataset_key, result.get('scenario')))
         timing = ts.get('timing') if isinstance(ts, dict) else None
         if isinstance(timing, dict):
             row['timing'] = timing
@@ -1013,6 +1166,82 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
         )
 
     return rows
+
+
+# Arms whose scores the paired deltas are computed against.
+_BASELINE_ARM = 'aranyani_base'
+
+
+def _log_sweep_summary(summary, models_to_run):
+    """Write flat, paired metrics to wandb.summary for sweep optimisation.
+
+    A sweep reads ``wandb.summary``, not the per-row ``wandb.log`` stream, so
+    the quantity a sweep should optimise has to live here. The paired deltas
+    are what the controller has to be judged on: absolute DP moves with the
+    scenario and the seed, the FADO-minus-baseline difference does not, and
+    both arms in a run share one pre-trained forest so the pairing is exact.
+    """
+    if wandb is None:
+        return
+    by_model = {}
+    if summary.get('mode') == 'single':
+        by_model = summary.get('metrics_by_model') or {}
+    else:
+        for model_row in summary.get('rows') or []:
+            name = model_row.get('model')
+            scenario_rows = model_row.get('rows') or []
+            merged = {}
+            for scenario_row in scenario_rows:
+                for metric, stats in (scenario_row.get('metrics') or {}).items():
+                    merged.setdefault(metric, []).append(stats.get('mean'))
+            by_model[name] = {
+                metric: {'mean': float(np.nanmean([v for v in values if v is not None]))
+                         if any(v is not None for v in values) else None}
+                for metric, values in merged.items()
+            }
+
+    for model_name, metrics in by_model.items():
+        for metric_name, stats in (metrics or {}).items():
+            if isinstance(stats, dict) and stats.get('mean') is not None:
+                wandb.summary[f'{model_name}/{metric_name}'] = stats['mean']
+
+    base = by_model.get(_BASELINE_ARM) or {}
+    treatments = [m for m in by_model if m != _BASELINE_ARM and m in models_to_run]
+    for treatment in treatments:
+        arm = by_model.get(treatment) or {}
+
+        def _mean(metrics_dict, key):
+            stats = (metrics_dict or {}).get(key)
+            return stats.get('mean') if isinstance(stats, dict) else None
+
+        for source, target in (('stream_final_dp', 'delta_dp'),
+                               ('stream_final_eo', 'delta_eo')):
+            b, a = _mean(base, source), _mean(arm, source)
+            if b is not None and a is not None:
+                # positive = the treatment arm is FAIRER than the baseline
+                wandb.summary[f'{treatment}/{target}'] = float(b) - float(a)
+        b, a = _mean(base, 'stream_final_accuracy'), _mean(arm, 'stream_final_accuracy')
+        if b is not None and a is not None:
+            # positive = the treatment arm is MORE ACCURATE than the baseline
+            wandb.summary[f'{treatment}/delta_accuracy'] = float(a) - float(b)
+
+    # Unprefixed aliases for the primary arm, so a sweep config can name a
+    # metric without knowing which arm it is.
+    primary = next((m for m in ('aranyani', 'fado_full') if m in by_model),
+                   treatments[0] if treatments else None)
+    if primary:
+        for metric in ('delta_dp', 'delta_eo', 'delta_accuracy'):
+            key = f'{primary}/{metric}'
+            if key in wandb.summary:
+                wandb.summary[metric] = wandb.summary[key]
+        for metric in ('fairness_far', 'fairness_mdr', 'fairness_mtd',
+                       'fairness_mtfa', 'fairness_mtr', 'fairness_false_alarms',
+                       'accuracy_far', 'accuracy_mdr', 'accuracy_mtd',
+                       'accuracy_mtfa', 'accuracy_mtr', 'accuracy_false_alarms',
+                       'stream_final_dp', 'stream_final_accuracy'):
+            key = f'{primary}/{metric}'
+            if key in wandb.summary:
+                wandb.summary[metric] = wandb.summary[key]
 
 
 def _aggregate_metrics(rows, metric_names):
@@ -1161,6 +1390,10 @@ def main(_):
             'wall_seconds', 'ms_per_sample', 'samples_per_second',
             'seconds_predict', 'seconds_fairness_metrics', 'seconds_train_step',
             'pretrain_wall_seconds',
+            'accuracy_detections', 'accuracy_true_positives', 'accuracy_false_alarms',
+            'accuracy_far', 'accuracy_mdr', 'accuracy_mtd', 'accuracy_mtfa', 'accuracy_mtr',
+            'fairness_detections', 'fairness_true_positives', 'fairness_false_alarms',
+            'fairness_far', 'fairness_mdr', 'fairness_mtd', 'fairness_mtfa', 'fairness_mtr',
         ]
         grouped = {}
         for run in seed_runs:
@@ -1190,6 +1423,10 @@ def main(_):
             'wall_seconds', 'ms_per_sample', 'samples_per_second',
             'seconds_predict', 'seconds_fairness_metrics', 'seconds_train_step',
             'pretrain_wall_seconds',
+            'accuracy_detections', 'accuracy_true_positives', 'accuracy_false_alarms',
+            'accuracy_far', 'accuracy_mdr', 'accuracy_mtd', 'accuracy_mtfa', 'accuracy_mtr',
+            'fairness_detections', 'fairness_true_positives', 'fairness_false_alarms',
+            'fairness_far', 'fairness_mdr', 'fairness_mtd', 'fairness_mtfa', 'fairness_mtr',
         ]
         metrics_by_model = {}
         for model_name in models_to_run:
@@ -1227,6 +1464,7 @@ def main(_):
                 )
             })
         wandb.summary['results_file'] = output_path
+        _log_sweep_summary(summary, models_to_run)
         if summary['mode'] == 'single':
             for model_name, metrics in summary['metrics_by_model'].items():
                 for metric_name, metric_stats in metrics.items():
