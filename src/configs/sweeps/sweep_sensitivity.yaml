@@ -22,24 +22,27 @@
 # confirmation detector, which in river means a LARGER delta. A sweep cannot
 # express that constraint, so we sample the confirm delta and a multiplier > 1;
 # main.py derives warn = confirm * multiplier.
+#
+# Before the dataset-default fix in main.py these five knobs were silently
+# replaced by _COMPAS_FADO_OVERRIDES on COMPAS, so every cell of the old sweep
+# ran the same configuration. Explicit flags now win.
 program: src/main.py
+project: fado-ablations
 method: random
-name: fado-sensitivity
+name: sensitivity
 run_cap: 120
 metric:
   name: delta_dp
   goal: maximize
 parameters:
   pipeline_model:
-    values: ['aranyani,aranyani_base']
+    value: 'aranyani,aranyani_base'
   pipeline_dataset:
-    values: ['compas']
+    value: compas
   drift_scenario:
-    values: ['abrupt_race']
+    value: abrupt_race
   seeds:
-    values: ['11,22,33,44,55']
-  run_seed_pipeline:
-    values: [true]
+    value: '11,22,33,44,55'
   drift_adwin_delta_confirm:
     distribution: log_uniform_values
     min: 0.000001
@@ -61,11 +64,15 @@ parameters:
     min: 0.05
     max: 0.8
   deterministic:
-    values: [true]
+    value: true
   wandb_log:
-    values: [true]
+    value: true
+  wandb_project:
+    value: fado-ablations
 command:
   - ${env}
-  - python
-  - ${program}
+  - PYTHONHASHSEED=0
+  - ${interpreter}
+  - -m
+  - src.main
   - ${args}

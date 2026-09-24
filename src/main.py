@@ -40,7 +40,6 @@ from src.helpers.data import (
     read_adult,
     read_compas,
     read_compas_train_test,
-    read_diabetes,
     read_folktables,
 )
 from src.models.arf.arf import evaluate_arf_over_timesteps
@@ -78,11 +77,6 @@ flags.DEFINE_float(
     'seed see the same rows (paired tests remain valid) but seeds differ. '
     'Default 1.0 = use full splits. Set 0.10 to slim a ~187k+187k cell to '
     '~18.7k+18.7k for a ~10x wall-clock reduction.',
-)
-flags.DEFINE_string(
-    'diabetes_path',
-    'data/diabetes/diabetic_data.csv',
-    'Path, directory, or glob for diabetes CSV files. Defaults to diabetic_data.csv.',
 )
 flags.DEFINE_string(
     'compas_path',
@@ -138,6 +132,15 @@ _FOLKTABLES_FADO_OVERRIDES = {
 }
 
 
+def _effective_fairness_window():
+    """Fairness window shared by every arm, dataset defaults included."""
+    return int(_build_aranyani_static_params()['fairness_window'])
+
+
+def _effective_lambda():
+    return float(_build_aranyani_static_params()['lambda_const'])
+
+
 def _effective_accuracy_window():
     """Rolling window for the reported prequential accuracy, shared by every arm.
 
@@ -147,7 +150,26 @@ def _effective_accuracy_window():
     the fairness window".
     """
     window = int(FLAGS.drift_accuracy_window)
-    return window if window > 0 else int(FLAGS.drift_fairness_window)
+    return window if window > 0 else _effective_fairness_window()
+
+
+# Flag that sets each static param. The dataset defaults above apply only when
+# that flag was not passed explicitly -- otherwise a sweep over, say,
+# --lambda_const on COMPAS would silently run every cell at the override.
+_STATIC_PARAM_FLAGS = {
+    'adwin_delta_warn': ('drift_adwin_delta_warn', 'drift_adwin_delta_warn_multiplier'),
+    'adwin_delta_confirm': ('drift_adwin_delta_confirm',),
+    'fairness_window': ('drift_fairness_window',),
+    'min_samples_per_stream': ('drift_min_samples_per_stream',),
+    'lr_decay_steps': ('drift_lr_decay_steps',),
+    'lambda_const': ('lambda_const',),
+    'drift_lr_spike_mult': ('drift_lr_spike_mult',),
+    'temperature_on_drift': ('drift_temperature_on_drift',),
+}
+
+
+def _explicitly_set(param):
+    return any(FLAGS[name].present for name in _STATIC_PARAM_FLAGS[param])
 
 
 def _build_aranyani_static_params():
@@ -175,10 +197,12 @@ def _build_aranyani_static_params():
         'fairness_signal_mode': str(FLAGS.fairness_signal_mode),
     }
     dataset_key = _dataset_name().lower()
-    if dataset_key == 'compas':
-        params.update(_COMPAS_FADO_OVERRIDES)
-    elif dataset_key == 'folktables':
-        params.update(_FOLKTABLES_FADO_OVERRIDES)
+    overrides = {'compas': _COMPAS_FADO_OVERRIDES,
+                 'folktables': _FOLKTABLES_FADO_OVERRIDES}.get(dataset_key, {})
+    params.update({k: v for k, v in overrides.items() if not _explicitly_set(k)})
+    if warn_multiplier > 0:
+        # Derive from the confirm delta actually in use, dataset default included.
+        params['adwin_delta_warn'] = params['adwin_delta_confirm'] * warn_multiplier
     return params
 
 
@@ -205,7 +229,6 @@ def _supported_models_for_dataset(dataset_name):
     supported = {
         'adult': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
         'folktables': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
-        'diabetes': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
         'compas': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
     }
     if dataset_key not in supported:
@@ -465,12 +488,6 @@ def _load_dataset_splits(dataset_key, scenario_name, seed):
             x_train, x_test, y_train, y_test, a_train, a_test, seed=seed)
         return x_train, x_test, y_train, y_test, a_train, a_test, marginals
 
-    if dataset_key == 'diabetes':
-        x_train, x_test, y_train, y_test, a_train, a_test = read_diabetes(path=FLAGS.diabetes_path)
-        x_train, x_test, y_train, y_test, a_train, a_test = _ensure_train_test(
-            x_train, x_test, y_train, y_test, a_train, a_test, seed=seed)
-        return x_train, x_test, y_train, y_test, a_train, a_test, None
-
     if dataset_key == 'compas':
         # Drift-aware loader: splits raw rows by seed, applies the named
         # scenario to the test slice only, then fits the encoder on train
@@ -709,10 +726,10 @@ def _pretrain_cache_key(x_train, y_train, a_train, seed):
         digest.update(np.ascontiguousarray(array).tobytes())
     return (
         digest.hexdigest(), int(seed if seed is not None else -1),
-        int(FLAGS.depth), int(FLAGS.num_trees), float(FLAGS.lambda_const),
+        int(FLAGS.depth), int(FLAGS.num_trees), _effective_lambda(),
         int(FLAGS.batch_size), str(FLAGS.constraint_type),
         str(FLAGS.gradient_type), bool(FLAGS.compute_fairness),
-        int(FLAGS.drift_fairness_window),
+        _effective_fairness_window(),
     )
 
 
@@ -749,14 +766,14 @@ def _pretrain_aranyani(x_train, y_train, a_train, data_dim, seed):
         batch_size=max(1, int(FLAGS.batch_size)),
         tree_depth=int(FLAGS.depth),
         compute_fairness=bool(FLAGS.compute_fairness),
-        lambda_const=float(FLAGS.lambda_const),
+        lambda_const=_effective_lambda(),
         num_trees=int(FLAGS.num_trees),
         constraint_type=FLAGS.constraint_type,
         gradient_type=FLAGS.gradient_type,
         local_run=True,
         # D3: the same window the evaluators use, so pre-training and
         # prequential evaluation regularise against one fairness signal.
-        fairness_window=int(_build_aranyani_static_params()['fairness_window']),
+        fairness_window=_effective_fairness_window(),
         use_incremental_fairness=True,
         timing_sink=timing,
     )
@@ -791,7 +808,7 @@ def _run_aranyani_train_then_test(
     data_dim = int(x_train_arr.shape[1])
     tree_depth = int(FLAGS.depth)
     num_trees = int(FLAGS.num_trees)
-    lambda_const = float(FLAGS.lambda_const)
+    lambda_const = _effective_lambda()
 
     model, pretrain_timing = _pretrain_aranyani(
         x_train_arr, y_train_arr, a_train_arr, data_dim, seed)
@@ -840,7 +857,7 @@ def _run_aranyani_train_then_test(
         lambda_const=lambda_const,
         tree_depth=tree_depth,
         num_trees=num_trees,
-        fairness_window=int(FLAGS.drift_fairness_window),
+        fairness_window=_effective_fairness_window(),
         static_params=_build_aranyani_static_params(),
         use_incremental_fairness=False,
     ))
@@ -851,7 +868,7 @@ def _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, 
     # state the previous arm happened to leave behind.
     if seed is not None:
         _set_global_seed(int(seed))
-    fairness_window = int(FLAGS.drift_fairness_window)
+    fairness_window = _effective_fairness_window()
     _, trained_model = evaluate_arf_over_timesteps(
         np.asarray(x_train, dtype=np.float32),
         np.asarray(y_train, dtype=np.int32),
@@ -879,7 +896,7 @@ def _run_arf_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, 
 def _run_rfr_train_then_test(x_train, y_train, a_train, x_test, y_test, a_test, seed=None):
     if seed is not None:
         _set_global_seed(int(seed))
-    fairness_window = int(FLAGS.drift_fairness_window)
+    fairness_window = _effective_fairness_window()
     _, trained_model = evaluate_rfr_over_timesteps(
         np.asarray(x_train, dtype=np.float32),
         np.asarray(y_train, dtype=np.int32),
@@ -1037,9 +1054,6 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
     elif dataset_key == 'folktables':
         scenarios = ['folktables_2015_to_2017_2018']
         print(' Running Folktables train-then-test: train=2015, test=2017+2018')
-    elif dataset_key == 'diabetes':
-        scenarios = ['diabetes']
-        print(' Running single Diabetes evaluation')
     elif dataset_key == 'compas':
         scenarios = list(COMPAS_SCENARIOS.keys())
         print(f' Running all {len(scenarios)} COMPAS drift scenarios')
@@ -1200,10 +1214,14 @@ def _log_sweep_summary(summary, models_to_run):
                 for metric, values in merged.items()
             }
 
+    # Built as a plain dict and written once: wandb's Summary does not support
+    # ``in``, so testing it for a key raised KeyError and aborted the run
+    # before the sweep metric was written.
+    out = {}
     for model_name, metrics in by_model.items():
         for metric_name, stats in (metrics or {}).items():
             if isinstance(stats, dict) and stats.get('mean') is not None:
-                wandb.summary[f'{model_name}/{metric_name}'] = stats['mean']
+                out[f'{model_name}/{metric_name}'] = stats['mean']
 
     base = by_model.get(_BASELINE_ARM) or {}
     treatments = [m for m in by_model if m != _BASELINE_ARM and m in models_to_run]
@@ -1219,11 +1237,11 @@ def _log_sweep_summary(summary, models_to_run):
             b, a = _mean(base, source), _mean(arm, source)
             if b is not None and a is not None:
                 # positive = the treatment arm is FAIRER than the baseline
-                wandb.summary[f'{treatment}/{target}'] = float(b) - float(a)
+                out[f'{treatment}/{target}'] = float(b) - float(a)
         b, a = _mean(base, 'stream_final_accuracy'), _mean(arm, 'stream_final_accuracy')
         if b is not None and a is not None:
             # positive = the treatment arm is MORE ACCURATE than the baseline
-            wandb.summary[f'{treatment}/delta_accuracy'] = float(a) - float(b)
+            out[f'{treatment}/delta_accuracy'] = float(a) - float(b)
 
     # Unprefixed aliases for the primary arm, so a sweep config can name a
     # metric without knowing which arm it is.
@@ -1232,16 +1250,17 @@ def _log_sweep_summary(summary, models_to_run):
     if primary:
         for metric in ('delta_dp', 'delta_eo', 'delta_accuracy'):
             key = f'{primary}/{metric}'
-            if key in wandb.summary:
-                wandb.summary[metric] = wandb.summary[key]
+            if key in out:
+                out[metric] = out[key]
         for metric in ('fairness_far', 'fairness_mdr', 'fairness_mtd',
                        'fairness_mtfa', 'fairness_mtr', 'fairness_false_alarms',
                        'accuracy_far', 'accuracy_mdr', 'accuracy_mtd',
                        'accuracy_mtfa', 'accuracy_mtr', 'accuracy_false_alarms',
                        'stream_final_dp', 'stream_final_accuracy'):
             key = f'{primary}/{metric}'
-            if key in wandb.summary:
-                wandb.summary[metric] = wandb.summary[key]
+            if key in out:
+                out[metric] = out[key]
+    wandb.summary.update(out)
 
 
 def _aggregate_metrics(rows, metric_names):
@@ -1306,6 +1325,10 @@ def main(_):
                 'drift_temperature_on_drift': float(FLAGS.drift_temperature_on_drift),
                 'drift_temperature_recovery_target': float(FLAGS.drift_temperature_recovery_target),
                 'drift_temperature_recovery_step': float(FLAGS.drift_temperature_recovery_step),
+                'seeds': seeds,
+                'controller_components': str(FLAGS.controller_components),
+                # What the arms actually ran with, after dataset defaults.
+                'static_params': _build_aranyani_static_params(),
             },
             'reinit': True,
         }

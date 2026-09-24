@@ -1,7 +1,38 @@
 # Sweeps
 
-Three sweeps, each answering one question, plus the rules that keep them
-defensible. Run from the repo root: `wandb sweep src/configs/sweeps/<file>`.
+Seven sweeps, each answering one question, plus the rules that keep them
+defensible. All log to the W&B project `fado-ablations`.
+
+| file | question | runs |
+|---|---|---|
+| `sweep_component_compas.yaml` / `_adult` | does each controller component contribute? | 12 / 18 |
+| `sweep_monitor_ablation.yaml` | which signal and detector should watch fairness? | 48 |
+| `sweep_sensitivity.yaml` | is the gain a basin or a knife edge? | 120 |
+| `sweep_lambda_budget_compas.yaml` / `_adult` | equal lambda budget for Aranyani-Base (log 3.2) | 14 / 21 |
+| `sweep_architecture.yaml` | does the gap survive other depths / tree counts? | 15 |
+
+Each run is 5 tuning seeds, so a run's cost is 5 x (pre-train + both arms).
+
+### Running
+
+From the repo root, with the project venv active:
+
+```bash
+src/configs/sweeps/launch.sh all                 # or: launch.sh component_compas monitor_ablation
+wandb agent fado-ablations/<sweep-id>            # the command launch.sh prints; one per machine/core
+```
+
+`launch.sh` runs `python -m TESTS.check_sweeps` first, which rejects unknown
+flags, scenarios not registered for the sweep's dataset, and unselectable
+models. Run it on its own after editing any config. Commands use
+`-m src.main` (`python src/main.py` cannot import `src`) and set
+`PYTHONHASHSEED=0`.
+
+**Explicit flags beat dataset defaults.** `_COMPAS_FADO_OVERRIDES` /
+`_FOLKTABLES_FADO_OVERRIDES` in `main.py` now apply only to params whose flag
+was not passed. Before this, a sweep over `--lambda_const` or the ADWIN deltas
+on COMPAS ran every cell at the override value. The resolved values are logged
+to the run config as `static_params`, so check that field when in doubt.
 
 ---
 
@@ -26,10 +57,14 @@ improvement Z" does not, and it is the stronger claim.
 Every sweep here runs on the tuning split; the winning configuration is then run
 once on the reporting split with `--run_seed_pipeline`.
 
-| split | seeds | scenarios |
-|---|---|---|
-| tuning | `11,22,33,44,55` | `abrupt_*`, `gradual_*` |
-| reporting | `66,77,...,202` (15 seeds) | `no_drift`, `*_decouple`, `*_swap` |
+| split | seeds | Adult scenarios | COMPAS scenarios |
+|---|---|---|---|
+| tuning | `11,22,33,44,55` | `no_drift`, `abrupt_gender`, `gradual_gender` | `no_drift`, `abrupt_race` |
+| reporting | `66,77,...,202` (15 seeds) | all five | `no_drift`, `abrupt_race` |
+
+COMPAS registers only two scenarios, so its split is by seed alone: the
+reported numbers are on unseen seeds (different train/test partitions and
+different drifted rows), not unseen drift types. Say so in the paper.
 
 Aranyani-Base gets the same tuning budget for its one knob (`--lambda_const`),
 otherwise the comparison is tuned-vs-untuned and a reviewer is right to say so.
@@ -90,11 +125,13 @@ detector cannot see a change before its own window has refilled.
 
 ---
 
-## 1. `sweep_component_ablation.yaml` -- does each component contribute?
+## 1. `sweep_component_{compas,adult}.yaml` -- does each component contribute?
 
-24 runs. Grid over controller presets, everything else fixed. Answers "ablate
-the effect of each component of the proposed method". Report `delta_dp` /
-`delta_accuracy` per preset with Wilcoxon against the full controller.
+Grid over controller presets, everything else fixed. Answers "ablate the
+effect of each component of the proposed method". `no_drift` is in the grid on
+purpose: it is the cost of a component when there is nothing to react to.
+Report `delta_dp` / `delta_accuracy` per preset with Wilcoxon against the full
+controller.
 
 ## 2. `sweep_sensitivity.yaml` -- is the gain a tuning artifact?
 
@@ -103,7 +140,7 @@ plus the marginal of `delta_dp` against each hyperparameter.
 
 ## 3. `sweep_monitor_ablation.yaml` -- which monitor should watch fairness?
 
-72 runs, signal design x detector backend.
+48 runs, signal design x detector backend x {`no_drift`, `abrupt_race`}.
 
 - `--fairness_signal_mode`: `raw_dp` (autocorrelated, the negative control),
   `subsampled_dp` (independent, one window of latency), `per_sample` (i.i.d.
@@ -119,3 +156,19 @@ Expected headline: **signal design dominates detector choice.** On a stationary
 50k stream, a rolling DP fed to ADWIN produces ~24 false alarms at delta=1e-5
 (lag-1 autocorrelation 0.991) while the per-sample surrogate produces 0 at
 delta=0.2.
+
+## 4. `sweep_lambda_budget_{compas,adult}.yaml` -- equal budget for lambda
+
+Grid over `--lambda_const` with **both** arms in every run, so each lambda
+yields a paired Base point and FADO point. No lambda is selected: report each
+arm's accuracy-vs-DP curve over the whole grid (decision 3.2a). The grid is
+the budget, identical for the two arms.
+
+**Budget rule.** Controller ablations (component, monitor, sensitivity) vary
+only controller parameters. Anything that affects every arm -- lambda, depth,
+tree count, windows -- is swept for every arm it reaches.
+
+## 5. `sweep_architecture.yaml` -- forest size
+
+depth x num_trees on COMPAS `abrupt_race`, both arms. Replaces
+`files/wandb_tree_depth_sweep.yaml`, which ran one arm on accuracy only.

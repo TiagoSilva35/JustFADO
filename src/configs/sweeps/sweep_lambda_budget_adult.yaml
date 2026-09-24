@@ -1,0 +1,43 @@
+# Decision log 3.2: equal tuning budget for lambda.
+#
+# Aranyani-Base has one knob, --lambda_const. Without tuning it the FADO
+# comparison is tuned-vs-untuned. Both arms run on the SAME lambda grid, paired
+# on one pre-trained forest per cell, so each lambda gives a Base point and a
+# FADO point and the two accuracy/DP fronts can be compared directly.
+#
+# Decision 3.2 (a): no lambda is selected. Report the accuracy-vs-DP
+# trade-off curve of each arm across the whole grid; the claim is that FADO's
+# curve lies beyond Base's. The metric below is for the W&B UI only.
+#
+# 7 lambdas x 3 scenarios = 21 runs, 5 tuning seeds each.
+program: src/main.py
+project: fado-ablations
+method: grid
+name: lambda-budget-adult
+metric:
+  name: aranyani_base/stream_final_dp
+  goal: minimize
+parameters:
+  pipeline_model:
+    value: 'aranyani,aranyani_base'
+  pipeline_dataset:
+    value: adult
+  drift_scenario:
+    values: ['no_drift', 'abrupt_gender', 'gradual_gender']
+  lambda_const:
+    values: [0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
+  seeds:
+    value: '11,22,33,44,55'
+  deterministic:
+    value: true
+  wandb_log:
+    value: true
+  wandb_project:
+    value: fado-ablations
+command:
+  - ${env}
+  - PYTHONHASHSEED=0
+  - ${interpreter}
+  - -m
+  - src.main
+  - ${args}

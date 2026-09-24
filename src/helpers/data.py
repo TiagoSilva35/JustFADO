@@ -1,46 +1,70 @@
-#!/usr/bin/env python
-# coding: utf-8
-# %%
-
-# %%
-
-
-"""Dataloaders."""
-
-
-# %%
-
-
 import os
 from glob import glob
 
-
-# %%
-
-import pickle
 import numpy as np
 import pandas as pd
-import logging
-from folktables import ACSDataSource, BasicProblem
-
+from folktables import ACSDataSource
 from sklearn.model_selection import train_test_split
 
-from src.drift.create_drifted_ds import generate_drifted_dataset
-from src.drift.scenarios import get_scenario, SCENARIOS
 from src.drift.compas_scenarios import COMPAS_SCENARIOS, get_compas_scenario
+from src.drift.scenarios import SCENARIOS, get_scenario
 
 
-logging.basicConfig(level=logging.INFO)
+# ---------------------------------------------------------------------------
+# Shared helpers
+# ---------------------------------------------------------------------------
 
-IM_WIDTH = IM_HEIGHT = 160
+
+def _resolve_csv_files(path, label):
+  path = str(path).strip()
+  if any(token in path for token in ['*', '?', '[']):
+    files = sorted(glob(path))
+  elif os.path.isdir(path):
+    files = sorted(glob(os.path.join(path, '*.csv')))
+  elif os.path.isfile(path):
+    files = [path]
+  else:
+    files = []
+  files = [f for f in files if os.path.isfile(f) and f.lower().endswith('.csv')]
+  if not files:
+    raise FileNotFoundError(
+        f"No {label} data files found for path '{path}'. "
+        "Provide a valid file, directory, or glob."
+    )
+  return files
 
 
+def _resolve_column_name(df, candidates, label):
+  column_map = {str(column).strip().lower(): column for column in df.columns}
+  for candidate in candidates:
+    if candidate in column_map:
+      return column_map[candidate]
+  raise ValueError(
+      f"Could not infer {label} column. Available columns: {list(df.columns)}"
+  )
+
+
+def _normalize_binary_series(series, label):
+  values = pd.Series(series)
+  if values.empty:
+    raise ValueError(f"Cannot parse empty {label} values.")
+  if values.dtype.kind in {'O', 'U', 'S'}:
+    values = values.astype(str).str.strip().str.lower()
+  encoded = pd.factorize(values)[0].astype(np.int32)
+  n_classes = len(np.unique(encoded))
+  if n_classes != 2:
+    raise ValueError(f"Expected binary {label} values, found {n_classes} classes.")
+  return encoded
+
+
+# ---------------------------------------------------------------------------
+# Tabular encoder (fit on train, apply to test)
+# ---------------------------------------------------------------------------
 
 
 def _normalize_categorical_values(values):
   normalized = values.where(values.notna(), '__missing__')
-  normalized = normalized.astype(str).str.strip().replace('', '__missing__')
-  return normalized
+  return normalized.astype(str).str.strip().replace('', '__missing__')
 
 
 def _fit_tabular_transformer(
@@ -48,27 +72,20 @@ def _fit_tabular_transformer(
     categorical_columns,
     frequency_encode_columns=None,
     rare_category_min_count=1,
-  return_dataframe=False,
+    return_dataframe=False,
 ):
-  """Fit a train-only tabular transformer and transform features."""
-  work = features.copy()
-  categorical = [column for column in categorical_columns if column in work.columns]
-  numeric = [column for column in work.columns if column not in categorical]
+  categorical = [c for c in categorical_columns if c in features.columns]
+  numeric = [c for c in features.columns if c not in categorical]
   frequency_encode_columns = [
-      column for column in (frequency_encode_columns or [])
-      if column in categorical
+      c for c in (frequency_encode_columns or []) if c in categorical
   ]
-  frequency_encode_set = set(frequency_encode_columns)
-  one_hot_columns = [
-      column for column in categorical
-      if column not in frequency_encode_set
-  ]
+  one_hot_columns = [c for c in categorical if c not in set(frequency_encode_columns)]
   min_count = int(max(1, rare_category_min_count))
 
   numeric_medians, numeric_means, numeric_stds = {}, {}, {}
-  numeric_frame = pd.DataFrame(index=work.index)
+  numeric_frame = pd.DataFrame(index=features.index)
   for column in numeric:
-    values = pd.to_numeric(work[column], errors='coerce')
+    values = pd.to_numeric(features[column], errors='coerce')
     median = float(values.median()) if values.notna().any() else 0.0
     values = values.fillna(median)
     mean = float(values.mean()) if values.notna().any() else 0.0
@@ -84,13 +101,13 @@ def _fit_tabular_transformer(
   categorical_frequency_maps = {}
   categorical_frames = []
   for column in one_hot_columns:
-    values = _normalize_categorical_values(work[column])
+    values = _normalize_categorical_values(features[column])
     dummies = pd.get_dummies(values, prefix=column, dtype=np.float32)
     categorical_dummy_columns[column] = list(dummies.columns)
     categorical_frames.append(dummies)
 
   for column in frequency_encode_columns:
-    values = _normalize_categorical_values(work[column])
+    values = _normalize_categorical_values(features[column])
     if min_count > 1:
       counts = values.value_counts()
       rare_values = counts[counts < min_count].index
@@ -99,14 +116,11 @@ def _fit_tabular_transformer(
     frequencies = values.value_counts(normalize=True).astype(np.float32).to_dict()
     categorical_frequency_maps[column] = frequencies
     encoded = values.map(frequencies).fillna(0.0).astype(np.float32)
-    categorical_frames.append(pd.DataFrame({f'{column}__freq': encoded}, index=work.index))
+    categorical_frames.append(
+        pd.DataFrame({f'{column}__freq': encoded}, index=features.index)
+    )
 
-  categorical_frame = (
-      pd.concat(categorical_frames, axis=1)
-      if categorical_frames
-      else pd.DataFrame(index=work.index)
-  )
-  transformed = pd.concat([numeric_frame, categorical_frame], axis=1)
+  transformed = pd.concat([numeric_frame, *categorical_frames], axis=1)
   transformed = transformed.astype(np.float32)
   transformer = {
       'feature_columns': list(transformed.columns),
@@ -127,399 +141,166 @@ def _fit_tabular_transformer(
 
 def _transform_tabular_features(features, transformer):
   """Apply a fitted tabular transformer to new feature data."""
-  work = features.copy()
-  categorical_columns = transformer.get('categorical_columns', [])
-  frequency_encoded_columns = set(transformer.get('frequency_encoded_columns', []))
-  categorical_frequency_maps = transformer.get('categorical_frequency_maps', {})
-  numeric_frame = pd.DataFrame(index=work.index)
+  frequency_encoded = set(transformer.get('frequency_encoded_columns', []))
+  frequency_maps = transformer.get('categorical_frequency_maps', {})
+
+  numeric_frame = pd.DataFrame(index=features.index)
   for column in transformer['numeric_columns']:
-    if column in work.columns:
-      values = pd.to_numeric(work[column], errors='coerce')
+    if column in features.columns:
+      values = pd.to_numeric(features[column], errors='coerce')
     else:
-      values = pd.Series(np.nan, index=work.index)
+      values = pd.Series(np.nan, index=features.index)
     values = values.fillna(transformer['numeric_medians'][column])
-    mean = transformer['numeric_means'][column]
-    std = transformer['numeric_stds'][column]
-    numeric_frame[column] = (values - mean) / std
+    numeric_frame[column] = (
+        (values - transformer['numeric_means'][column])
+        / transformer['numeric_stds'][column]
+    )
 
   categorical_frames = []
-  for column in categorical_columns:
-    if column in work.columns:
-      values = _normalize_categorical_values(work[column])
+  for column in transformer.get('categorical_columns', []):
+    if column in features.columns:
+      values = _normalize_categorical_values(features[column])
     else:
-      values = pd.Series('__missing__', index=work.index, dtype='object')
-    if column in frequency_encoded_columns:
-      frequencies = categorical_frequency_maps.get(column, {})
+      values = pd.Series('__missing__', index=features.index, dtype='object')
+    if column in frequency_encoded:
+      frequencies = frequency_maps.get(column, {})
       if '__other__' in frequencies:
-        values = values.where(values.isin(set(frequencies.keys())), '__other__')
+        values = values.where(values.isin(set(frequencies)), '__other__')
       encoded = values.map(frequencies).fillna(0.0).astype(np.float32)
-      categorical_frames.append(pd.DataFrame({f'{column}__freq': encoded}, index=work.index))
+      categorical_frames.append(
+          pd.DataFrame({f'{column}__freq': encoded}, index=features.index)
+      )
     else:
       dummies = pd.get_dummies(values, prefix=column, dtype=np.float32)
-      dummies = dummies.reindex(
+      categorical_frames.append(dummies.reindex(
           columns=transformer['categorical_dummy_columns'][column],
           fill_value=0.0,
-      )
-      categorical_frames.append(dummies)
+      ))
 
-  categorical_frame = (
-      pd.concat(categorical_frames, axis=1)
-      if categorical_frames
-      else pd.DataFrame(index=work.index)
-  )
-  transformed = pd.concat([numeric_frame, categorical_frame], axis=1)
+  transformed = pd.concat([numeric_frame, *categorical_frames], axis=1)
   transformed = transformed.reindex(
-      columns=transformer['feature_columns'],
-      fill_value=0.0,
+      columns=transformer['feature_columns'], fill_value=0.0,
   )
   return transformed.to_numpy(dtype=np.float32)
 
 
+def _encode_features(features, categorical_columns, transformer=None, **fit_kwargs):
+  """Fit a transformer when none is given, otherwise apply it."""
+  if transformer is None:
+    return _fit_tabular_transformer(features, categorical_columns, **fit_kwargs)
+  return _transform_tabular_features(features, transformer), transformer
+
+
+# ---------------------------------------------------------------------------
+# Adult
+# ---------------------------------------------------------------------------
+
+ADULT_COLUMNS = [
+    'age', 'workclass', 'fnlwgt', 'education', 'education-num',
+    'marital-status', 'occupation', 'relationship', 'race', 'gender',
+    'capital gain', 'capital loss', 'hours per week', 'native-country',
+    'income',
+]
+ADULT_CATEGORICAL = [
+    'workclass', 'education', 'marital-status', 'occupation',
+    'relationship', 'race', 'gender', 'native-country',
+]
+_ADULT_MARITAL_STATUS = {
+    'Divorced': 'not married',
+    'Married-AF-spouse': 'married',
+    'Married-civ-spouse': 'married',
+    'Married-spouse-absent': 'married',
+    'Never-married': 'not married',
+    'Separated': 'not married',
+    'Widowed': 'not married',
+}
+
+
 def _adult_income_to_binary(series):
   normalized = (
-      pd.Series(series).astype(str).str.strip().str.replace('.', '', regex=False).str.lower()
+      pd.Series(series).astype(str).str.strip()
+      .str.replace('.', '', regex=False).str.lower()
   )
-  unique_values = set(normalized.unique())
-  if unique_values.issubset({'<=50k', '>50k'}):
+  if set(normalized.unique()).issubset({'<=50k', '>50k'}):
     return (normalized == '>50k').astype(np.int32).to_numpy()
   return _normalize_binary_series(normalized, 'target')
 
 
 def _adult_gender_to_binary(series):
+  """1 = male, 0 = female."""
   normalized = pd.Series(series).astype(str).str.strip().str.lower()
-  unique_values = set(normalized.unique())
-  if unique_values.issubset({'male', 'female'}):
+  if set(normalized.unique()).issubset({'male', 'female'}):
     return (normalized == 'male').astype(np.int32).to_numpy()
   return _normalize_binary_series(normalized, 'sensitive attribute')
 
 
-def _prepare_adult_frame(df):
+def _read_adult_csv(path, file_name):
+  # adult.test starts with a '|1x3 Cross validator' comment line.
+  skiprows = 1 if file_name == 'adult.test' else 0
+  with open(os.path.join(path, file_name), 'rb') as f:
+    return pd.read_csv(f, names=ADULT_COLUMNS, skiprows=skiprows)
+
+
+def _preprocess_adult_frame(df, transformer=None):
   frame = df.dropna().copy()
-  if 'marital-status' in frame.columns:
-    frame['marital-status'] = frame['marital-status'].replace(
-        {
-            'Divorced': 'not married',
-            'Married-AF-spouse': 'married',
-            'Married-civ-spouse': 'married',
-            'Married-spouse-absent': 'married',
-            'Never-married': 'not married',
-            'Separated': 'not married',
-            'Widowed': 'not married',
-        }
-    )
-  return frame
-
-
-def _preprocess_adult_frame(df, feature_transformer=None, fit_feature_transformer=False):
-  frame = _prepare_adult_frame(df)
+  frame['marital-status'] = frame['marital-status'].replace(_ADULT_MARITAL_STATUS)
   y = _adult_income_to_binary(frame['income'])
   a = _adult_gender_to_binary(frame['gender'])
-
-  features = frame.drop(columns=['income']).copy()
-  categorical_features = [
-      'workclass',
-      'education',
-      'marital-status',
-      'occupation',
-      'relationship',
-      'race',
-      'gender',
-      'native-country',
-  ]
-  if fit_feature_transformer or feature_transformer is None:
-    x, feature_transformer = _fit_tabular_transformer(features, categorical_features)
-  else:
-    x = _transform_tabular_features(features, feature_transformer)
-  return x, y, a, feature_transformer
-
-
-def preprocess_adult(df):
-  """Pre-process the Adult dataset.
-
-  Args:
-    df: pandas data frame.
-
-  Returns:
-  """
-  x, y, a, _ = _preprocess_adult_frame(
-      df,
-      feature_transformer=None,
-      fit_feature_transformer=True,
+  x, transformer = _encode_features(
+      frame.drop(columns=['income']), ADULT_CATEGORICAL, transformer,
   )
-  return x, y, a
+  return x, y, a, transformer
 
 
-# %%
+def _apply_adult_scenario(df, scenario_name):
+  if scenario_name and scenario_name != 'no_drift':
+    print(f"Applying drift scenario: {scenario_name}")
+    return get_scenario(scenario_name)(df)
+  return df
 
 
 def read_adult(drift, path='data/adult', drift_scenario=None):
-  """Read the Adult dataset.
+  """Read Adult: adult.data is the training set, adult.test the stream.
 
   Args:
-    drift: bool or str – if True uses default abrupt_gender scenario,
-           if a string it selects the named scenario from drift.scenarios.
-    path: path to the adult data directory.
-    drift_scenario: explicit scenario name (overrides *drift* when given).
+    drift: ``True`` applies the default ``abrupt_gender`` scenario, a scenario
+      name applies that scenario, anything else applies none.
+    path: directory holding adult.data / adult.test.
+    drift_scenario: explicit scenario name; overrides ``drift``.
 
   Returns:
-    x_train, x_test, y_train, y_test, a_train, a_test
+    x_train, x_test, y_train, y_test, a_train, a_test. The test arrays are
+    empty lists when adult.test is missing.
   """
-
-  columns = [
-      'age',
-      'workclass',
-      'fnlwgt',
-      'education',
-      'education-num',
-      'marital-status',
-      'occupation',
-      'relationship',
-      'race',
-      'gender',
-      'capital gain',
-      'capital loss',
-      'hours per week',
-      'native-country',
-      'income',
-  ]
-
-  with open(os.path.join(path, 'adult.data'), 'rb') as f:
-    train_df = pd.read_csv(f, names=columns)
-
-
-  x_train, y_train, a_train, adult_transformer = _preprocess_adult_frame(
-      train_df,
-      feature_transformer=None,
-      fit_feature_transformer=True,
+  x_train, y_train, a_train, transformer = _preprocess_adult_frame(
+      _read_adult_csv(path, 'adult.data')
   )
+  if not os.path.exists(os.path.join(path, 'adult.test')):
+    return x_train, [], y_train, [], a_train, []
 
-  # Load test data if available
-  test_file_path = os.path.join(path, 'adult.test')
-  if os.path.exists(test_file_path):
-    with open(test_file_path, 'rb') as f:
-        # Skip the first line if it contains a header or comment
-        df = pd.read_csv(f, names=columns, skiprows=1)
-        print(f"This set contains, {len(df[df['gender'] == ' Female'])} female samples")
-        print(f"Income column unique values: {df['income'].unique()}")
-        print(f"Samples with income >50K: {len(df[df['income'].str.strip() == '>50K'])}")
-        print(f"Samples with income >50K.: {len(df[df['income'].str.strip() == '>50K.'])}")
-        print(f"Male samples with >50K income: {len(df[(df['gender'].str.strip() == 'Male') & (df['income'].str.strip() == '>50K')])}")
-        print(f"Male samples with >50K. income: {len(df[(df['gender'].str.strip() == 'Male') & (df['income'].str.strip() == '>50K.')])}")
-        _scenario_name = drift_scenario  
-        if _scenario_name is None and isinstance(drift, str) and drift in SCENARIOS:
-            _scenario_name = drift
-        elif _scenario_name is None and drift is True:
-            _scenario_name = 'abrupt_gender'  # backwards-compatible default
+  scenario_name = drift_scenario
+  if scenario_name is None and isinstance(drift, str) and drift in SCENARIOS:
+    scenario_name = drift
+  elif scenario_name is None and drift is True:
+    scenario_name = 'abrupt_gender'
 
-        if _scenario_name:
-            scenario_fn = get_scenario(_scenario_name)
-            print(f"Applying drift scenario: {_scenario_name}")
-            test_df = scenario_fn(df)
-            print(f"This drifted set contains {len(test_df[test_df['gender'] == ' Female'])} female examples")
-        else:
-            test_df = df
-
-    x_test, y_test, a_test, _ = _preprocess_adult_frame(
-        test_df,
-        feature_transformer=adult_transformer,
-        fit_feature_transformer=False,
-    )
-  else:
-    x_test, y_test, a_test = [], [], []
-
+  test_df = _apply_adult_scenario(_read_adult_csv(path, 'adult.test'), scenario_name)
+  x_test, y_test, a_test, _ = _preprocess_adult_frame(test_df, transformer)
   return x_train, x_test, y_train, y_test, a_train, a_test
 
 
-# %%
-
-
 def load_drifted_test_set(scenario_name, path='data/adult'):
-  """Load and preprocess only the adult test set with a drift scenario applied.
-
-  This is a lightweight alternative to read_adult() for evaluating an
-  already-trained model against different drift scenarios without reloading
-  the training data.
-
-  Args:
-    scenario_name: name of the drift scenario (key in SCENARIOS dict).
-    path: path to the adult data directory.
-
-  Returns:
-    x_test, y_test, a_test  (NumPy arrays, preprocessed)
-  """
-
-  columns = [
-      'age', 'workclass', 'fnlwgt', 'education', 'education-num',
-      'marital-status', 'occupation', 'relationship', 'race', 'gender',
-      'capital gain', 'capital loss', 'hours per week', 'native-country',
-      'income',
-  ]
-
-  test_file_path = os.path.join(path, 'adult.test')
-  train_file_path = os.path.join(path, 'adult.data')
-  with open(train_file_path, 'rb') as f:
-    train_df = pd.read_csv(f, names=columns)
-  _, _, _, adult_transformer = _preprocess_adult_frame(
-      train_df,
-      feature_transformer=None,
-      fit_feature_transformer=True,
-  )
-
-  with open(test_file_path, 'rb') as f:
-    df = pd.read_csv(f, names=columns, skiprows=1)
-
-  if scenario_name and scenario_name != 'no_drift':
-    scenario_fn = get_scenario(scenario_name)
-    print(f"Applying drift scenario: {scenario_name}")
-    df = scenario_fn(df)
-  else:
-    print("No drift applied (baseline)")
-
-  x_test, y_test, a_test, _ = _preprocess_adult_frame(
-      df,
-      feature_transformer=adult_transformer,
-      fit_feature_transformer=False,
-  )
+  """Adult test stream with ``scenario_name`` applied, encoded with the
+  transformer fitted on adult.data. Returns x_test, y_test, a_test."""
+  _, _, _, transformer = _preprocess_adult_frame(_read_adult_csv(path, 'adult.data'))
+  test_df = _apply_adult_scenario(_read_adult_csv(path, 'adult.test'), scenario_name)
+  x_test, y_test, a_test, _ = _preprocess_adult_frame(test_df, transformer)
   return x_test, y_test, a_test
 
 
-# %%
-
-
-def _preprocess_census_frame(df, feature_transformer=None, fit_feature_transformer=False):
-  """Pre-process the Census dataset.
-
-  Args:
-    df:
-
-  Returns:
-  """
-  frame = df.dropna().copy()
-  categorical_features = [
-      'class_worker',
-      'education',
-      'hs_college',
-      'marital_stat',
-      'major_ind_code',
-      'major_occ_code',
-      'race',
-      'hisp_origin',
-      'sex',
-      'union_member',
-      'unemp_reason',
-      'full_or_part_emp',
-      'tax_filer_stat',
-      'region_prev_res',
-      'state_prev_res',
-      'det_hh_fam_stat',
-      'det_hh_summ',
-      'mig_chg_msa',
-      'mig_chg_reg',
-      'mig_move_reg',
-      'mig_same',
-      'mig_prev_sunbelt',
-      'fam_under_18',
-      'country_father',
-      'country_mother',
-      'country_self',
-      'citizenship',
-      'vet_question',
-  ]
-  y = _normalize_binary_series(frame['income_50k'], 'target')
-  a = _normalize_binary_series(frame['sex'], 'sensitive attribute')
-  features = frame.drop(columns=['income_50k']).copy()
-  if 'unk' in features.columns:
-    features = features.drop(columns=['unk'])
-
-  if fit_feature_transformer or feature_transformer is None:
-    x, feature_transformer = _fit_tabular_transformer(features, categorical_features)
-  else:
-    x = _transform_tabular_features(features, feature_transformer)
-
-  return x, np.asarray(y, dtype=np.int32), np.asarray(a, dtype=np.int32), feature_transformer
-
-
-def preprocess_census(df):
-  x, y, a, _ = _preprocess_census_frame(
-      df,
-      feature_transformer=None,
-      fit_feature_transformer=True,
-  )
-  return x, y, a
-
-
-# %%
-
-
-def read_census(path='../data/census/'):
-  """Read the Census dataset.
-
-  Column names borrowed from:
-  https://docs.1010data.com/Tutorials/MachineLearningExamples/CensusIncomeDataSet.html
-  1 unidentified column name marked as 'unk' and dropped later.
-
-  Args:
-    path:
-
-  Returns:
-
-  """
-  column_names = [
-      'age', 'class_worker', 'det_ind_code', 'det_occ_code', 'education',
-      'wage_per_hour', 'hs_college', 'marital_stat', 'major_ind_code',
-      'major_occ_code', 'race', 'hisp_origin', 'sex', 'union_member',
-      'unemp_reason', 'full_or_part_emp', 'capital_gains', 'capital_losses',
-      'stock_dividends', 'tax_filer_stat', 'region_prev_res', 'state_prev_res',
-      'det_hh_fam_stat', 'det_hh_summ', 'unk', 'mig_chg_msa', 'mig_chg_reg',
-      'mig_move_reg', 'mig_same', 'mig_prev_sunbelt', 'num_emp', 'fam_under_18',
-      'country_father', 'country_mother', 'country_self', 'citizenship',
-      'own_or_self', 'vet_question', 'vet_benefits', 'weeks_worked',
-      'year', 'income_50k',
-  ]
-
-  # we only use the test set for online learning
-  with open(os.path.join(path, 'census-income.data'), 'rb') as f:
-    df = pd.read_csv(f, names=column_names)
-  x, y, a = preprocess_census(df)
-  return x, [], y, [], a, []
-
-
-def read_jigsaw(path='../data/jigsaw/'):
-  with open(os.path.join(path, "jigsaw.pkl"), "rb") as f:
-    inputs, texts, Y, A = pickle.load(f)
-
-  X = np.array(inputs)
-  Y = np.array(Y)
-  A = np.array(A)
-  return X, Y, A
-
-
-def _resolve_compas_files(path):
-  """Resolve COMPAS CSV inputs from a file, directory, or glob path."""
-  path = str(path).strip()
-  if not path:
-    path = 'data/compas/*'
-
-  if any(token in path for token in ['*', '?', '[']):
-    files = sorted(glob(path))
-  elif os.path.isdir(path):
-    files = sorted(glob(os.path.join(path, '*.csv')))
-  elif os.path.isfile(path):
-    files = [path]
-  else:
-    files = []
-
-  files = [
-      file_path for file_path in files
-      if os.path.isfile(file_path) and str(file_path).lower().endswith('.csv')
-  ]
-  if not files:
-    raise FileNotFoundError(
-        f"No COMPAS data files found for path '{path}'. "
-        "Provide a valid file, directory, or glob (e.g., data/compas/*)."
-    )
-  return files
-
+# ---------------------------------------------------------------------------
+# COMPAS
+# ---------------------------------------------------------------------------
 
 _COMPAS_TARGET_CANDIDATES = [
     'two_year_recid', 'is_recid', 'recid', 'label', 'target', 'y',
@@ -527,85 +308,53 @@ _COMPAS_TARGET_CANDIDATES = [
 _COMPAS_SENSITIVE_CANDIDATES = [
     'race', 'ethnicity', 'sensitive', 'sensitive_attribute', 'group', 'a',
 ]
-_COMPAS_LEGACY_FEATURE_NAMES = [
-    "juv_fel_count",
-    "juv_misd_count",
-    "juv_other_count",
-    "priors_count",
-    "age",
-    "c_charge_degree",
-    "c_charge_desc",
-    "age_cat",
-    "sex",
-    "race",
-    "is_recid",
+# Header for headerless legacy CSVs.
+_COMPAS_LEGACY_COLUMNS = [
+    'juv_fel_count', 'juv_misd_count', 'juv_other_count', 'priors_count',
+    'age', 'c_charge_degree', 'c_charge_desc', 'age_cat', 'sex', 'race',
+    'is_recid',
 ]
-_COMPAS_PREFERRED_FEATURE_COLUMNS = [
-    'juv_fel_count',
-    'juv_misd_count',
-    'juv_other_count',
-    'priors_count',
-    'age',
-    'c_charge_degree',
-    'c_charge_desc',
-    'age_cat',
-    'sex',
-    'race',
-]
+_COMPAS_FEATURE_COLUMNS = _COMPAS_LEGACY_COLUMNS[:-1]
 
 
 def _read_compas_work_df(path):
-  """Read raw COMPAS CSV(s) and return a cleaned, un-encoded DataFrame.
+  """Read raw COMPAS CSV(s) into an un-encoded frame.
+
+  Categorical columns stay raw strings so drift scenarios in
+  ``src/drift/compas_scenarios.py`` can edit them before encoding.
 
   Returns:
-    work_df: pandas DataFrame containing only the columns we use
-      (features + target + sensitive), with rows missing target/sensitive
-      values dropped. Categorical columns are still raw strings so drift
-      scenarios in ``src/drift/compas_scenarios.py`` can manipulate them
-      before encoding.
-    feature_columns: list of feature column names in canonical order.
-    target_col, sensitive_col: resolved column names.
+    work_df: features + target + sensitive, rows missing target/sensitive
+      dropped.
+    feature_columns, target_col, sensitive_col.
   """
-
   def _has_any_column(frame, candidates):
     columns = {str(column).strip().lower() for column in frame.columns}
     return any(candidate in columns for candidate in candidates)
 
-  files = _resolve_compas_files(path)
   frames = []
-  for file_path in files:
+  for file_path in _resolve_csv_files(path, 'COMPAS'):
     frame = pd.read_csv(file_path)
-    if not (
-        _has_any_column(frame, _COMPAS_TARGET_CANDIDATES)
-        and _has_any_column(frame, _COMPAS_SENSITIVE_CANDIDATES)
-    ):
-      frame = pd.read_csv(
-          file_path, names=_COMPAS_LEGACY_FEATURE_NAMES, header=None
-      )
+    if not (_has_any_column(frame, _COMPAS_TARGET_CANDIDATES)
+            and _has_any_column(frame, _COMPAS_SENSITIVE_CANDIDATES)):
+      frame = pd.read_csv(file_path, names=_COMPAS_LEGACY_COLUMNS, header=None)
     frames.append(frame)
-  df = pd.concat(frames, ignore_index=True).copy()
+  df = pd.concat(frames, ignore_index=True)
 
   target_col = _resolve_column_name(df, _COMPAS_TARGET_CANDIDATES, 'target')
   sensitive_col = _resolve_column_name(
       df, _COMPAS_SENSITIVE_CANDIDATES, 'sensitive attribute'
   )
 
-  present_preferred = [
-      column for column in _COMPAS_PREFERRED_FEATURE_COLUMNS if column in df.columns
-  ]
-  if len(present_preferred) >= 3:
-    feature_columns = list(dict.fromkeys(present_preferred))
-  else:
+  feature_columns = [c for c in _COMPAS_FEATURE_COLUMNS if c in df.columns]
+  if len(feature_columns) < 3:
     feature_columns = [
-        column for column in df.columns
-        if column != target_col
-        and str(column).strip().lower() not in set(_COMPAS_TARGET_CANDIDATES)
+        c for c in df.columns
+        if c != target_col
+        and str(c).strip().lower() not in set(_COMPAS_TARGET_CANDIDATES)
     ]
-  required_columns = list(
-      dict.fromkeys(feature_columns + [target_col, sensitive_col])
-  )
-  work_df = df[required_columns].copy()
-  work_df = work_df.dropna(subset=[target_col, sensitive_col]).copy()
+  required_columns = list(dict.fromkeys(feature_columns + [target_col, sensitive_col]))
+  work_df = df[required_columns].dropna(subset=[target_col, sensitive_col]).copy()
   if work_df.empty:
     raise ValueError(
         "COMPAS data has no usable rows after filtering missing target/sensitive values."
@@ -614,15 +363,11 @@ def _read_compas_work_df(path):
 
 
 def _compas_target_to_binary(values):
-  """COMPAS target (``two_year_recid``) -> np.int32 with deterministic 0/1.
+  """COMPAS target -> int32 0/1 with a fixed, order-independent mapping.
 
-  ``_normalize_binary_series`` uses ``pd.factorize`` which assigns code 0
-  to whichever value appears first -- order-dependent, and silently
-  inverts when called on disjoint train/test halves. For COMPAS the
-  target is always int {0, 1} (or a clean yes/no string), so we can map
-  it deterministically without factorize, which lets us re-encode
-  ``y_test`` after a scenario has flipped some labels and stay
-  consistent with the pre-split ``y_full`` encoding.
+  Unlike ``_normalize_binary_series`` this gives the same encoding on any
+  slice, so ``y_test`` can be re-encoded after a scenario flips labels and
+  still agree with ``y_train``.
   """
   series = pd.Series(values)
   if pd.api.types.is_numeric_dtype(series):
@@ -634,13 +379,11 @@ def _compas_target_to_binary(values):
     return normalized.astype(np.int32).to_numpy()
   if normalized.isin({'yes', 'no', 'true', 'false', '0', '1'}).any():
     return normalized.isin({'yes', 'true', '1'}).astype(np.int32).to_numpy()
-  # Last-resort fallback: order-dependent factorize. Caller should
-  # avoid this path on disjoint slices.
   return np.asarray(_normalize_binary_series(values, 'target'), dtype=np.int32)
 
 
 def _compas_sensitive_to_binary(values):
-  """Encode COMPAS sensitive attribute as binary (1=white/Caucasian, 0=other)."""
+  """1 = White/Caucasian, 0 = any other race."""
   values = pd.Series(values)
   if values.dtype.kind in {'O', 'U', 'S'}:
     normalized = values.astype(str).str.strip().str.lower()
@@ -650,19 +393,12 @@ def _compas_sensitive_to_binary(values):
     }
     if normalized.isin(known_groups).any():
       return normalized.isin({'white', 'caucasian'}).astype(np.int32).to_numpy()
-    return _normalize_binary_series(normalized, 'sensitive attribute')
+    values = normalized
   return _normalize_binary_series(values, 'sensitive attribute')
 
 
 def _compas_sex_to_binary(values):
-  """Encode COMPAS ``sex`` as binary (1=Female, 0=Male).
-
-  Used to build the intersectional composite group label
-  ``a = 2*a_race + a_sex`` when ``intersectional=True`` is passed to
-  ``read_compas_train_test``. The 1=Female convention follows the COMPAS
-  fairness literature where positive-rate parity is typically analysed
-  with women as the reference subgroup.
-  """
+  """1 = Female, 0 = Male (the reference subgroup in the COMPAS literature)."""
   series = pd.Series(values)
   if series.dtype.kind in {'O', 'U', 'S'}:
     normalized = series.astype(str).str.strip().str.lower()
@@ -670,92 +406,56 @@ def _compas_sex_to_binary(values):
   return _normalize_binary_series(series, 'sex attribute')
 
 
-def _encode_compas_features(
-    work_df, target_col, feature_transformer=None, fit=False,
-    return_dataframe=False,
-):
-  """Encode COMPAS features and return x + transformer.
-
-  Split out from ``_encode_compas_frame`` so callers that pre-encode the
-  binary target and sensitive labels globally (to avoid order-dependent
-  ``pd.factorize`` between disjoint train/test halves) can reuse the
-  same tabular transformer for features alone. Set ``return_dataframe`` to
-  return numeric features as a pandas DataFrame instead of a NumPy array.
-  """
-  features = work_df.drop(columns=[target_col]).copy()
+def _encode_compas_features(work_df, target_col, transformer=None,
+                            return_dataframe=False):
+  """Encode COMPAS features. ``c_charge_desc`` is frequency-encoded (its
+  one-hot would be ~400 sparse columns); categories seen < 10 times pool."""
+  features = work_df.drop(columns=[target_col])
   if features.empty:
     raise ValueError("COMPAS data has no feature columns after dropping target column.")
-
-  categorical_features = [
-      column for column in features.columns
-      if not pd.api.types.is_numeric_dtype(features[column])
+  categorical = [
+      c for c in features.columns if not pd.api.types.is_numeric_dtype(features[c])
   ]
-  if fit or feature_transformer is None:
-    x, feature_transformer = _fit_tabular_transformer(
-        features,
-        categorical_features,
-        frequency_encode_columns=['c_charge_desc'],
-        rare_category_min_count=10,
-        return_dataframe=return_dataframe,
-    )
-  else:
-    x = _transform_tabular_features(features, feature_transformer)
+  x, transformer = _encode_features(
+      features, categorical, transformer,
+      frequency_encode_columns=['c_charge_desc'],
+      rare_category_min_count=10,
+  )
+  x = np.asarray(x, dtype=np.float32)
   if return_dataframe:
-    return pd.DataFrame(
-        np.asarray(x, dtype=np.float32),
-        columns=feature_transformer['feature_columns'],
-        index=work_df.index,
-    ), feature_transformer
-  return np.asarray(x, dtype=np.float32), feature_transformer
+    x = pd.DataFrame(x, columns=transformer['feature_columns'], index=work_df.index)
+  return x, transformer
 
 
-def _encode_compas_frame(
-    work_df, target_col, sensitive_col,
-  feature_transformer=None, fit=False, return_dataframe=False,
-):
-  """Encode a COMPAS frame end-to-end (x, y, a) using the tabular transformer.
+def read_compas(path='data/compas/*', return_dataframe=False):
+  """Legacy loader: encode the whole dataset, return (x, y, a).
 
-  WARNING: ``y`` and ``a`` are factorised on this frame in isolation, so
-  calling this on disjoint train/test halves can produce inconsistent
-  binary encodings (whichever class appears first in each half gets code
-  0). For drift-aware splits use ``_encode_compas_features`` and
-  pre-encode y / a globally before splitting (see
-  ``read_compas_train_test``).
-  """
-  y = np.asarray(
-      _normalize_binary_series(work_df[target_col], 'target'), dtype=np.int32
-  )
-  a = np.asarray(
-      _compas_sensitive_to_binary(work_df[sensitive_col]), dtype=np.int32
-  )
-  x, feature_transformer = _encode_compas_features(
-      work_df,
-      target_col=target_col,
-      feature_transformer=feature_transformer,
-      fit=fit,
-      return_dataframe=return_dataframe,
-  )
-  return x, y, a, feature_transformer
-
-
-def read_compas(path="data/compas/*", return_dataframe=False):
-  """Legacy COMPAS loader: encode the full dataset, return (x, y, a).
-
-  Used by code paths that build train/test via post-hoc array splits
-  (e.g. ``_smart_split`` in ``main.py``). For drift-aware evaluation use
-  ``read_compas_train_test`` instead, which splits raw rows before
-  encoding so per-scenario shifts can be applied to the test slice.
+  Not used by the pipeline -- use ``read_compas_train_test``, which splits
+  before encoding so scenarios can be applied to the test slice.
   """
   work_df, feature_columns, target_col, sensitive_col = _read_compas_work_df(path)
   print(f"Using {len(feature_columns)} features: {feature_columns}")
-  x, y, a, _ = _encode_compas_frame(
-      work_df,
-      target_col=target_col,
-      sensitive_col=sensitive_col,
-      fit=True,
-      return_dataframe=return_dataframe,
-  )
+  y = np.asarray(_normalize_binary_series(work_df[target_col], 'target'), dtype=np.int32)
+  a = np.asarray(_compas_sensitive_to_binary(work_df[sensitive_col]), dtype=np.int32)
+  x, _ = _encode_compas_features(work_df, target_col, return_dataframe=return_dataframe)
   return x, y, a
+
+
+def _stratified_split_indices(n, stratify_options, test_size, seed):
+  """Seeded split, stratified on the first valid option (each class >= 2)."""
+  stratify = None
+  for option in stratify_options:
+    _, counts = np.unique(option, return_counts=True)
+    if len(counts) >= 2 and np.all(counts >= 2):
+      stratify = option
+      break
+  indices = np.arange(n)
+  try:
+    return train_test_split(indices, test_size=float(test_size),
+                            random_state=int(seed), shuffle=True, stratify=stratify)
+  except ValueError:
+    return train_test_split(indices, test_size=float(test_size),
+                            random_state=int(seed), shuffle=True, stratify=None)
 
 
 def read_compas_train_test(
@@ -765,495 +465,168 @@ def read_compas_train_test(
     test_size=0.3,
     intersectional=False,
 ):
-  """Read COMPAS, split train/test by seed, apply a drift scenario to test.
+  """COMPAS split by seed, drift scenario applied to the test slice only.
 
-  The training slice is always kept drift-free (matching the Adult
-  pipeline). The drift scenario is applied to the test slice in its raw
-  string form, then the tabular transformer is fitted on the train slice
-  alone and reused to encode the test slice -- this both avoids
-  train/test leakage and ensures the scenario edit on ``race`` /
-  ``age_cat`` / ``c_charge_degree`` propagates correctly through the
-  one-hot encoder.
+  Raw rows are split first, the scenario edits the raw test strings, then the
+  encoder is fitted on train and reused on test -- no leakage, and edits to
+  ``race`` / ``age_cat`` / ``c_charge_degree`` propagate through the one-hot
+  columns. ``test_size=0.3`` (~2.1k rows) keeps each of the three phases in
+  ``compas_scenarios.py`` above ADWIN's reliability floor.
 
-  ``test_size`` defaults to 0.30 (~2.1k test samples on COMPAS), giving
-  each of the 3 drift phases declared in ``compas_scenarios.py`` enough
-  rows (warmup ~430, drift ~865, recovery ~865) to stay above ADWIN's
-  reliability floor. Training still has ~5k rows, which is comfortably
-  more than enough for the 64-parameter Aranyani forest.
+  Stratified on joint (y, a), falling back to y, then unstratified; the same
+  ``seed`` gives identical partitions across scenarios, so seeded
+  comparisons stay paired.
 
-  Stratification matches ``_smart_split``: joint ``(y, a)`` when valid,
-  otherwise plain ``y``, otherwise unstratified shuffle. The same
-  ``random_state=seed`` is used so seeded paired comparisons share
-  identical train/test row partitions across scenarios. The target
-  encoding ``y`` is fit on the *full* DataFrame before the split to
-  avoid ``pd.factorize`` order-dependence flipping labels between train
-  and test (see ``_encode_compas_frame`` docstring).
+  Returns:
+    x_train, x_test, y_train, y_test, a_train, a_test, and with
+    ``intersectional=True`` the composite ``a = 2*race + sex`` plus an
+    ``a_marginals`` dict of the per-attribute arrays.
   """
   work_df, feature_columns, target_col, sensitive_col = _read_compas_work_df(path)
   print(f"Using {len(feature_columns)} features: {feature_columns}")
 
-  # Deterministic target encoding so y_full and the post-scenario
-  # y_test recomputation share the same 0/1 mapping (factorize would
-  # be order-dependent on disjoint slices -- see _compas_target_to_binary).
   y_full = _compas_target_to_binary(work_df[target_col])
   a_full = _compas_sensitive_to_binary(work_df[sensitive_col])
-
   joint = np.asarray([f'{int(y)}_{int(a)}' for y, a in zip(y_full, a_full)])
-  uniques, counts = np.unique(joint, return_counts=True)
-  if len(uniques) >= 2 and np.all(counts >= 2):
-    stratify = joint
-  else:
-    y_uniques, y_counts = np.unique(y_full, return_counts=True)
-    stratify = y_full if len(y_uniques) >= 2 and np.all(y_counts >= 2) else None
-
-  indices = np.arange(len(work_df))
-  try:
-    train_idx, test_idx = train_test_split(
-        indices,
-        test_size=float(test_size),
-        random_state=int(seed),
-        shuffle=True,
-        stratify=stratify,
-    )
-  except ValueError:
-    train_idx, test_idx = train_test_split(
-        indices,
-        test_size=float(test_size),
-        random_state=int(seed),
-        shuffle=True,
-        stratify=None,
-    )
-
+  train_idx, test_idx = _stratified_split_indices(
+      len(work_df), [joint, y_full], test_size, seed,
+  )
   train_df = work_df.iloc[train_idx].reset_index(drop=True)
   test_df = work_df.iloc[test_idx].reset_index(drop=True)
 
   scenario = (scenario_name or '').strip()
   if scenario and scenario != 'no_drift' and scenario in COMPAS_SCENARIOS:
-    scenario_fn = get_compas_scenario(scenario)
     print(f"Applying COMPAS drift scenario: {scenario}")
-    test_df = scenario_fn(test_df, target_col=target_col)
+    test_df = get_compas_scenario(scenario)(test_df, target_col=target_col)
   else:
     print("COMPAS: no drift applied (baseline)")
 
-  # y_train is sliced from the pre-split deterministic encoding (train
-  # is never edited). y_test is RE-encoded from the post-scenario
-  # ``test_df`` so concept-drift label flips inside scenarios are
-  # honoured; the same deterministic mapping keeps it consistent with
-  # y_train / y_full.
+  # Train labels come from the pre-split encoding; test labels and groups are
+  # re-encoded from the edited test rows so scenario label flips and race
+  # swaps are honoured. Both encoders are order-independent, so they agree.
   y_train = np.asarray(y_full[train_idx], dtype=np.int32)
   y_test = _compas_target_to_binary(test_df[target_col])
-
-  # a_train is sliced from the pre-split encoding; a_test is recomputed
-  # from the (possibly drift-modified) race column so that swaps like
-  # African-American -> Caucasian flip the sensitive bit accordingly.
-  # _compas_sensitive_to_binary uses a deterministic isin check on known
-  # race strings, so it stays consistent with a_full.
   a_train = np.asarray(a_full[train_idx], dtype=np.int32)
-  a_test = np.asarray(
-      _compas_sensitive_to_binary(test_df[sensitive_col]), dtype=np.int32
-  )
+  a_test = np.asarray(_compas_sensitive_to_binary(test_df[sensitive_col]), dtype=np.int32)
 
-  x_train, transformer = _encode_compas_features(
-      train_df, target_col=target_col, fit=True,
-  )
-  x_test, _ = _encode_compas_features(
-      test_df, target_col=target_col,
-      feature_transformer=transformer, fit=False,
-  )
+  x_train, transformer = _encode_compas_features(train_df, target_col)
+  x_test, _ = _encode_compas_features(test_df, target_col, transformer)
 
-  # limit to only 10 training and test samples
-  x_train = x_train[:10]
-  y_train = y_train[:10]
-  x_test = x_test[:10]
-  y_test = y_test[:10]
-  a_train = a_train[:10]
-  a_test = a_test[:10]
   if not intersectional:
     return x_train, x_test, y_train, y_test, a_train, a_test
 
-  # Intersectional mode: build a composite group code a = 2*a_race + a_sex
-  # and expose the two marginal arrays for diagnostic DP/EO reporting.
-  # ``sex`` is one of the legacy COMPAS feature columns; the encoder is
-  # fitted post-split so this column survives in the raw train/test DFs.
-  if 'sex' not in train_df.columns or 'sex' not in test_df.columns:
+  if 'sex' not in train_df.columns:
     raise ValueError(
-        "COMPAS intersectional mode requires a 'sex' column in the raw "
-        "frame; got columns " + str(list(train_df.columns))
+        "COMPAS intersectional mode requires a 'sex' column; got "
+        f"{list(train_df.columns)}"
     )
-  a_sex_train = _compas_sex_to_binary(train_df['sex'])
-  a_sex_test = _compas_sex_to_binary(test_df['sex'])
-  # a_train/a_test already hold the binary race code (1=Caucasian).
-  a_race_train = a_train
-  a_race_test = a_test
-  a_train_intersect = (2 * a_race_train.astype(np.int32)
-                       + a_sex_train.astype(np.int32))
-  a_test_intersect = (2 * a_race_test.astype(np.int32)
-                      + a_sex_test.astype(np.int32))
+  sex_train = _compas_sex_to_binary(train_df['sex'])
+  sex_test = _compas_sex_to_binary(test_df['sex'])
   a_marginals = {
       'attr_names': ('race', 'sex'),
-      'train': np.stack([a_race_train, a_sex_train], axis=1).astype(np.int32),
-      'test': np.stack([a_race_test, a_sex_test], axis=1).astype(np.int32),
+      'train': np.stack([a_train, sex_train], axis=1).astype(np.int32),
+      'test': np.stack([a_test, sex_test], axis=1).astype(np.int32),
   }
-
-
   return (
       x_train, x_test, y_train, y_test,
-      a_train_intersect.astype(np.int32),
-      a_test_intersect.astype(np.int32),
+      (2 * a_train + sex_train).astype(np.int32),
+      (2 * a_test + sex_test).astype(np.int32),
       a_marginals,
   )
 
 
-# CelebA
+# ---------------------------------------------------------------------------
+# Folktables (ACS Income)
+# ---------------------------------------------------------------------------
 
-def load_dump(file_path):
-  with open(file_path, "rb") as f:
-    data = pickle.load(f)
-  return data
-
-
-def read_celeba(path="../data/celeba/"):
-  X, Y, A = load_dump(os.path.join(path, "clip_data.pkl"))
-  x_train, y_train, a_train = X, Y[: len(X)], A[: len(X)]
-  return x_train, y_train, a_train
+_ACS_FEATURES = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'WKHP', 'SEX', 'RAC1P']
+_ACS_CATEGORICAL = ['COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'SEX', 'RAC1P']
 
 
-def _resolve_diabetes_files(path):
-  """Resolve diabetes CSV inputs from a file, directory, or glob path."""
-  path = str(path).strip()
-  if not path:
-    path = 'data/diabetes/diabetic_data.csv'
-
-  if any(token in path for token in ['*', '?', '[']):
-    files = sorted(glob(path))
-  elif os.path.isdir(path):
-    files = sorted(glob(os.path.join(path, '*.csv')))
-  elif os.path.isfile(path):
-    files = [path]
-  else:
-    files = []
-
-  files = [file_path for file_path in files if os.path.isfile(file_path)]
-  if not files:
-    raise FileNotFoundError(
-        f"No diabetes data files found for path '{path}'. "
-        "Provide a valid file, directory, or glob (e.g., data/diabetes/diabetic_data.csv)."
-    )
-
-  dataset_files = []
-  for file_path in files:
-    columns = {
-        str(column).strip().lower()
-        for column in pd.read_csv(file_path, nrows=0).columns
-    }
-    if 'readmitted' in columns:
-      dataset_files.append(file_path)
-
-  if not dataset_files:
-    raise ValueError(
-        f"No diabetes dataset CSV was found for path '{path}'. "
-        "Expected at least one CSV with a 'readmitted' column."
-    )
-  return dataset_files
-
-
-def _resolve_column_name(df, candidates, label):
-  column_map = {str(column).strip().lower(): column for column in df.columns}
-  for candidate in candidates:
-    if candidate in column_map:
-      return column_map[candidate]
-  raise ValueError(
-      f"Could not infer {label} column. Available columns: {list(df.columns)}"
-  )
-
-
-def _normalize_binary_series(series, label):
-  values = pd.Series(series)
-  if values.empty:
-    raise ValueError(f"Cannot parse empty {label} values.")
-  if values.dtype.kind in {'O', 'U', 'S'}:
-    normalized = values.astype(str).str.strip().str.lower()
-  else:
-    normalized = values
-
-  encoded = pd.factorize(normalized)[0].astype(np.int32)
-  if len(np.unique(encoded)) != 2:
-    raise ValueError(
-        f"Expected binary {label} values, found {len(np.unique(encoded))} classes."
-    )
-  return encoded
-
-
-def _preprocess_diabetes_frame(df, feature_transformer=None, fit_feature_transformer=False):
-  df = df.dropna().copy()
-  target_col = _resolve_column_name(
-      df,
-      ['readmitted'],
-      'target',
-  )
-  sensitive_col = _resolve_column_name(
-      df,
-      ['gender', 'sex', 'sensitive', 'sensitive_attribute', 'group', 'a'],
-      'sensitive attribute',
-  )
-
-  sensitive_values = df[sensitive_col]
-  if sensitive_values.dtype.kind in {'O', 'U', 'S'}:
-    normalized_sensitive = sensitive_values.astype(str).str.strip().str.lower()
-    binary_sensitive_mask = normalized_sensitive.isin({'male', 'female'})
-    if binary_sensitive_mask.any() and not binary_sensitive_mask.all():
-      df = df.loc[binary_sensitive_mask].copy()
-      normalized_sensitive = normalized_sensitive.loc[df.index]
-    sensitive_values = normalized_sensitive
-
-  target_values = df[target_col]
-  if target_values.dtype.kind in {'O', 'U', 'S'}:
-    normalized_target = target_values.astype(str).str.strip().str.lower()
-    if set(normalized_target.unique()).issubset({'no', '>30', '<30'}):
-      target_values = normalized_target.replace({'no': 'no', '>30': 'yes', '<30': 'yes'})
-
-  y = _normalize_binary_series(target_values, 'target')
-  a = _normalize_binary_series(sensitive_values, 'sensitive attribute')
-
-  features = df.drop(columns=[target_col])
-  if features.empty:
-    raise ValueError("Diabetes data has no feature columns after dropping target column.")
-
-  categorical_features = [
-      column for column in features.columns
-      if not pd.api.types.is_numeric_dtype(features[column])
-  ]
-  if fit_feature_transformer or feature_transformer is None:
-    x, feature_transformer = _fit_tabular_transformer(features, categorical_features)
-  else:
-    x = _transform_tabular_features(features, feature_transformer)
-  return x, y, a, feature_transformer
-
-
-def read_diabetes(path='data/diabetes/diabetic_data.csv'):
-  """Read diabetes data from a file, folder, or glob path."""
-  files = _resolve_diabetes_files(path)
-  train_frames = []
-  test_frames = []
-  for file_path in files:
-    file_name = os.path.basename(file_path).lower()
-    frame = pd.read_csv(file_path)
-    if 'test' in file_name:
-      test_frames.append(frame)
-    elif 'train' in file_name:
-      train_frames.append(frame)
-    else:
-      train_frames.append(frame)
-
-  if test_frames:
-    test_df = pd.concat(test_frames, ignore_index=True)
-    if train_frames:
-      train_df = pd.concat(train_frames, ignore_index=True)
-    else:
-      split_idx = max(1, int(0.8 * len(test_df)))
-      if split_idx >= len(test_df):
-        split_idx = len(test_df) - 1
-      if split_idx <= 0:
-        raise ValueError("Not enough diabetes samples to build train/test splits.")
-      train_df = test_df.iloc[:split_idx].copy()
-      test_df = test_df.iloc[split_idx:].copy()
-  else:
-    merged_df = pd.concat(train_frames, ignore_index=True)
-    split_idx = max(1, int(0.8 * len(merged_df)))
-    if split_idx >= len(merged_df):
-      split_idx = len(merged_df) - 1
-    if split_idx <= 0:
-      raise ValueError("Not enough diabetes samples to build train/test splits.")
-    train_df = merged_df.iloc[:split_idx].copy()
-    test_df = merged_df.iloc[split_idx:].copy()
-
-  x_train, y_train, a_train, diabetes_transformer = _preprocess_diabetes_frame(
-      train_df,
-      feature_transformer=None,
-      fit_feature_transformer=True,
-  )
-  x_test, y_test, a_test, _ = _preprocess_diabetes_frame(
-      test_df,
-      feature_transformer=diabetes_transformer,
-      fit_feature_transformer=False,
-  )
-  return x_train, x_test, y_train, y_test, a_train, a_test
-
-
-def _adult_income_filter(data):
-  """Mimic Adult dataset filtering for ACS Income."""
-  df = data
-  df = df[df['AGEP'] > 16]
-  df = df[df['PINCP'] > 100]
-  df = df[df['WKHP'] > 0]
-  df = df[df['PWGTP'] >= 1]
-  return df
-
-
-def _acs_income_problem(sensitive_attribute='sex'):
-  sensitive_attribute = str(sensitive_attribute).lower()
-  features = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'WKHP', 'SEX', 'RAC1P']
-  if sensitive_attribute == 'race':
-    group = 'RAC1P'
-  else:
-    group = 'SEX'
-
-  return BasicProblem(
-      features=features,
-      target='PINCP',
-      target_transform=lambda x: x > 50000,
-      group=group,
-      preprocess=_adult_income_filter,
-      postprocess=lambda x: np.nan_to_num(x, -1),
-  )
+def _adult_income_filter(df):
+  """The ACSIncome filter that mimics the original Adult extraction."""
+  return df[(df['AGEP'] > 16) & (df['PINCP'] > 100)
+            & (df['WKHP'] > 0) & (df['PWGTP'] >= 1)]
 
 
 def _normalize_sensitive_attribute(values, sensitive_attribute):
   values = np.asarray(values)
-  sensitive_attribute = str(sensitive_attribute).lower()
-  if sensitive_attribute == 'race':
-    # Binary race split: white (1) vs non-white (0)
-    return (values == 1).astype(np.int32)
-  # SEX in ACS is {1, 2}; convert to {0, 1}
-  return (values - 1).astype(np.int32)
+  if str(sensitive_attribute).lower() == 'race':
+    return (values == 1).astype(np.int32)  # white (1) vs non-white (0)
+  return (values - 1).astype(np.int32)     # SEX {1, 2} -> {0, 1}
 
 
-def _preprocess_folktables_frame(
-    frame,
-    sensitive_attribute,
-    feature_transformer=None,
-    fit_feature_transformer=False,
-    intersectional=False,
-):
-  work = _adult_income_filter(frame).copy()
-  sensitive_attribute = str(sensitive_attribute).lower()
-  sensitive_column = 'RAC1P' if sensitive_attribute == 'race' else 'SEX'
-  feature_columns = ['AGEP', 'COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'WKHP', 'SEX', 'RAC1P']
-  required_columns = list(dict.fromkeys(
-      feature_columns + ['PINCP', sensitive_column, 'SEX', 'RAC1P']
-  ))
-  work = work.dropna(subset=required_columns).copy()
+def _preprocess_folktables_frame(frame, sensitive_attribute, transformer=None,
+                                 intersectional=False):
+  sensitive_column = 'RAC1P' if str(sensitive_attribute).lower() == 'race' else 'SEX'
+  work = _adult_income_filter(frame).dropna(subset=_ACS_FEATURES + ['PINCP']).copy()
 
   y = (pd.to_numeric(work['PINCP'], errors='coerce') > 50000).astype(np.int32).to_numpy()
   a = _normalize_sensitive_attribute(
       pd.to_numeric(work[sensitive_column], errors='coerce').to_numpy(),
       sensitive_attribute,
   )
-  features = work[feature_columns].copy()
-  categorical_features = ['COW', 'SCHL', 'MAR', 'OCCP', 'POBP', 'RELP', 'SEX', 'RAC1P']
-  if fit_feature_transformer or feature_transformer is None:
-    x, feature_transformer = _fit_tabular_transformer(features, categorical_features)
-  else:
-    x = _transform_tabular_features(features, feature_transformer)
-
+  x, transformer = _encode_features(work[_ACS_FEATURES], _ACS_CATEGORICAL, transformer)
   if not intersectional:
-    return x, y, a, feature_transformer
+    return x, y, a, transformer, None
 
-  # Intersectional mode: also compute marginal sex and race-binarised
-  # arrays so the caller can build a = 2*a_sex + a_race and report per-
-  # attribute DP/EO as diagnostics.
-  a_sex = _normalize_sensitive_attribute(
-      pd.to_numeric(work['SEX'], errors='coerce').to_numpy(),
-      'sex',
-  )
-  a_race = _normalize_sensitive_attribute(
-      pd.to_numeric(work['RAC1P'], errors='coerce').to_numpy(),
-      'race',
-  )
-  marginals = np.stack([a_sex, a_race], axis=1).astype(np.int32)
-  return x, y, a, feature_transformer, marginals
+  # Columns [sex, race-binarised], for per-attribute diagnostic DP/EO.
+  marginals = np.stack([
+      _normalize_sensitive_attribute(pd.to_numeric(work['SEX'], errors='coerce').to_numpy(), 'sex'),
+      _normalize_sensitive_attribute(pd.to_numeric(work['RAC1P'], errors='coerce').to_numpy(), 'race'),
+  ], axis=1).astype(np.int32)
+  return x, y, a, transformer, marginals
 
 
 def read_folktables(path='data/acs-folktables', train_year=2015, test_years=(2017, 2018),
                     state='CA', horizon='1-Year', sensitive_attribute='sex',
                     download=True, intersectional=False):
-  """Read Folktables ACS Income data from local cache."""
-  train_year = int(train_year)
+
+  states = state if isinstance(state, (list, tuple)) else [state]
+  states = [str(s).strip() for s in states if str(s).strip()] or ['CA']
+
+  def _load(year):
+    source = ACSDataSource(survey_year=int(year), horizon=horizon,
+                           survey='person', root_dir=path)
+    return source.get_data(states=states, download=download)
+
+  x_train, y_train, a_train, transformer, m_train = _preprocess_folktables_frame(
+      _load(train_year), sensitive_attribute, intersectional=intersectional,
+  )
+
   test_years = tuple(int(year) for year in test_years)
-  if isinstance(state, (list, tuple)):
-    states = [str(s).strip() for s in state if str(s).strip()]
-  else:
-    states = [str(state).strip()]
-  if not states:
-    states = ['CA']
-
-  train_source = ACSDataSource(
-      survey_year=train_year, horizon=horizon, survey='person', root_dir=path
-  )
-  train_df = train_source.get_data(states=states, download=download)
-  pre_train = _preprocess_folktables_frame(
-      train_df,
-      sensitive_attribute=sensitive_attribute,
-      feature_transformer=None,
-      fit_feature_transformer=True,
-      intersectional=intersectional,
-  )
-  if intersectional:
-    x_train, y_train, a_train, folktables_transformer, m_train = pre_train
-  else:
-    x_train, y_train, a_train, folktables_transformer = pre_train
-    m_train = None
-  x_tests, y_tests, a_tests, m_tests = [], [], [], []
+  split_size = len(x_train) // max(len(test_years), 1)
+  parts = []
   for year in test_years:
-    test_source = ACSDataSource(
-        survey_year=year, horizon=horizon, survey='person', root_dir=path
+    x_t, y_t, a_t, _, m_t = _preprocess_folktables_frame(
+        _load(year), sensitive_attribute, transformer, intersectional=intersectional,
     )
-    test_df = test_source.get_data(states=states, download=download)
-    pre_test = _preprocess_folktables_frame(
-        test_df,
-        sensitive_attribute=sensitive_attribute,
-        feature_transformer=folktables_transformer,
-        fit_feature_transformer=False,
-        intersectional=intersectional,
-    )
-    if intersectional:
-      x_t, y_t, a_t, _, m_t = pre_test
-    else:
-      x_t, y_t, a_t, _ = pre_test
-      m_t = None
-    # append only a subset of the test data
-    split_size = len(x_train) // max(len(test_years), 1)
-    x_tests.append(x_t[:split_size])
-    y_tests.append(y_t[:split_size])
-    a_tests.append(a_t[:split_size])
-    if intersectional:
-      m_tests.append(m_t[:split_size])
+    parts.append((x_t[:split_size], y_t[:split_size], a_t[:split_size],
+                  None if m_t is None else m_t[:split_size]))
 
-  x_test = np.concatenate(x_tests, axis=0) if x_tests else np.array([], dtype=np.float32)
-  y_test = np.concatenate(y_tests, axis=0) if y_tests else np.array([], dtype=np.int32)
-  a_test = np.concatenate(a_tests, axis=0) if a_tests else np.array([], dtype=np.int32)
+  def _concat(i, dtype, empty_shape=(0,)):
+    arrays = [p[i] for p in parts]
+    return (np.concatenate(arrays, axis=0) if arrays
+            else np.zeros(empty_shape, dtype=dtype)).astype(dtype)
 
-  if intersectional:
-    m_test = (np.concatenate(m_tests, axis=0)
-              if m_tests else np.zeros((0, 2), dtype=np.int32))
-    # Build composite intersectional code a = 2*a_sex + a_race.
-    # m_train / m_test columns: [sex, race_binarised].
-    a_train_intersect = (2 * m_train[:, 0].astype(np.int32)
-                         + m_train[:, 1].astype(np.int32))
-    a_test_intersect = (2 * m_test[:, 0].astype(np.int32)
-                        + m_test[:, 1].astype(np.int32))
-    a_marginals = {
-        'attr_names': ('sex', 'race'),
-        'train': m_train.astype(np.int32),
-        'test': m_test.astype(np.int32),
-    }
-    return (
-        np.asarray(x_train, dtype=np.float32),
-        np.asarray(x_test, dtype=np.float32),
-        np.asarray(y_train, dtype=np.int32),
-        np.asarray(y_test, dtype=np.int32),
-        np.asarray(a_train_intersect, dtype=np.int32),
-        np.asarray(a_test_intersect, dtype=np.int32),
-        len({int(v) for v in a_train_intersect.tolist()}),
-        a_marginals,
-    )
+  x_test = _concat(0, np.float32)
+  y_test = _concat(1, np.int32)
+  a_test = _concat(2, np.int32)
+  x_train = np.asarray(x_train, dtype=np.float32)
+  y_train = np.asarray(y_train, dtype=np.int32)
 
-  return (
-      np.asarray(x_train, dtype=np.float32),
-      np.asarray(x_test, dtype=np.float32),
-      np.asarray(y_train, dtype=np.int32),
-      np.asarray(y_test, dtype=np.int32),
-      np.asarray(a_train, dtype=np.int32),
-      np.asarray(a_test, dtype=np.int32),
-      len(set(a_train))
-  )
+  if not intersectional:
+    a_train = np.asarray(a_train, dtype=np.int32)
+    return (x_train, x_test, y_train, y_test, a_train, a_test,
+            len(set(a_train.tolist())))
+
+  m_test = _concat(3, np.int32, empty_shape=(0, 2))
+  a_train = (2 * m_train[:, 0] + m_train[:, 1]).astype(np.int32)
+  a_test = (2 * m_test[:, 0] + m_test[:, 1]).astype(np.int32)
+  a_marginals = {
+      'attr_names': ('sex', 'race'),
+      'train': m_train.astype(np.int32),
+      'test': m_test,
+  }
+  return (x_train, x_test, y_train, y_test, a_train, a_test,
+          len(set(a_train.tolist())), a_marginals)

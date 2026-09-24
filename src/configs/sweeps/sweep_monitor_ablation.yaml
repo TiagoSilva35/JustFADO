@@ -19,8 +19,9 @@
 # scenarios alongside it -- a detector that never fires wins on false alarms
 # and is useless.
 program: src/main.py
+project: fado-ablations
 method: grid
-name: fado-monitor-ablation
+name: monitor
 metric:
   # False alarms per sample on the fairness detector. FAR rather than a raw
   # count because it is defined with a single false alarm (MTFA needs two) and
@@ -33,9 +34,9 @@ parameters:
   pipeline_model:
     values: ['fado_monitor_only,aranyani_base']
   pipeline_dataset:
-    values: ['compas']
+    value: compas
   drift_scenario:
-    values: ['no_drift', 'abrupt_race', 'gradual_race']
+    values: ['no_drift', 'abrupt_race']
   fairness_signal_mode:
     values: ['raw_dp', 'subsampled_dp', 'per_sample']
   fairness_detector:
@@ -49,15 +50,17 @@ parameters:
       - 'capymoa:cusum'
       - 'capymoa:rddm'
   seeds:
-    values: ['11,22,33,44,55']
-  run_seed_pipeline:
-    values: [true]
+    value: '11,22,33,44,55'
   deterministic:
-    values: [true]
+    value: true
   wandb_log:
-    values: [true]
+    value: true
+  wandb_project:
+    value: fado-ablations
 command:
   - ${env}
-  - python
-  - ${program}
+  - PYTHONHASHSEED=0
+  - ${interpreter}
+  - -m
+  - src.main
   - ${args}

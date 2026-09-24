@@ -1,0 +1,45 @@
+# Which components of the reaction controller contribute? (COMPAS)
+#
+# Grid, not bayes: an ablation table, not a search. Every arm runs with
+# IDENTICAL hyperparameters; only the enabled components differ. Each run
+# evaluates the treatment arm and aranyani_base on the same pre-trained forest,
+# and the metric is their paired difference, so scenario and seed effects
+# cancel. no_drift is included on purpose: it measures what a component costs
+# when there is nothing to react to.
+#
+# 6 presets x 2 scenarios = 12 runs, 5 tuning seeds each.
+program: src/main.py
+project: fado-ablations
+method: grid
+name: component-compas
+metric:
+  name: delta_dp          # baseline DP minus treatment DP; positive = fairer
+  goal: maximize
+parameters:
+  pipeline_model:
+    values:
+      - 'aranyani,aranyani_base'            # full controller
+      - 'fado_lr_only,aranyani_base'        # - temperature reaction
+      - 'fado_temp_only,aranyani_base'      # - LR reaction, - prewarm
+      - 'fado_no_prewarm,aranyani_base'     # - warning stage
+      - 'fado_no_noise_guard,aranyani_base' # - label-noise guard
+      - 'fado_detect_only,aranyani_base'    # detects, reacts to nothing
+  pipeline_dataset:
+    value: compas
+  drift_scenario:
+    values: ['no_drift', 'abrupt_race']
+  seeds:
+    value: '11,22,33,44,55'
+  deterministic:
+    value: true
+  wandb_log:
+    value: true
+  wandb_project:
+    value: fado-ablations
+command:
+  - ${env}
+  - PYTHONHASHSEED=0
+  - ${interpreter}
+  - -m
+  - src.main
+  - ${args}
