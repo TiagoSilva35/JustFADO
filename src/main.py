@@ -195,6 +195,9 @@ def _build_aranyani_static_params():
         'accuracy_detector': str(FLAGS.accuracy_detector),
         'fairness_detector': str(FLAGS.fairness_detector),
         'fairness_signal_mode': str(FLAGS.fairness_signal_mode),
+        'fairness_target': float(FLAGS.fairness_target),
+        'lambda_dual_lr': float(FLAGS.lambda_dual_lr),
+        'lambda_max': float(FLAGS.lambda_max),
     }
     dataset_key = _dataset_name().lower()
     overrides = {'compas': _COMPAS_FADO_OVERRIDES,
@@ -208,8 +211,8 @@ def _build_aranyani_static_params():
 
 # Ablation arms. These are NOT part of the default model set -- running every
 # preset on every scenario would multiply the pipeline cost. Request one with
-# --pipeline_model=fado_lr_only, or several with --pipeline_model=fado_lr_only,
-# fado_temp_only, or build one ad hoc with --controller_components.
+# --pipeline_model=fado_no_lambda, or several with --pipeline_model=fado_no_lambda,
+# fado_lambda_only, or build one ad hoc with --controller_components.
 _ABLATION_MODELS = sorted(name for name in CONTROLLER_PRESETS if name.startswith('fado'))
 
 
@@ -509,23 +512,79 @@ def _load_dataset_splits(dataset_key, scenario_name, seed):
     raise ValueError(f"Unsupported dataset for pipeline evaluation: '{dataset_key}'.")
 
 
+def _phase_layout(dataset_key, n_samples):
+    """The stream's phases as ``[(slug, start, end), ...]`` sample ranges.
+
+    Adult and COMPAS scenarios lay a stream out as phases (``SPLITS`` holds the
+    phase END fractions, ``PHASE_LABELS`` their names). Folktables has no
+    injected drift: its stream is the test years in order, each contributing an
+    equal share (see ``read_folktables``), so each year is a phase.
+    """
+    dataset_key = str(dataset_key).lower()
+    if dataset_key == 'folktables':
+        years = FOLKTABLES_PIPELINE_TEST_YEARS
+        splits = [(i + 1) / len(years) for i in range(len(years))]
+        labels = [f'year {year}' for year in years]
+    else:
+        module = _compas_scenarios if dataset_key == 'compas' else _adult_scenarios
+        splits = list(getattr(module, 'SPLITS', []) or [])
+        labels = list(getattr(module, 'PHASE_LABELS', []) or [])
+    n_samples = int(n_samples or 0)
+    if len(splits) < 2 or len(labels) != len(splits) or not n_samples:
+        return []
+    ends = [int(float(s) * n_samples) for s in splits]
+    ends[-1] = n_samples
+    starts = [0] + ends[:-1]
+    slugs = [str(label).strip().lower().replace(' ', '_') for label in labels]
+    return list(zip(slugs, starts, ends))
+
+
 def _change_points(dataset_key, n_samples):
     """Sample indices at which the concept actually changes.
 
-    The scenario generators lay a stream out as phases (``SPLITS`` holds the
-    phase END fractions), so every boundary except the last is a change event:
-    COMPAS ``[0.30, 0.70, 1.0]`` changes at 30% (drift onset) and again at 70%
-    (the recovery edge, where the concept reverts). Scoring against a single
-    onset would count a detection at the recovery edge as a very late detection
-    of the first drift instead of a prompt detection of the second.
+    Every phase boundary is a change event: COMPAS ``[0.30, 0.70, 1.0]``
+    changes at 30% (drift onset) and again at 70% (the recovery edge, where the
+    concept reverts). Scoring against a single onset would count a detection
+    at the recovery edge as a very late detection of the first drift instead
+    of a prompt detection of the second.
     """
-    module = (_compas_scenarios if str(dataset_key).lower() == 'compas'
-              else _adult_scenarios)
-    splits = list(getattr(module, 'SPLITS', []) or [])
-    n_samples = int(n_samples or 0)
-    if len(splits) < 2 or not n_samples:
-        return []
-    return [int(float(s) * n_samples) for s in splits[:-1]]
+    return [start for _, start, _ in _phase_layout(dataset_key, n_samples)[1:]]
+
+
+# 'lambda' exists only for the FADO arm (2.1); the others skip it.
+_PHASE_SOURCE_METRICS = ('accuracy', 'dp', 'eo', 'lambda')
+
+
+def _phase_metrics(stream, dataset_key):
+    """Per-phase and post-drift means of the prequential curves (decision 2.4).
+
+    The whole-stream mean (``stream_final_*``) dilutes the post-drift period,
+    the only place FADO differs from the baseline, into the warmup. This adds:
+
+      phase_<slug>_<metric>   mean over one phase, e.g. phase_drift_dp
+      post_drift_<metric>     mean from the first change point to the end
+
+    They average the same rolling curves as ``stream_final_*``, so the
+    whole-stream value is the length-weighted mean of the phases. The curves
+    are rolling-window values, so the first window of a phase still carries
+    part of the previous one. Phases are structural: a no_drift stream gets the
+    same boundaries, which makes it the control for the drifted scenarios.
+    """
+    if not isinstance(stream, dict):
+        return {}
+    out = {}
+    for metric in _PHASE_SOURCE_METRICS:
+        series = stream.get(metric)
+        if series is None:
+            continue
+        values = np.asarray(series, dtype=float).reshape(-1)
+        phases = _phase_layout(dataset_key, len(values))
+        for slug, start, end in phases:
+            if end > start:
+                out[f'phase_{slug}_{metric}'] = float(np.nanmean(values[start:end]))
+        if len(phases) >= 2 and phases[1][1] < len(values):
+            out[f'post_drift_{metric}'] = float(np.nanmean(values[phases[1][1]:]))
+    return out
 
 
 def _detector_metrics(points, change_points, n_samples, tolerance, precedence=0):
@@ -1113,6 +1172,8 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
             ),
             'stream_final_dp': _mean_stream_metric(ts.get('dp')),
             'stream_final_eo': _mean_stream_metric(ts.get('eo')),
+            'stream_final_lambda': _mean_stream_metric(ts.get('lambda')),
+            'fairness_resets': len(ts.get('fairness_resets') or []),
             'elapsed_seconds': result.get('elapsed_seconds'),
             'error': result.get('error'),
             'test_metrics': tm,
@@ -1122,6 +1183,10 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
         # probabilities + incremental fairness counters) is measurable in the
         # same results table as accuracy/DP/EO instead of being asserted.
         row.update(_detection_metrics(ts, dataset_key, result.get('scenario')))
+        row.update(_phase_metrics(ts, dataset_key))
+        # Top level so the lambda trade-off plot can read it from results.json;
+        # None for the arms without a fairness penalty (ARF, RFR).
+        row['lambda_const'] = (ts.get('static_params_used') or {}).get('lambda_const')
         timing = ts.get('timing') if isinstance(ts, dict) else None
         if isinstance(timing, dict):
             row['timing'] = timing
@@ -1233,22 +1298,28 @@ def _log_sweep_summary(summary, models_to_run):
             return stats.get('mean') if isinstance(stats, dict) else None
 
         for source, target in (('stream_final_dp', 'delta_dp'),
-                               ('stream_final_eo', 'delta_eo')):
+                               ('stream_final_eo', 'delta_eo'),
+                               ('post_drift_dp', 'delta_dp_post_drift'),
+                               ('post_drift_eo', 'delta_eo_post_drift')):
             b, a = _mean(base, source), _mean(arm, source)
             if b is not None and a is not None:
                 # positive = the treatment arm is FAIRER than the baseline
                 out[f'{treatment}/{target}'] = float(b) - float(a)
-        b, a = _mean(base, 'stream_final_accuracy'), _mean(arm, 'stream_final_accuracy')
-        if b is not None and a is not None:
-            # positive = the treatment arm is MORE ACCURATE than the baseline
-            out[f'{treatment}/delta_accuracy'] = float(a) - float(b)
+        for source, target in (('stream_final_accuracy', 'delta_accuracy'),
+                               ('post_drift_accuracy', 'delta_accuracy_post_drift')):
+            b, a = _mean(base, source), _mean(arm, source)
+            if b is not None and a is not None:
+                # positive = the treatment arm is MORE ACCURATE than the baseline
+                out[f'{treatment}/{target}'] = float(a) - float(b)
 
     # Unprefixed aliases for the primary arm, so a sweep config can name a
     # metric without knowing which arm it is.
     primary = next((m for m in ('aranyani', 'fado_full') if m in by_model),
                    treatments[0] if treatments else None)
     if primary:
-        for metric in ('delta_dp', 'delta_eo', 'delta_accuracy'):
+        for metric in ('delta_dp', 'delta_eo', 'delta_accuracy',
+                       'delta_dp_post_drift', 'delta_eo_post_drift',
+                       'delta_accuracy_post_drift'):
             key = f'{primary}/{metric}'
             if key in out:
                 out[metric] = out[key]
@@ -1256,11 +1327,45 @@ def _log_sweep_summary(summary, models_to_run):
                        'fairness_mtfa', 'fairness_mtr', 'fairness_false_alarms',
                        'accuracy_far', 'accuracy_mdr', 'accuracy_mtd',
                        'accuracy_mtfa', 'accuracy_mtr', 'accuracy_false_alarms',
-                       'stream_final_dp', 'stream_final_accuracy'):
+                       'stream_final_dp', 'stream_final_accuracy',
+                       'post_drift_dp', 'post_drift_accuracy'):
             key = f'{primary}/{metric}'
             if key in out:
                 out[metric] = out[key]
     wandb.summary.update(out)
+
+
+_SUMMARY_METRICS = [
+    'accuracy', 'dp', 'eo',
+    'stream_final_accuracy', 'stream_final_dp', 'stream_final_eo',
+    'stream_final_accuracy_cumulative',
+    'post_drift_accuracy', 'post_drift_dp', 'post_drift_eo',
+    'stream_final_lambda', 'post_drift_lambda', 'fairness_resets',
+    'wall_seconds', 'ms_per_sample', 'samples_per_second',
+    'seconds_predict', 'seconds_fairness_metrics', 'seconds_train_step',
+    'pretrain_wall_seconds',
+    'accuracy_detections', 'accuracy_true_positives', 'accuracy_false_alarms',
+    'accuracy_far', 'accuracy_mdr', 'accuracy_mtd', 'accuracy_mtfa', 'accuracy_mtr',
+    'fairness_detections', 'fairness_true_positives', 'fairness_false_alarms',
+    'fairness_far', 'fairness_mdr', 'fairness_mtd', 'fairness_mtfa', 'fairness_mtr',
+]
+
+
+def _summary_metric_names(seed_runs):
+    """The fixed summary metrics plus every per-phase key the rows carry.
+
+    Phase names differ per dataset (Adult has five, COMPAS three, Folktables
+    one per test year), so they are collected rather than listed.
+    """
+    phase_keys = sorted({
+        key
+        for run in seed_runs
+        for row in run.get('results') or []
+        if isinstance(row, dict)
+        for key in row
+        if key.startswith('phase_')
+    })
+    return _SUMMARY_METRICS + phase_keys
 
 
 def _aggregate_metrics(rows, metric_names):
@@ -1301,40 +1406,45 @@ def main(_):
     dataset_name = _dataset_name()
     models_to_run = _resolve_pipeline_models(dataset_name)
     seeds = _parse_seed_list()
+    # Saved with the results as well as sent to W&B, so offline tools (the
+    # lambda trade-off plot) can tell which runs share a configuration.
+    run_config = {
+        'dataset': dataset_name,
+        'models': models_to_run,
+        'batch_size': int(FLAGS.batch_size),
+        'depth': int(FLAGS.depth),
+        'num_trees': int(FLAGS.num_trees),
+        'lambda_const': float(FLAGS.lambda_const),
+        'drift_scenario': FLAGS.drift_scenario,
+        'drift_adwin_delta_warn': float(FLAGS.drift_adwin_delta_warn),
+        'drift_adwin_delta_confirm': float(FLAGS.drift_adwin_delta_confirm),
+        'drift_lr_prewarm_mult': float(FLAGS.drift_lr_prewarm_mult),
+        'drift_lr_spike_mult': float(FLAGS.drift_lr_spike_mult),
+        'drift_lr_decay_steps': int(FLAGS.drift_lr_decay_steps),
+        'drift_cooldown': int(FLAGS.drift_cooldown),
+        'drift_min_samples_per_stream': int(FLAGS.drift_min_samples_per_stream),
+        'drift_temperature_on_drift': float(FLAGS.drift_temperature_on_drift),
+        'drift_temperature_recovery_target': float(FLAGS.drift_temperature_recovery_target),
+        'drift_temperature_recovery_step': float(FLAGS.drift_temperature_recovery_step),
+        'seeds': seeds,
+        'controller_components': str(FLAGS.controller_components),
+        # What the arms actually ran with, after dataset defaults.
+        'static_params': _build_aranyani_static_params(),
+    }
     wb_run = None
     if bool(FLAGS.wandb_log):
         if wandb is None:
             raise ImportError("wandb logging requested but wandb is not installed.")
         init_kwargs = {
             'project': str(FLAGS.wandb_project),
-            'config': {
-                'dataset': dataset_name,
-                'models': models_to_run,
-                'batch_size': int(FLAGS.batch_size),
-                'depth': int(FLAGS.depth),
-                'num_trees': int(FLAGS.num_trees),
-                'lambda_const': float(FLAGS.lambda_const),
-                'drift_scenario': FLAGS.drift_scenario,
-                'drift_adwin_delta_warn': float(FLAGS.drift_adwin_delta_warn),
-                'drift_adwin_delta_confirm': float(FLAGS.drift_adwin_delta_confirm),
-                'drift_lr_prewarm_mult': float(FLAGS.drift_lr_prewarm_mult),
-                'drift_lr_spike_mult': float(FLAGS.drift_lr_spike_mult),
-                'drift_lr_decay_steps': int(FLAGS.drift_lr_decay_steps),
-                'drift_cooldown': int(FLAGS.drift_cooldown),
-                'drift_min_samples_per_stream': int(FLAGS.drift_min_samples_per_stream),
-                'drift_temperature_on_drift': float(FLAGS.drift_temperature_on_drift),
-                'drift_temperature_recovery_target': float(FLAGS.drift_temperature_recovery_target),
-                'drift_temperature_recovery_step': float(FLAGS.drift_temperature_recovery_step),
-                'seeds': seeds,
-                'controller_components': str(FLAGS.controller_components),
-                # What the arms actually ran with, after dataset defaults.
-                'static_params': _build_aranyani_static_params(),
-            },
+            'config': run_config,
             'reinit': True,
         }
         if str(FLAGS.wandb_entity).strip():
             init_kwargs['entity'] = str(FLAGS.wandb_entity).strip()
         wb_run = wandb.init(**init_kwargs)
+        run_config['wandb_run_id'] = str(wb_run.id)
+        run_config['wandb_sweep_id'] = getattr(wb_run, 'sweep_id', None)
 
     print(f"\n{'=' * 80}")
     print(f" Multi-seed pipeline: {len(seeds)} runs")
@@ -1347,6 +1457,11 @@ def main(_):
     seed_runs = []
     wandb_timestep_rows = []
     base_output_dir = os.path.join(OUTPUT_DIR, f'dataset_{dataset_name}')
+    if wb_run is not None:
+        # Sweep agents run in parallel; a shared directory would let every run
+        # overwrite the others' results.json files.
+        base_output_dir = os.path.join(
+            OUTPUT_DIR, 'wandb', str(wb_run.id), f'dataset_{dataset_name}')
     for idx, seed in enumerate(seeds, 1):
         print(f"\n{'-' * 80}")
         print(f" Seed run [{idx}/{len(seeds)}]: {seed}")
@@ -1406,18 +1521,7 @@ def main(_):
             seed_runs.append({'seed': seed, 'model': model_name, 'results': results})
 
     if FLAGS.run_all_scenarios:
-        metric_names = [
-            'accuracy', 'dp', 'eo',
-            'stream_final_accuracy', 'stream_final_dp', 'stream_final_eo',
-            'stream_final_accuracy_cumulative',
-            'wall_seconds', 'ms_per_sample', 'samples_per_second',
-            'seconds_predict', 'seconds_fairness_metrics', 'seconds_train_step',
-            'pretrain_wall_seconds',
-            'accuracy_detections', 'accuracy_true_positives', 'accuracy_false_alarms',
-            'accuracy_far', 'accuracy_mdr', 'accuracy_mtd', 'accuracy_mtfa', 'accuracy_mtr',
-            'fairness_detections', 'fairness_true_positives', 'fairness_false_alarms',
-            'fairness_far', 'fairness_mdr', 'fairness_mtd', 'fairness_mtfa', 'fairness_mtr',
-        ]
+        metric_names = _summary_metric_names(seed_runs)
         grouped = {}
         for run in seed_runs:
             for row in run['results']:
@@ -1439,18 +1543,7 @@ def main(_):
             })
         summary = {'mode': 'all_scenarios', 'rows': summary_rows}
     else:
-        metric_names = [
-            'accuracy', 'dp', 'eo',
-            'stream_final_accuracy', 'stream_final_dp', 'stream_final_eo',
-            'stream_final_accuracy_cumulative',
-            'wall_seconds', 'ms_per_sample', 'samples_per_second',
-            'seconds_predict', 'seconds_fairness_metrics', 'seconds_train_step',
-            'pretrain_wall_seconds',
-            'accuracy_detections', 'accuracy_true_positives', 'accuracy_false_alarms',
-            'accuracy_far', 'accuracy_mdr', 'accuracy_mtd', 'accuracy_mtfa', 'accuracy_mtr',
-            'fairness_detections', 'fairness_true_positives', 'fairness_false_alarms',
-            'fairness_far', 'fairness_mdr', 'fairness_mtd', 'fairness_mtfa', 'fairness_mtr',
-        ]
+        metric_names = _summary_metric_names(seed_runs)
         metrics_by_model = {}
         for model_name in models_to_run:
             rows = [
@@ -1469,6 +1562,7 @@ def main(_):
         'dataset': dataset_name,
         'seeds': seeds,
         'run_all_scenarios': bool(FLAGS.run_all_scenarios),
+        'config': run_config,
         'seed_runs': seed_runs,
         'summary': summary,
     }

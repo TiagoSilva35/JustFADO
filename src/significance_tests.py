@@ -42,7 +42,14 @@ from scipy import stats
 # changes.
 DEFAULT_MODELS_REFERENCE = 'aranyani'
 DEFAULT_MODELS_BASELINES = ('aranyani_base', 'arf', 'rfr')
-DEFAULT_METRICS = ('accuracy', 'dp', 'eo')
+# Whole-stream means plus their post-drift counterparts (decision 2.4). Holm
+# correction runs within each metric column, so adding columns does not change
+# the correction applied to the existing ones. Per-phase keys
+# (phase_<slug>_<metric>) can be requested with --metrics.
+DEFAULT_METRICS = (
+    'accuracy', 'dp', 'eo',
+    'post_drift_accuracy', 'post_drift_dp', 'post_drift_eo',
+)
 
 
 def _load_seed_runs(inputs_dir: Path) -> List[dict]:
@@ -169,13 +176,16 @@ def _holm(raw_pvals: Sequence[float]) -> List[float]:
     Returns adjusted p-values in the same order as the input. Adjustment uses
     the monotone correction: each rung is clamped up to the previous rung so
     the sequence is non-decreasing along the original ordering of p-values.
+
+    A NaN p-value (a test that could not run, e.g. fewer than two paired
+    seeds) stays NaN and is left out of the family. It used to become 0.0 --
+    ``max(0.0, nan)`` is 0.0 -- and was reported as significant.
     """
     pvals = list(raw_pvals)
-    m = len(pvals)
-    if m == 0:
-        return []
-    ranked = sorted(range(m), key=lambda i: pvals[i])
-    adj = [0.0] * m
+    adj = [float('nan')] * len(pvals)
+    valid = [i for i, p in enumerate(pvals) if not math.isnan(p)]
+    m = len(valid)
+    ranked = sorted(valid, key=lambda i: pvals[i])
     running = 0.0
     for rank, idx in enumerate(ranked):
         factor = m - rank
@@ -186,6 +196,8 @@ def _holm(raw_pvals: Sequence[float]) -> List[float]:
 
 
 def _star(p: float) -> str:
+    if math.isnan(p):
+        return '--'
     if p < 0.001:
         return '***'
     if p < 0.01:
@@ -318,8 +330,8 @@ def main() -> None:
     parser.add_argument(
         '--metrics',
         default=','.join(DEFAULT_METRICS),
-        help='Comma-separated metric keys (any subset of '
-             'accuracy, dp, eo).',
+        help='Comma-separated metric keys: accuracy, dp, eo, '
+             'post_drift_<metric>, or phase_<slug>_<metric>.',
     )
     parser.add_argument(
         '--json',

@@ -7,7 +7,7 @@
 # cancel. no_drift is included on purpose: it measures what a component costs
 # when there is nothing to react to.
 #
-# 6 presets x 2 scenarios = 12 runs, 5 tuning seeds each.
+# 9 presets x 2 scenarios = 18 runs, 5 tuning seeds each.
 program: src/main.py
 project: fado-ablations
 method: grid
@@ -19,8 +19,11 @@ parameters:
   pipeline_model:
     values:
       - 'aranyani,aranyani_base'            # full controller
-      - 'fado_lr_only,aranyani_base'        # - temperature reaction
-      - 'fado_temp_only,aranyani_base'      # - LR reaction, - prewarm
+      - 'fado_no_lambda,aranyani_base'      # FADO before 2.1: lambda fixed
+      - 'fado_lambda_only,aranyani_base'    # lambda controller, no LR/temp
+      - 'fado_no_reset,aranyani_base'       # - fairness-stat reset on drift
+      - 'fado_no_lr,aranyani_base'          # - LR reaction, - prewarm
+      - 'fado_no_temp,aranyani_base'        # - temperature reaction
       - 'fado_no_prewarm,aranyani_base'     # - warning stage
       - 'fado_no_noise_guard,aranyani_base' # - label-noise guard
       - 'fado_detect_only,aranyani_base'    # detects, reacts to nothing

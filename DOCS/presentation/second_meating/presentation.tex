@@ -55,7 +55,7 @@
     \parbox[t]{4.2in}{\centering\monofont\color{grey}\fontsize{10}{12}\selectfont \hdrsec}%
     \hfill
     \parbox[t]{2.6in}{\raggedleft\monofont\fontsize{13}{15}\selectfont
-      \textbf{\color{ink}\hdrpg}{\color{grey}/21}}%
+      \textbf{\color{ink}\hdrpg}{\color{grey}/12}}%
     \hspace{9mm}%
   }%
 }
@@ -123,7 +123,7 @@
 
 % ===================================================== 2 TITLE
 \begin{frame}[plain]
-  \titleSlide{FADO} {Meating 1}
+  \titleSlide{FADO} {Meeting 2}
   \tb{11}{0.92}{4.55}{\color{ink}\fs{19}{22}Tiago Silva}
   \tb{11}{0.92}{5.35}{\color{ink}\fs{14}{18}\textbf{CISUC \textperiodcentered{} Data-Centric AI Lab}\\
     {\color{body}\fs{14}{18}Department of Informatics Engineering, University of Coimbra}}
@@ -134,10 +134,19 @@
 \pageset{Outline}{01}
 \begin{frame}
   \ctitle{Outline}
-
+  \body{
+    \begin{enumerate}
+      \item \textbf{Weekly reviews}: KANs;
+      \item \textbf{Review pass}: what we found, what we fixed, a correction;
+      \item \textbf{Decisions taken};
+      \item \textbf{The $\lambda$ controller}: the answer to the novelty critique;
+      \item \textbf{First results} and how they happened;
+      \item \textbf{Ablation plan}, open questions and next steps.
+    \end{enumerate}
+  }
 \end{frame}
 
-\pageset{Weakly reviews - KANs}{02}
+\pageset{Weekly reviews - KANs}{02}
 \begin{frame}
     \ctitle{KANs}
     \tb{3.9}{4.72}{2.55}{\includegraphics[width=3.9in]{assets/D3KAN.png}}
@@ -151,5 +160,175 @@
       KANs applied to learning fair representations.}
 \end{frame}
 
+% ===================================================== REVIEW PASS (03)
+\pageset{Review pass}{03}
+\begin{frame}
+  \ctitle{The review pass: results we {\color{cred}\textit{\underline{could not}}} trust}
+  \dcolblk{0.85}{Invalid results}{%
+    COMPAS loader cut every split to \textbf{10 rows}: every stored COMPAS number came from 10 test samples.\\[5pt]
+    Significance script turned untestable comparisons ($n<2$) into $p=0$, \textbf{***}.
+  }
+  \dcolblk{4.85}{Silently inert experiments}{%
+    COMPAS defaults overwrote the swept flags: every cell of the old sensitivity sweep ran \textbf{one} configuration.\\[5pt]
+    The W\&B summary crashed before writing the metric the sweeps optimise.
+  }
+  \dcolblk{8.85}{Arms not comparable}{%
+    On COMPAS, FADO/Base used a 250-sample window, ARF/RFR 1000.\\[5pt]
+    Pre-training used $\lambda=0.1$, evaluation $\lambda=1.0$.\\[5pt]
+    All fixed; COMPAS must be \textbf{re-run}.
+  }
+  \slidefoot{Checked and fine: no stored run hit the variable-dispatch collision ($d$ = 108, 19, 760 vs $2^{\text{depth}}$).}
+\end{frame}
+
+% ===================================================== CORRECTION (04)
+\pageset{Review pass}{04}
+\begin{frame}
+  \ctitle{A {\color{cred}\textit{\underline{correction}}} to Meeting 1}
+  \body{
+    \textbf{``37.12 $\rightarrow$ 13.22 minutes on Adult''} timed a benchmark copy of the recursive updater, \textbf{not the code the pipeline ran}.\par
+    The production path is now the level-wise vectorised updater, chosen by depth (\texttt{'auto'}).\par
+    The benchmark will be rewritten to time the production forest, and the headline number replaced.
+  }
+  \slidefoot{The complexity argument, $O(B\times4^n)\rightarrow O(B\times2^n)$, stands; the wall-clock figure does not until re-measured.}
+\end{frame}
+
+% ===================================================== DECISIONS (05)
+\pageset{Decisions}{05}
+\begin{frame}
+  \ctitle{Decisions taken}
+  \tb{11.6}{0.85}{2.3}{\color{body}\fs{16}{21}
+    \begin{tabular}{@{}p{2.6in}p{8.6in}@{}}
+      \toprule
+      \textbf{Scope} & Exclusively online learning. \\
+      \textbf{$\lambda$ comparison} & Report accuracy-vs-DP \textbf{trade-off curves} over one shared $\lambda$ grid; no $\lambda$ is picked. \\
+      \textbf{Tuning budget} & Controller ablations vary only the controller; parameters that reach every arm ($\lambda$, depth, trees, windows) are swept for every arm. \\
+      \textbf{Metrics} & Whole-stream \textbf{and} per-phase / post-drift accuracy and DP. \\
+      \textbf{Search} & Grid for factorials, random for sensitivity; report distributions, never an argmax. \\
+      \textbf{Seeds} & Tune on 11--55, report on 66--202. COMPAS splits by seed only (two scenarios). \\
+      \textbf{Per-tree $\lambda$} & Deferred; at most an ablation. \\
+      \bottomrule
+    \end{tabular}}
+\end{frame}
+
+% ===================================================== LAMBDA CONTROLLER (06)
+\pageset{The $\lambda$ controller}{06}
+\begin{frame}
+  \ctitle{Answering {\color{cred}\textit{\underline{novelty}}}: $\lambda$ becomes a dual variable}
+  \dcolblk{0.85}{Constraint}{%
+    DP $=\max_g|D_g|$, with $D_g$ the gap between group $g$ and the mean positive rate.\\[5pt]
+    Target: $+D_g\le\varepsilon$ and $-D_g\le\varepsilon$ for every $g$.
+  }
+  \dcolblk{4.85}{Signal}{%
+    One sample gives $v_t[g]$ with $\mathbb{E}[v_t[g]]=D_g$ (Horvitz--Thompson).\\[5pt]
+    Unbiased, no window, no autocorrelation.
+  }
+  \dcolblk{8.85}{Update, every sample}{%
+    $\mu\leftarrow\mathrm{clip}(\mu+\eta(\pm v_t[g]-\varepsilon),\,0,\,\lambda_{\max})$\\[5pt]
+    $\lambda_t=\min(\lambda_{\text{base}}+\textstyle\sum\mu,\ \lambda_{\max})$
+  }
+  \slidefoot{Plus forgetting: every confirmed drift resets the penalty's statistics, so $\lambda$ scales a \emph{post}-drift gradient.}
+\end{frame}
+
+% ===================================================== WHY THIS SIGNAL (07)
+\pageset{The $\lambda$ controller}{07}
+\begin{frame}
+  \ctitle{Why not feed the rolling DP?}
+  \tb{6.4}{0.85}{2.4}{\color{body}\fs{14}{18}
+    Stationary 50k stream: every alarm is false.\par\medskip
+    \begin{tabular}{@{}lrr@{}}
+      \toprule
+      signal & lag-1 autocorr. & alarms, $\delta{=}10^{-5}$ \\
+      \midrule
+      per-sample estimate & $-0.001$ & \textbf{0} \\
+      rolling DP, $W{=}250$ & $0.991$ & {\color{cred}\textbf{24}} \\
+      DP every $W$ samples & $-0.044$ & 0 \\
+      \bottomrule
+    \end{tabular}}
+  \tb{4.9}{7.6}{2.4}{\color{body}\fs{15}{20}
+    Detectors assume independent inputs; a rolling DP shares $W{-}1$ of $W$ samples with its predecessor.\par\medskip
+    The per-sample estimate keeps both the detector's bound and an \textbf{unbiased} constraint gradient.}
+  \slidefoot{Limits: soft trees are non-convex, so primal--dual bounds are motivation, not a guarantee.}
+\end{frame}
+
+% ===================================================== RESULTS (08)
+\pageset{First results}{08}
+\begin{frame}
+  \ctitle{First results: DP {\color{cred}\textit{\underline{held down}}} after the drift}
+  \tb{7.0}{0.85}{2.3}{\color{body}\fs{15}{20}%
+    COMPAS \texttt{abrupt\_race}, 3 tuning seeds, $\lambda_{\text{base}}=0.3$, $\varepsilon=0.05$.\par\medskip
+    \begin{tabular}{@{}lrrr@{}}
+      \toprule
+      arm & accuracy & DP & post-drift DP \\
+      \midrule
+      \textbf{FADO} ($\lambda$ controller) & 0.605 & \textbf{0.058} & \textbf{0.066} \\
+      FADO, no reset & 0.606 & 0.081 & 0.099 \\
+      FADO, $\lambda$ fixed & 0.605 & 0.094 & 0.117 \\
+      Aranyani-Base & 0.617 & 0.093 & 0.116 \\
+      \bottomrule
+    \end{tabular}}
+  \tb{4.3}{8.35}{2.3}{\color{body}\fs{14}{18}%
+    \textbf{Same direction on every seed:} $-54\%$, $-18\%$, $-40\%$ DP vs.\ $\lambda$ fixed.\par\medskip
+    \textbf{No accuracy cost:} ${\sim}12\%$ of predictions change; half become right, half wrong. Borderline cases move.\par\medskip
+    \textbf{Not a collapse:} positive rate $0.40\rightarrow0.37$.}
+  \slidefoot{A fair classifier still shows rolling DP $\approx0.026$ (window noise). 3 seeds, one scenario: a direction, not a claim.}
+\end{frame}
+
+% ===================================================== TRAJECTORY (09)
+\pageset{First results}{09}
+\begin{frame}
+  \ctitle{How it happened: the price rises {\color{cred}\textit{\underline{while}}} DP is above target}
+  \centerimage{8.1}{1.95}{assets/lambda_trajectory.png}
+  \slidefoot{Identical until the drift; then the fixed-$\lambda$ arms sit at DP 0.15--0.20 while $\lambda$ climbs to 2 and holds FADO near $\varepsilon$.}
+\end{frame}
+
+% ===================================================== ABLATION PLAN (10)
+\pageset{Ablation plan}{10}
+\begin{frame}
+  \ctitle{Ablation plan: nine sweeps, {\color{cred}\textit{\underline{ready}}} to run}
+  \tb{11.6}{0.85}{2.3}{\color{body}\fs{16}{21}
+    \begin{tabular}{@{}p{3.1in}p{6.3in}r@{}}
+      \toprule
+      \textbf{sweep} & \textbf{question} & \textbf{runs} \\
+      \midrule
+      component (COMPAS / Adult) & Does each part contribute? 9 presets, incl. \emph{no-$\lambda$}, \emph{$\lambda$-only}, \emph{no-reset} & 18 / 27 \\
+      monitor & Which signal and detector should watch fairness? & 48 \\
+      sensitivity & Basin or knife edge? Controller parameters, incl. $\varepsilon$, $\eta$ & 120 \\
+      $\lambda$ budget (COMPAS / Adult) & Trade-off curves, same $\lambda$ grid for FADO and Base & 14 / 21 \\
+      reference (COMPAS / Adult) & ARF / RFR points on those curves & 2 / 3 \\
+      architecture & Does the gap survive other depths and tree counts? & 15 \\
+      \bottomrule
+    \end{tabular}}
+  \slidefoot{5 tuning seeds per run; every config is validated before launch.}
+\end{frame}
+
+% ===================================================== OPEN QUESTIONS (11)
+\pageset{Open questions}{11}
+\begin{frame}
+  \ctitle{Open questions}
+  \body{
+    \begin{itemize}
+      \item \textbf{Target $\varepsilon$}: chosen per dataset on tuning seeds, or stated as a requirement?
+      \item \textbf{Claim}: ``after drift, FADO spends fewer samples above $\varepsilon$ than Base''?
+      \item \textbf{Theory}: a stability argument for non-convex soft trees, or state the convex-only caveat?
+      \item \textbf{Tuning protocol}: disjoint streams, or prefix tuning (drift starts at 15--30\%, so a prefix sees none)?
+      \item \textbf{Accuracy gap to Base}: comes from the LR/temperature reaction, not from $\lambda$.
+    \end{itemize}
+  }
+\end{frame}
+
+% ===================================================== NEXT STEPS (12)
+\pageset{Next steps}{12}
+\begin{frame}
+  \ctitle{Next steps}
+  \body{
+    \begin{enumerate}
+      \item Re-run COMPAS on full splits;
+      \item Launch the sweeps on the tuning seeds;
+      \item Metric for the claim: samples above $\varepsilon$ after each change point;
+      \item Re-benchmark the production forest;
+      \item Final protocol: 20 reporting seeds, all datasets, all arms.
+    \end{enumerate}
+  }
+\end{frame}
 
 \end{document}

@@ -1,0 +1,34 @@
+# Reference points for the lambda trade-off plot (decision 3.2): ARF and RFR
+# have no fairness lambda, so they run once per scenario on the same tuning
+# seeds and appear as single points next to the Base / FADO curves.
+#
+# 2 scenarios = 2 runs, 5 tuning seeds each.
+program: src/main.py
+project: fado-ablations
+method: grid
+name: reference-compas
+metric:
+  name: arf/stream_final_dp
+  goal: minimize
+parameters:
+  pipeline_model:
+    value: 'arf,rfr'
+  pipeline_dataset:
+    value: compas
+  drift_scenario:
+    values: ['no_drift', 'abrupt_race']
+  seeds:
+    value: '11,22,33,44,55'
+  deterministic:
+    value: true
+  wandb_log:
+    value: true
+  wandb_project:
+    value: fado-ablations
+command:
+  - ${env}
+  - PYTHONHASHSEED=0
+  - ${interpreter}
+  - -m
+  - src.main
+  - ${args}

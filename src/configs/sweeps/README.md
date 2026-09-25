@@ -1,14 +1,15 @@
 # Sweeps
 
-Seven sweeps, each answering one question, plus the rules that keep them
+Nine sweeps, each answering one question, plus the rules that keep them
 defensible. All log to the W&B project `fado-ablations`.
 
 | file | question | runs |
 |---|---|---|
-| `sweep_component_compas.yaml` / `_adult` | does each controller component contribute? | 12 / 18 |
+| `sweep_component_compas.yaml` / `_adult` | does each controller component contribute? | 18 / 27 |
 | `sweep_monitor_ablation.yaml` | which signal and detector should watch fairness? | 48 |
 | `sweep_sensitivity.yaml` | is the gain a basin or a knife edge? | 120 |
 | `sweep_lambda_budget_compas.yaml` / `_adult` | equal lambda budget for Aranyani-Base (log 3.2) | 14 / 21 |
+| `sweep_reference_compas.yaml` / `_adult` | ARF / RFR reference points for the lambda plot | 2 / 3 |
 | `sweep_architecture.yaml` | does the gap survive other depths / tree counts? | 15 |
 
 Each run is 5 tuning seeds, so a run's cost is 5 x (pre-train + both arms).
@@ -27,6 +28,17 @@ flags, scenarios not registered for the sweep's dataset, and unselectable
 models. Run it on its own after editing any config. Commands use
 `-m src.main` (`python src/main.py` cannot import `src`) and set
 `PYTHONHASHSEED=0`.
+
+**Each run writes its own results folder**, `files/experiments/wandb/<run id>/`
+(gitignored), with the run's configuration saved in
+`seed_pipeline_results.json`. Parallel agents used to overwrite each other in
+`files/experiments/dataset_<name>/`.
+
+**Whole-stream and post-drift metrics (decision 2.4).** Every run reports both.
+Each paired delta has a `_post_drift` twin (`delta_dp_post_drift`, ...), and
+per-phase means are in the results as `phase_<phase>_<metric>`. The sweeps
+still optimise the whole-stream `delta_dp`; the post-drift values sit next to
+it in W&B.
 
 **Explicit flags beat dataset defaults.** `_COMPAS_FADO_OVERRIDES` /
 `_FOLKTABLES_FADO_OVERRIDES` in `main.py` now apply only to params whose flag
@@ -163,6 +175,12 @@ Grid over `--lambda_const` with **both** arms in every run, so each lambda
 yields a paired Base point and FADO point. No lambda is selected: report each
 arm's accuracy-vs-DP curve over the whole grid (decision 3.2a). The grid is
 the budget, identical for the two arms.
+
+Plot it with `python -m src.plot_lambda_tradeoff` once the lambda-budget and
+reference sweeps have finished (it reads `files/experiments/wandb/*/`). Each
+figure has a whole-stream panel and a post-drift panel (decision 2.4). If the
+same folder also holds other sweeps, narrow it with `--config depth=4` etc.;
+the script refuses to draw runs with different configurations on one curve.
 
 **Budget rule.** Controller ablations (component, monitor, sensitivity) vary
 only controller parameters. Anything that affects every arm -- lambda, depth,

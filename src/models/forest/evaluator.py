@@ -11,6 +11,7 @@ from src.helpers import utils
 from src.models.forest.controller import ControllerConfig
 from src.models.forest.detectors import make_detector, DEFAULT_SPEC
 from src.models.forest.fairness_signal import FairnessSignal, DEFAULT_MODE
+from src.models.forest.lambda_controller import LambdaController
 
 def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
     """Infer tree depth and number of trees from a trained forest model."""
@@ -100,6 +101,10 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         'fairness_detector': DEFAULT_SPEC,
         'fairness_signal_mode': DEFAULT_MODE,
         'fairness_detector_params': None,
+        # Lambda controller (decision log 2.1): DP target, dual step size, cap.
+        'fairness_target': 0.05,
+        'lambda_dual_lr': 0.01,
+        'lambda_max': 10.0,
     }
     if static_params:
         print("Overriding default static parameters with provided values:")
@@ -129,6 +134,9 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     FAIR_DETECTOR = str(defaults.get('fairness_detector') or DEFAULT_SPEC)
     FAIR_SIGNAL_MODE = str(defaults.get('fairness_signal_mode') or DEFAULT_MODE)
     FAIR_PARAMS = dict(defaults.get('fairness_detector_params') or {})
+    FAIRNESS_TARGET = float(defaults['fairness_target'])
+    LAMBDA_DUAL_LR = float(defaults['lambda_dual_lr'])
+    LAMBDA_MAX = float(defaults['lambda_max'])
 
     if ADWIN_DELTA_WARN <= ADWIN_DELTA_CONFIRM:
         print(
@@ -189,6 +197,29 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_attributes)
 
     print(f"Inferred tree depth: {tree_depth}, number of trees: {num_trees}, internal nodes per tree: {num_internal_nodes}")
+
+    # 2.1: lambda becomes the dual variable of DP <= FAIRNESS_TARGET. Without
+    # the controller it stays at lambda_const, as in Aranyani-Base.
+    lambda_controller = (
+        LambdaController(lambda_const, epsilon=FAIRNESS_TARGET,
+                         eta=LAMBDA_DUAL_LR, lambda_max=LAMBDA_MAX,
+                         num_groups=number_of_attributes)
+        if controller.react_lambda else None)
+    lambda_t = float(lambda_const)
+    lambdas = []
+    fairness_resets = []
+
+    def _reset_fairness_stats(t, reason):
+        # 2.1 prerequisite: the penalty's statistics are running means since
+        # the stream began; after a confirmed drift they describe the old
+        # concept, so they are forgotten and rebuilt from post-drift samples.
+        nonlocal gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count
+        if not (compute_fairness and controller.reset_fairness_stats):
+            return
+        gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count = \
+            init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_attributes)
+        fairness_resets.append(t)
+        print(f"[FAIRNESS] Reset fairness statistics at sample {t} ({reason} drift).")
     # FADO runs the optimised monitors: incremental O(NA) counters here and the
     # recursive O(B x 2^n) leaf-probability updater in the forest. The
     # Aranyani-Base evaluator deliberately keeps the legacy paths so the
@@ -301,6 +332,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             recovery_deadline = t + MAX_RECOVERY_STEPS
             
             print(f"[DRIFT] Concept drift confirmed at sample {t} — spiking LR to {DRIFT_LR_SPIKE:.2e} and making hard routing decisions")
+            _reset_fairness_stats(t, 'accuracy')
             if controller.react_temperature:
                 for tree in model.layers:
                     if hasattr(tree, 'temperature'):
@@ -333,7 +365,13 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                     for channel, value in observed.items():
                         if fairness_detectors[channel].update(value):
                             fairness_drift_points.append(t)
+                            _reset_fairness_stats(t, 'fairness')
                             break
+
+        if lambda_controller is not None:
+            with timer.phase('lambda_update'):
+                lambda_t = lambda_controller.update(y_pred, a_t)
+        lambdas.append(lambda_t)
         
         if just_confirmed_drift:
             # A4 fix: hold TEMP_ON_DRIFT for this timestep. Previously the
@@ -420,7 +458,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                 grads = compute_fairness_gradients(
                     grads, gradient_w, gradient_b, agg_y,
                     subgroup_count, protected_class_count,
-                    fairness_type, lambda_const,
+                    fairness_type, lambda_t,
                     num_internal_nodes, data_dim, number_of_attributes,
                     gradient_type, base_gamma, huber_loss_delta=huber_loss_delta, dp_sign=dp_sign, constraint_type=constraint_type,
                     variable_layout=variable_layout,
@@ -458,6 +496,12 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         'n_samples': n_samples,
         'drifted_points': drifted_points,
         'fairness_drifted_points': fairness_drift_points,
+        # 2.1: lambda at every step (constant lambda_const without the
+        # controller) and the samples where the fairness statistics were reset.
+        'lambda': lambdas,
+        'fairness_resets': fairness_resets,
+        'lambda_controller': (lambda_controller.describe()
+                              if lambda_controller else None),
         'detectors': {
             'accuracy_warn': warn_det.describe(),
             'accuracy_confirm': acc_det.describe(),
@@ -487,6 +531,9 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             'accuracy_detector': ACC_DETECTOR,
             'fairness_detector': FAIR_DETECTOR,
             'fairness_signal_mode': FAIR_SIGNAL_MODE,
+            'fairness_target': FAIRNESS_TARGET,
+            'lambda_dual_lr': LAMBDA_DUAL_LR,
+            'lambda_max': LAMBDA_MAX,
         },
         'controller': controller.as_dict(),
     }

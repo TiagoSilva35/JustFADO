@@ -291,7 +291,11 @@ def _print_latex_tables(
     n_cols = len(scenarios)
 
     for metric in metrics:
-        metric_label_map = {'dp': 'DP', 'eo': 'EO', 'accuracy': 'Accuracy'}
+        metric_label_map = {
+            'dp': 'DP', 'eo': 'EO', 'accuracy': 'Accuracy',
+            'post_drift_dp': 'Post-drift DP', 'post_drift_eo': 'Post-drift EO',
+            'post_drift_accuracy': 'Post-drift Accuracy',
+        }
         metric_label = metric_label_map.get(metric, metric.replace('_', ' ').title())
         arrow = r'$\uparrow$' if 'accuracy' in metric else r'$\downarrow$'
         print(f'% {metric_label}')

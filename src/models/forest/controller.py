@@ -27,10 +27,18 @@ class ControllerConfig:
         confirmed drift.
       label_noise_guard: suppress detections triggered by a single
         high-confidence error (probable label noise).
-      detect_fairness_drift: monitor the fairness signal for drift. Reserved
-        for the lambda controller; not implemented yet.
-      react_lambda: modulate the fairness penalty weight in response to
-        fairness drift. Reserved for the lambda controller; not implemented yet.
+      detect_fairness_drift: run the fairness monitor (a detector from
+        ``detectors.py`` on a signal from ``fairness_signal.py``).
+      react_lambda: the lambda controller (decision log 2.1). Projected
+        stochastic dual ascent on the constraints |D_g| <= epsilon, driven by
+        the per-sample Horvitz--Thompson estimate of D_g; see
+        ``lambda_controller.py``. It runs at every step and does not need a
+        detection.
+      reset_fairness_stats: forget the fairness penalty's running statistics
+        (``agg_y``, ``gradient_w``, ``gradient_b``, group counts) on every
+        confirmed drift, accuracy or fairness. Without it they are means over
+        the whole stream, so after a drift lambda would scale a gradient that
+        still points at the pre-drift disparity.
     """
 
     detect_accuracy_drift: bool = True
@@ -38,8 +46,9 @@ class ControllerConfig:
     react_lr: bool = True
     react_temperature: bool = True
     label_noise_guard: bool = True
-    detect_fairness_drift: bool = False
-    react_lambda: bool = False
+    detect_fairness_drift: bool = True
+    react_lambda: bool = True
+    reset_fairness_stats: bool = True
 
     @property
     def any_reaction(self):
@@ -48,8 +57,10 @@ class ControllerConfig:
     @property
     def is_inert(self):
         """True when the controller cannot change anything about the run."""
-        return not (self.detect_accuracy_drift or self.detect_fairness_drift) \
-            or not self.any_reaction
+        if self.react_lambda:
+            return False
+        detects = self.detect_accuracy_drift or self.detect_fairness_drift
+        return not detects or not (self.any_reaction or self.reset_fairness_stats)
 
     def describe(self):
         on = [f.name for f in dataclasses.fields(self) if getattr(self, f.name)]
@@ -60,8 +71,7 @@ class ControllerConfig:
 
     @classmethod
     def none(cls):
-        return cls(detect_accuracy_drift=False, prewarm=False, react_lr=False,
-                   react_temperature=False, label_noise_guard=False)
+        return cls(**{f.name: False for f in dataclasses.fields(cls)})
 
     @classmethod
     def from_spec(cls, spec):
@@ -102,25 +112,38 @@ class ControllerConfig:
         return cls(**base)
 
 
+_FULL = ControllerConfig()
+
 PRESETS = {
-    # Everything on. Equivalent to the historical `aranyani` model.
-    'fado_full': ControllerConfig(),
+    # Everything on: accuracy-drift reaction (LR, temperature, prewarm, noise
+    # guard), the fairness monitor, the lambda controller and the reset of the
+    # fairness statistics on drift. This is the `aranyani` / FADO arm.
+    'fado_full': _FULL,
+    # FADO as it was before the lambda controller (decision log 2.1): the
+    # accuracy-drift reaction only, lambda fixed. The key ablation -- the
+    # difference between this and fado_full is what 2.1 adds.
+    'fado_no_lambda': dataclasses.replace(
+        _FULL, react_lambda=False, detect_fairness_drift=False,
+        reset_fairness_stats=False),
+    # The lambda controller alone: no LR / temperature / prewarm reaction.
+    # Both detectors still run, because a confirmed drift triggers the reset.
+    'fado_lambda_only': dataclasses.replace(
+        _FULL, prewarm=False, react_lr=False, react_temperature=False),
+    # Leave-one-out ablations, each relative to fado_full.
+    'fado_no_reset': dataclasses.replace(_FULL, reset_fairness_stats=False),
+    'fado_no_lr': dataclasses.replace(_FULL, react_lr=False, prewarm=False),
+    'fado_no_temp': dataclasses.replace(_FULL, react_temperature=False),
+    'fado_no_prewarm': dataclasses.replace(_FULL, prewarm=False),
+    'fado_no_noise_guard': dataclasses.replace(_FULL, label_noise_guard=False),
     # Detect but never react: isolates the cost and the false-positive rate of
-    # detection from the effect of the reaction.
-    'fado_detect_only': ControllerConfig(
-        prewarm=False, react_lr=False, react_temperature=False),
-    # Single-component ablations.
-    'fado_lr_only': ControllerConfig(react_temperature=False),
-    'fado_temp_only': ControllerConfig(prewarm=False, react_lr=False),
-    'fado_no_prewarm': ControllerConfig(prewarm=False),
-    'fado_no_noise_guard': ControllerConfig(label_noise_guard=False),
-    # Monitor arms: the fairness detector runs and records what it *would*
-    # have signalled, without reacting. Used by the monitor ablation to compare
-    # detector backends and signal designs on detection quality alone.
-    'fado_monitor': ControllerConfig(detect_fairness_drift=True),
-    'fado_monitor_only': ControllerConfig(
-        detect_accuracy_drift=False, prewarm=False, react_lr=False,
-        react_temperature=False, detect_fairness_drift=True),
+    # detection from the effect of any reaction.
+    'fado_detect_only': dataclasses.replace(
+        _FULL, prewarm=False, react_lr=False, react_temperature=False,
+        react_lambda=False, reset_fairness_stats=False),
+    # The fairness monitor alone, observing: used by the monitor ablation to
+    # compare detector backends and signal designs on detection quality.
+    'fado_monitor_only': dataclasses.replace(
+        ControllerConfig.none(), detect_fairness_drift=True),
     # No controller at all; the pure-Aranyani arm routes to the baseline
     # evaluator rather than to this config.
     'none': ControllerConfig.none(),

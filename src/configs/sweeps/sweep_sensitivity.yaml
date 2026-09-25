@@ -63,6 +63,16 @@ parameters:
     distribution: uniform
     min: 0.05
     max: 0.8
+  # Lambda controller (2.1). epsilon on the pipeline DP scale; eta spans the
+  # slow-and-smooth to fast-and-noisy range of the dual ascent.
+  fairness_target:
+    distribution: uniform
+    min: 0.01
+    max: 0.10
+  lambda_dual_lr:
+    distribution: log_uniform_values
+    min: 0.001
+    max: 0.1
   deterministic:
     value: true
   wandb_log:

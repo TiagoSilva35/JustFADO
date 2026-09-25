@@ -122,6 +122,24 @@ flags.DEFINE_string(
     'default), subsampled_dp, or raw_dp (the autocorrelated negative control). '
     'See src/models/forest/fairness_signal.py.',
 )
+flags.DEFINE_float(
+    'fairness_target',
+    0.05,
+    'Lambda controller (2.1): the DP target epsilon, on the pipeline DP scale '
+    '(max deviation from the mean group positive rate; for two groups half the '
+    'rate gap). Lambda rises while DP is above it.',
+)
+flags.DEFINE_float(
+    'lambda_dual_lr',
+    0.01,
+    'Lambda controller (2.1): dual ascent step size eta. Lambda drains back to '
+    '--lambda_const at eta * (epsilon - DP) per sample once DP is below target.',
+)
+flags.DEFINE_float(
+    'lambda_max',
+    10.0,
+    'Lambda controller (2.1): upper bound on lambda.',
+)
 flags.DEFINE_bool(
     'deterministic',
     True,
