@@ -75,11 +75,7 @@ def train_online(
   demographic_parities = []
   equalized_odds = []
   accuracies = []
-  
-  # Fairness monitor. The incremental O(NA) counter window is a FADO-pipeline
-  # optimisation; the pure-Aranyani baseline passes
-  # ``use_incremental_fairness=False`` and runs the legacy O(NW) full-window
-  # recomputation instead, so the speed-up stays attributable to FADO.
+
   fairness_window_state = utils.make_fairness_window(
       fairness_window, incremental=use_incremental_fairness
   )
@@ -89,18 +85,10 @@ def train_online(
       else "legacy full-window recomputation (O(NW))",
   )
 
-  # Pre-training runtime is measured too: with the FADO-only optimisations the
-  # pre-training phase runs on different code paths in the two arms, so its
-  # cost has to be reported alongside the prequential phase rather than
-  # assumed. ``timing_sink`` is an optional dict the caller passes in to
-  # receive the report without changing this function's return signature.
   timer = utils.PhaseTimer()
   n_train_samples = int(np.asarray(inputs).shape[0])
 
-  # D2: resolve the fairness penalty onto variables by identity, not by
-  # tensor shape (theta collides with weight when data_dim == num_leaves).
   variable_layout = build_variable_layout(model)
-  # hyperparameters
   huber_loss_delta = 0.1
   all_tree_trainable_vars = []
   for tree in model.layers:
@@ -112,10 +100,6 @@ def train_online(
       targets_batch,
       protected_batch) in enumerate(iterations):
     _iter_t0 = time.perf_counter()
-    # ``persistent`` is only needed when ``.gradient`` is called more than once.
-    # The 'node' fairness gradient is now analytic (see
-    # ``initializers.accumulate_fairness_stats``), so the only tape traversal
-    # left is the task loss below; 'leaf' still needs a second pass.
     with tf.GradientTape(
         persistent=(compute_fairness and constraint_type == 'leaf')
     ) as tape:
@@ -128,12 +112,6 @@ def train_online(
         class_weights = tf.gather(weight_updater.class_weights, targets_batch)
         target_loss = criteria(y_true=targets_batch, y_pred=predictions, sample_weight=class_weights)
         weight_updater.total_num_samples += 1
-
-      # B2 fix (2026-06): per-sample slicing MUST happen inside the tape's
-      # with-block so the slice ops are recorded. Slicing the batch tensors
-      # outside the tape produces untracked tensors that make
-      # ``tape.gradient`` return None for every var, silently disabling the
-      # fairness regulariser. See DOCS/BUG_REPORT_fairness_regulariser.md.
       if compute_fairness:
         node_decisions_per_sample = tf.unstack(node_decisions, axis=1)
         predictions_per_sample = tf.unstack(predictions, axis=0)
@@ -145,7 +123,6 @@ def train_online(
       targets_np = targets_batch.numpy()
       protected_np = protected_batch.numpy()
       
-      # Maintain full history for validation later, rolling window for fairness metrics
       y_predictions.extend(y_pred_np)
       y_true_all.extend(targets_np)
       

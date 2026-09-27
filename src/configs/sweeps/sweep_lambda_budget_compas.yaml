@@ -1,15 +1,10 @@
-# Decision log 3.2: equal tuning budget for lambda.
+# Decision log 3.2: equal lambda budget, reported as trade-off curves (compas).
 #
-# Aranyani-Base has one knob, --lambda_const. Without tuning it the FADO
-# comparison is tuned-vs-untuned. Both arms run on the SAME lambda grid, paired
-# on one pre-trained forest per cell, so each lambda gives a Base point and a
-# FADO point and the two accuracy/DP fronts can be compared directly.
+# Both arms run on the SAME lambda grid, paired on one pre-trained forest per
+# cell. No lambda is selected: plot each arm's accuracy-vs-DP curve with
+# python -m src.plot_lambda_tradeoff. Scenarios: all 8 injected-drift scenarios.
 #
-# Decision 3.2 (a): no lambda is selected. Report the accuracy-vs-DP
-# trade-off curve of each arm across the whole grid; the claim is that FADO's
-# curve lies beyond Base's. The metric below is for the W&B UI only.
-#
-# 7 lambdas x 2 scenarios = 14 runs, 5 tuning seeds each.
+# 7 lambdas x 8 scenario(s) = 56 runs, 5 tuning seeds each.
 program: src/main.py
 project: fado-ablations
 method: grid
@@ -23,7 +18,15 @@ parameters:
   pipeline_dataset:
     value: compas
   drift_scenario:
-    values: ['no_drift', 'abrupt_race']
+    values:
+      - sim_x_permutations
+      - sim_x_permutations_gradual
+      - sim_y_swaps
+      - sim_y_swaps_gradual
+      - sim_y_prior_skip
+      - sim_y_prior_skip_gradual
+      - sim_x_exceed_skip
+      - sim_x_exceed_skip_gradual
   lambda_const:
     values: [0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
   seeds:

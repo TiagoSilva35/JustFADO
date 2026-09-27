@@ -1,18 +1,3 @@
-"""Uniform drift-detector interface over river and CapyMOA.
-
-The controller used to hard-code a river ADWIN. Comparing detectors is part of
-the evaluation now, so detectors are addressed by a ``backend:name`` spec and
-wrapped behind one ``update(value) -> bool`` call. This also absorbs river's
-``change_detected`` -> ``drift_detected`` rename, so the code works on either
-river version.
-
-CapyMOA detectors are JVM-backed (JDK 17+ required); the import is lazy so the
-repo still runs without a JVM as long as no ``capymoa:`` spec is requested.
-
-    det = make_detector('capymoa:seed', delta=0.05)
-    if det.update(error):
-        ...
-"""
 
 import importlib
 
@@ -26,9 +11,6 @@ RIVER_DETECTORS = {
     'page_hinkley': ('PageHinkley', {'min_instances', 'delta', 'threshold', 'alpha'}),
 }
 
-# All CapyMOA detectors share the MOADriftDetector API. The second element is
-# the set of constructor keywords we forward; anything else is dropped with a
-# warning so a sweep can pass one parameter dict to every arm.
 CAPYMOA_DETECTORS = {
     'adwin': ('ADWIN', {'delta'}),
     'cusum': ('CUSUM', {'min_n_instances', 'delta', 'lambda_'}),

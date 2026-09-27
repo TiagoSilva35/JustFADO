@@ -9,7 +9,6 @@ from sklearn.model_selection import train_test_split
 from src.drift.compas_scenarios import COMPAS_SCENARIOS, get_compas_scenario
 from src.drift.scenarios import SCENARIOS, get_scenario
 
-
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------

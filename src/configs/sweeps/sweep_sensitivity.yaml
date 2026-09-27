@@ -39,8 +39,13 @@ parameters:
     value: 'aranyani,aranyani_base'
   pipeline_dataset:
     value: compas
+  # Sampled like any other parameter, so the reported distribution covers
+  # every injected drift type rather than one scenario.
   drift_scenario:
-    value: abrupt_race
+    values: ['sim_x_permutations', 'sim_x_permutations_gradual',
+             'sim_y_swaps', 'sim_y_swaps_gradual',
+             'sim_y_prior_skip', 'sim_y_prior_skip_gradual',
+             'sim_x_exceed_skip', 'sim_x_exceed_skip_gradual']
   seeds:
     value: '11,22,33,44,55'
   drift_adwin_delta_confirm:

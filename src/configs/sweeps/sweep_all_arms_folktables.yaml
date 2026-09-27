@@ -1,0 +1,35 @@
+# Every arm on every drift of this dataset (folktables): the main results table.
+#
+# natural drift: train on 2015, stream 2017 then 2018 (10% subsample). The drift is a property of the data, so by the budget rule every
+# arm runs on it: FADO, FADO without the lambda controller, Base, ARF, RFR.
+#
+# 1 run(s), 5 tuning seeds each.
+program: src/main.py
+project: fado-ablations
+method: grid
+name: all-arms-folktables
+metric:
+  name: delta_dp
+  goal: maximize
+parameters:
+  pipeline_model:
+    value: 'aranyani,fado_no_lambda,aranyani_base,arf,rfr'
+  pipeline_dataset:
+    value: folktables
+  folktables_subsample_fraction:
+    value: 0.1   # ~18.7k train + ~18.7k stream (full CA is 187k + 187k)
+  seeds:
+    value: '11,22,33,44,55'
+  deterministic:
+    value: true
+  wandb_log:
+    value: true
+  wandb_project:
+    value: fado-ablations
+command:
+  - ${env}
+  - PYTHONHASHSEED=0
+  - ${interpreter}
+  - -m
+  - src.main
+  - ${args}

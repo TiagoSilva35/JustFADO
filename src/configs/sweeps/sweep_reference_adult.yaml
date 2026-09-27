@@ -1,8 +1,9 @@
-# Reference points for the lambda trade-off plot (decision 3.2): ARF and RFR
-# have no fairness lambda, so they run once per scenario on the same tuning
-# seeds and appear as single points next to the Base / FADO curves.
+# ARF / RFR reference points for the lambda trade-off plot (adult).
 #
-# 3 scenarios = 3 runs, 5 tuning seeds each.
+# They have no fairness lambda, so they run once per scenario on the same
+# tuning seeds. Scenarios: the 4 abrupt injected-drift scenarios (gradual ones double an already long sweep).
+#
+# 4 run(s), 5 tuning seeds each.
 program: src/main.py
 project: fado-ablations
 method: grid
@@ -16,7 +17,11 @@ parameters:
   pipeline_dataset:
     value: adult
   drift_scenario:
-    values: ['no_drift', 'abrupt_gender', 'gradual_gender']
+    values:
+      - sim_x_permutations
+      - sim_y_swaps
+      - sim_y_prior_skip
+      - sim_x_exceed_skip
   seeds:
     value: '11,22,33,44,55'
   deterministic:

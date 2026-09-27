@@ -1,19 +1,19 @@
-# ARF / RFR reference points for the lambda trade-off plot (compas).
+# Every arm on every drift of this dataset (compas): the main results table.
 #
-# They have no fairness lambda, so they run once per scenario on the same
-# tuning seeds. Scenarios: all 8 injected-drift scenarios.
+# all 8 injected-drift scenarios. The drift is a property of the data, so by the budget rule every
+# arm runs on it: FADO, FADO without the lambda controller, Base, ARF, RFR.
 #
 # 8 run(s), 5 tuning seeds each.
 program: src/main.py
 project: fado-ablations
 method: grid
-name: reference-compas
+name: all-arms-compas
 metric:
-  name: arf/stream_final_dp
-  goal: minimize
+  name: delta_dp
+  goal: maximize
 parameters:
   pipeline_model:
-    value: 'arf,rfr'
+    value: 'aranyani,fado_no_lambda,aranyani_base,arf,rfr'
   pipeline_dataset:
     value: compas
   drift_scenario:

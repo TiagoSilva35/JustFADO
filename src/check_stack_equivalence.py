@@ -1,31 +1,3 @@
-#!/usr/bin/env python3
-"""Compare a prequential run across two dependency stacks.
-
-The 2026-09 upgrade crosses the Keras 2 -> Keras 3 boundary (tensorflow 2.8 ->
-2.21). Everything runs, but the optimizer implementation was rewritten, and
-that is the one place where numbers could move. This script pins down whether
-they did.
-
-Run it once in each environment, then diff:
-
-    # old env (python 3.9, tensorflow 2.8)
-    python src/check_stack_equivalence.py --out files/equiv_old.json
-
-    # new env (python 3.12, tensorflow 2.21)
-    python src/check_stack_equivalence.py --out files/equiv_new.json
-
-    # compare
-    python src/check_stack_equivalence.py --compare files/equiv_old.json files/equiv_new.json
-
-Deliberately synthetic and self-contained: no dataset files, no wandb, one
-seed, a few hundred timesteps. It is checking the numerics of the forest +
-optimizer, not the science.
-
-If the streams diverge, the first suspect is the optimizer. Try pinning
-``tf.keras.optimizers.legacy.Adam`` (TF 2.11-2.15) or
-``tf_keras.optimizers.Adam`` as a bridge and re-run.
-"""
-
 import argparse
 import json
 import os

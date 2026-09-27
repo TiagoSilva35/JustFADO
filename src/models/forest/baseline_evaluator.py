@@ -1,30 +1,4 @@
-"""Pure Aranyani prequential evaluator (no drift detection / no reaction).
-
-This module mirrors `src.models.forest.evaluator.evaluate_over_timesteps` but
-removes every component of the FADO reaction controller, so that a fair
-comparison can be drawn between:
-
-    - `evaluate_over_timesteps` (FADO: Aranyani + ADWIN drift detection + LR/temperature reaction)
-    - `evaluate_aranyani_baseline_over_timesteps` (pure Aranyani, no controller)
-
-Specifically, this evaluator:
-  * does NOT instantiate any ADWIN detector (no warning / no confirmation),
-  * does NOT modulate the optimizer learning rate (fixed at ``learning_rate``),
-  * does NOT modulate the soft-routing temperature (left untouched),
-  * does NOT apply the label-noise guard or cooldown logic,
-  * does NOT track drift events,
-  * does NOT use any of the FADO efficiency optimisations: fairness metrics are
-    recomputed over the full window (legacy O(NW)) instead of maintained with
-    incremental counters, and the forest is expected to run the original
-    mask-product leaf-probability path (O(B x 4^n)) rather than the recursive
-    updater. Both legacy paths are numerically identical to their optimised
-    counterparts, so only runtime differs -- which is exactly what makes the
-    reported speed-up attributable to FADO alone.
-
-It keeps the prequential test-then-train protocol, the rolling-window
-fairness monitoring, and the fairness-aware online updates (node-level
-running statistics + Aranyani gradient correction).
-"""
+"""Pure Aranyani prequential evaluator (no drift detection / no reaction)."""
 
 import time
 from collections import deque
@@ -42,11 +16,6 @@ from src.models.forest.initializers import (
 
 
 def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
-    """Infer tree depth and number of trees from a trained forest model.
-
-    Identical to the helper in `evaluator.py`; duplicated here to keep this
-    module self-contained and free of any drift-controller imports.
-    """
     inferred_num_trees = int(fallback_num_trees)
     if hasattr(model, 'layers'):
         inferred_num_trees = int(len(model.layers))
@@ -66,14 +35,6 @@ def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
 
 
 def _warn_expected_leaf_path(model, expected, tag):
-    """Warn (without mutating the model) if the forest is on the wrong path.
-
-    ``expected`` is a resolved path name ('mask' / 'recursive') or None to skip
-    the check. Only the baseline arm has a hard expectation: it must stay on
-    the original mask path for the comparison to isolate the FADO-only
-    optimisations. The FADO arm runs 'auto', which legitimately resolves to
-    either path depending on tree depth.
-    """
     if expected is None:
         return
     trees = getattr(model, 'layers', None)
@@ -109,19 +70,6 @@ def evaluate_aranyani_baseline_over_timesteps(
     static_params=None,
     use_incremental_fairness=False,
 ):
-    """Run the Aranyani base learner prequentially without any drift response.
-
-    Parameters mirror `evaluate_over_timesteps` so the caller can swap the two
-    evaluators without changing its call site. Drift-controller-specific keys
-    in `static_params` are silently ignored; only `fairness_window` and
-    `lambda_const` are honoured (matching the parameters that *do* apply to
-    pure Aranyani).
-
-    Returns a dict with the same shape as `evaluate_over_timesteps`, so the
-    downstream aggregation code does not need to special-case this baseline.
-    `drifted_points` is always empty and `static_params_used` records only the
-    knobs that were actually applied.
-    """
     accuracies = []
     dps = []
     eos = []
@@ -129,15 +77,9 @@ def evaluate_aranyani_baseline_over_timesteps(
     defaults = {
         'fairness_window': int(fairness_window),
         'lambda_const': float(lambda_const),
-        # None -> follow ``fairness_window`` (B2: one time scale for all
-        # stream metrics). Must mirror the FADO evaluator exactly, otherwise
-        # the two arms are compared on differently-smoothed accuracy curves.
         'accuracy_window': accuracy_window,
     }
     if static_params:
-        # Only the two knobs that apply to a controller-free Aranyani run are
-        # honoured. We silently ignore drift-controller keys so callers can
-        # reuse `_build_aranyani_static_params()` unchanged.
         for key in ('fairness_window', 'lambda_const', 'accuracy_window'):
             if key in static_params:
                 defaults[key] = static_params[key]
@@ -152,10 +94,6 @@ def evaluate_aranyani_baseline_over_timesteps(
         f"(test-then-train={test_then_train}, fairness lambda={lambda_const}, "
         f"window={FAIRNESS_WINDOW}). No drift detection / no reaction controller."
     )
-
-    # B1/B2 fix: rolling accuracy on the same window as the fairness metrics,
-    # matching the FADO evaluator. The cumulative curve is still returned as
-    # ``accuracy_cumulative`` for continuity with earlier results.
     USE_ROLLING = True
     correct_buffer = deque()
     rolling_correct = 0
@@ -167,7 +105,6 @@ def evaluate_aranyani_baseline_over_timesteps(
     a_all = []
     n_samples = len(x_test)
 
-    # Fixed-learning-rate optimizer for the entire stream.
     optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
     criteria = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
 
@@ -185,9 +122,6 @@ def evaluate_aranyani_baseline_over_timesteps(
             f"[ARANYANI-BASELINE] Inferred geometry: depth={tree_depth}, "
             f"trees={num_trees}, internal_nodes={num_internal_nodes}"
         )
-
-    # Legacy O(NW) recomputation by default: the incremental counter window is
-    # a FADO-only optimisation. Values are identical either way.
     fairness_window_state = utils.make_fairness_window(
         FAIRNESS_WINDOW, incremental=use_incremental_fairness
     )
@@ -197,9 +131,6 @@ def evaluate_aranyani_baseline_over_timesteps(
            else "legacy full-window recomputation (O(NW))")
     )
     _warn_expected_leaf_path(model, expected='mask', tag='ARANYANI-BASELINE')
-
-    # D2: resolve the fairness penalty onto variables by identity, not by
-    # tensor shape (theta collides with weight when data_dim == num_leaves).
     variable_layout = build_variable_layout(model)
     huber_loss_delta = 0.1
 
@@ -249,9 +180,6 @@ def evaluate_aranyani_baseline_over_timesteps(
         if test_then_train:
             _train_t0 = time.perf_counter()
             y_t_tensor = tf.convert_to_tensor([y_t], dtype=tf.int32)
-            # The 'node' fairness gradient is analytic (no tape traversal), so
-            # only 'leaf' needs a second ``.gradient`` call and thus a
-            # persistent tape.
             with tf.GradientTape(
                 persistent=(compute_fairness and constraint_type == 'leaf')
             ) as tape:
@@ -259,8 +187,6 @@ def evaluate_aranyani_baseline_over_timesteps(
                 y_probs_train = train_out[0] if isinstance(train_out, tuple) else train_out
                 node_decisions_train = train_out[1] if isinstance(train_out, tuple) else None
                 loss = criteria(y_true=y_t_tensor, y_pred=y_probs_train)
-                # B2 fix (2026-06): per-sample slicing MUST happen inside
-                # the tape. See DOCS/BUG_REPORT_fairness_regulariser.md.
                 if compute_fairness and node_decisions_train is not None:
                     node_decisions_per_sample = tf.unstack(
                         node_decisions_train, axis=1

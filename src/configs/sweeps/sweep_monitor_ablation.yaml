@@ -35,8 +35,11 @@ parameters:
     values: ['fado_monitor_only,aranyani_base']
   pipeline_dataset:
     value: compas
+  # no_drift is the control, not a drift scenario: false alarms can only be
+  # counted on a stream with nothing to detect (the stream before injection).
   drift_scenario:
-    values: ['no_drift', 'abrupt_race']
+    values: ['no_drift', 'sim_x_permutations', 'sim_y_swaps',
+             'sim_y_prior_skip', 'sim_x_exceed_skip']
   fairness_signal_mode:
     values: ['raw_dp', 'subsampled_dp', 'per_sample']
   fairness_detector:

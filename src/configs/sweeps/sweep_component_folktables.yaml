@@ -1,15 +1,15 @@
-# Which components of the reaction controller contribute? (compas)
+# Which components of the reaction controller contribute? (folktables)
 #
-# Grid over the nine controller presets on all 8 injected-drift scenarios.
+# Grid over the nine controller presets on natural drift: train on 2015, stream 2017 then 2018 (10% subsample).
 # Every arm runs with identical hyperparameters; only the enabled components
 # differ. Each run evaluates the preset and aranyani_base on one pre-trained
 # forest, and the metric is their paired difference.
 #
-# 9 presets x 8 scenario(s) = 72 runs, 5 tuning seeds each.
+# 9 presets x 1 scenario(s) = 9 runs, 5 tuning seeds each.
 program: src/main.py
 project: fado-ablations
 method: grid
-name: component-compas
+name: component-folktables
 metric:
   name: delta_dp
   goal: maximize
@@ -26,17 +26,9 @@ parameters:
       - 'fado_no_noise_guard,aranyani_base' # - label-noise guard
       - 'fado_detect_only,aranyani_base'    # detects, reacts to nothing
   pipeline_dataset:
-    value: compas
-  drift_scenario:
-    values:
-      - sim_x_permutations
-      - sim_x_permutations_gradual
-      - sim_y_swaps
-      - sim_y_swaps_gradual
-      - sim_y_prior_skip
-      - sim_y_prior_skip_gradual
-      - sim_x_exceed_skip
-      - sim_x_exceed_skip_gradual
+    value: folktables
+  folktables_subsample_fraction:
+    value: 0.1   # ~18.7k train + ~18.7k stream (full CA is 187k + 187k)
   seeds:
     value: '11,22,33,44,55'
   deterministic:

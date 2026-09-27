@@ -1,17 +1,3 @@
-"""Decision log 1.2: did any reported (dataset, depth) pair hit data_dim == 2**depth?
-
-Before `build_variable_layout`, `compute_fairness_gradients` dispatched
-variables by shape. `theta` is [2**depth, num_classes] and the weight test was
-`shape[0] == data_dim`, so the fairness penalty landed on the wrong variable
-exactly when the encoded feature count equals the number of leaves.
-
-The encoded feature count is data-dependent (one-hot columns are fitted on the
-train split), and for COMPAS the split is seed-dependent, so this loads every
-dataset the way the pipeline does and reports data_dim per seed.
-
-    python -m TESTS.check_depth_collision --seeds 1,11,22,...  --depths 3,4,5,7,9
-"""
-
 import argparse
 import contextlib
 import io

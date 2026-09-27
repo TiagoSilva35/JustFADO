@@ -16,12 +16,13 @@ import sys
 import yaml
 
 import src.main  # noqa: F401 -- registers every pipeline flag
-from src.drift.compas_scenarios import COMPAS_SCENARIOS
-from src.drift.scenarios import SCENARIOS
-from src.main import FLAGS, _ABLATION_MODELS, _supported_models_for_dataset
+from src.main import (FLAGS, _ABLATION_MODELS, _scenarios_for_dataset,
+                      _supported_models_for_dataset)
 
 SWEEP_DIR = os.path.join('src', 'configs', 'sweeps')
-SCENARIOS_BY_DATASET = {'compas': set(COMPAS_SCENARIOS), 'adult': set(SCENARIOS)}
+SCENARIOS_BY_DATASET = {
+    name: set(_scenarios_for_dataset(name)) for name in ('adult', 'compas', 'folktables')
+}
 
 
 def _values(spec):

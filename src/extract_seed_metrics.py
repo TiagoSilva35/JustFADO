@@ -4,17 +4,6 @@ import statistics
 from collections import defaultdict
 from pathlib import Path
 
-
-# Active scenario set: mirrors the pruned COMPAS_SCENARIOS registry in
-# src/drift/compas_scenarios.py. Three scenarios cover the paper
-# narrative cleanly:
-#   * no_drift            -- baseline reference; controller dormant.
-#   * abrupt_race         -- ADWIN-fires demonstration.
-#   * age_race_decouple   -- only cell where FADO beats Aranyani-Base
-#                            on BOTH demographic parity and accuracy.
-# The other two scenario keys are documented for ease of override but
-# are not in the default order, so they are not rendered unless brought
-# back via --scenarios=<csv>.
 DEFAULT_SCENARIO_ORDER = [
     'no_drift',
     'abrupt_race',

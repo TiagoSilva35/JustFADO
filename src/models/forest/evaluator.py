@@ -14,7 +14,6 @@ from src.models.forest.fairness_signal import FairnessSignal, DEFAULT_MODE
 from src.models.forest.lambda_controller import LambdaController
 
 def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
-    """Infer tree depth and number of trees from a trained forest model."""
     inferred_num_trees = int(fallback_num_trees)
     if hasattr(model, 'layers'):
         inferred_num_trees = int(len(model.layers))
@@ -34,14 +33,6 @@ def _infer_forest_geometry(model, fallback_tree_depth, fallback_num_trees):
 
 
 def _warn_expected_leaf_path(model, expected, tag):
-    """Warn (without mutating the model) if the forest is on the wrong path.
-
-    ``expected`` is a resolved path name ('mask' / 'recursive') or None to skip
-    the check. Only the baseline arm has a hard expectation: it must stay on
-    the original mask path for the comparison to isolate the FADO-only
-    optimisations. The FADO arm runs 'auto', which legitimately resolves to
-    either path depending on tree depth.
-    """
     if expected is None:
         return
     trees = getattr(model, 'layers', None)
@@ -71,12 +62,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     drifted_points = []
 
     defaults = {
-        # A1 fix: in river, a LARGER delta means a MORE sensitive detector.
-        # The warning stage must therefore have the larger delta so it trips
-        # before the confirmation stage. The previous values were the other way
-        # round (warn=1e-5, confirm=0.02), which made confirmation fire ~2x
-        # earlier than the warning and left the pre-warm stage -- and
-        # ``drift_lr_prewarm_mult`` -- dead code.
         'adwin_delta_warn': 0.02,
         'adwin_delta_confirm': 0.00001,
         'drift_lr_prewarm_mult': 5.0,
@@ -89,19 +74,12 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         'temperature_on_drift': 0.1,
         'temperature_recovery_target': 1.0,
         'temperature_recovery_step': 0.002,
-        # None -> follow ``fairness_window`` so every stream metric shares one
-        # time scale (B2).
         'accuracy_window': accuracy_window,
-        # None -> 2 x lr_decay_steps. Upper bound on how long the controller
-        # may stay in the post-drift recovery regime (A3 safety net).
         'max_recovery_steps': None,
-        # Detector backends, so the monitor is an experimental factor rather
-        # than a hard-coded river ADWIN. See src/models/forest/detectors.py.
         'accuracy_detector': DEFAULT_SPEC,
         'fairness_detector': DEFAULT_SPEC,
         'fairness_signal_mode': DEFAULT_MODE,
         'fairness_detector_params': None,
-        # Lambda controller (decision log 2.1): DP target, dual step size, cap.
         'fairness_target': 0.05,
         'lambda_dual_lr': 0.01,
         'lambda_max': 10.0,
@@ -151,13 +129,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     print(f"Accuracy window: {ACCURACY_WINDOW} (rolling), max recovery steps: {MAX_RECOVERY_STEPS}")
     print(f"Controller components: {controller.describe()}")
 
-    # B1 fix: report a ROLLING accuracy, not the cumulative curve. Averaging a
-    # cumulative curve gives sample i a weight ~ ln(N/i), so everything after
-    # 60% of the stream -- the only region where the controller can differ from
-    # the baseline -- was worth under 10% of the reported number.
-    # B2 fix: it defaults to the fairness window, so accuracy and DP/EO finally
-    # share one time scale. The cumulative curve is still returned as
-    # ``accuracy_cumulative`` for continuity with earlier results.
     USE_ROLLING = True
     fairness_drift_points = []
     fairness_signal = None
@@ -198,8 +169,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
 
     print(f"Inferred tree depth: {tree_depth}, number of trees: {num_trees}, internal nodes per tree: {num_internal_nodes}")
 
-    # 2.1: lambda becomes the dual variable of DP <= FAIRNESS_TARGET. Without
-    # the controller it stays at lambda_const, as in Aranyani-Base.
+
     lambda_controller = (
         LambdaController(lambda_const, epsilon=FAIRNESS_TARGET,
                          eta=LAMBDA_DUAL_LR, lambda_max=LAMBDA_MAX,
@@ -210,9 +180,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
     fairness_resets = []
 
     def _reset_fairness_stats(t, reason):
-        # 2.1 prerequisite: the penalty's statistics are running means since
-        # the stream began; after a confirmed drift they describe the old
-        # concept, so they are forgotten and rebuilt from post-drift samples.
         nonlocal gradient_w, gradient_b, agg_y, subgroup_count, protected_class_count
         if not (compute_fairness and controller.reset_fairness_stats):
             return
@@ -220,15 +187,9 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             init_fairness_state(num_trees, data_dim, num_internal_nodes, number_of_attributes)
         fairness_resets.append(t)
         print(f"[FAIRNESS] Reset fairness statistics at sample {t} ({reason} drift).")
-    # FADO runs the optimised monitors: incremental O(NA) counters here and the
-    # recursive O(B x 2^n) leaf-probability updater in the forest. The
-    # Aranyani-Base evaluator deliberately keeps the legacy paths so the
-    # efficiency gain is attributable to FADO alone.
     fairness_window = utils.make_fairness_window(FAIRNESS_WINDOW, incremental=True)
     _warn_expected_leaf_path(model, expected=None, tag='FADO')
     
-    # D2: resolve the fairness penalty onto variables by identity, not by
-    # tensor shape (theta collides with weight when data_dim == num_leaves).
     variable_layout = build_variable_layout(model)
     huber_loss_delta = 0.1
 
@@ -255,8 +216,7 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         with timer.phase('fairness_metrics'):
             fairness_window.append(y_pred, a_t, y_t)
 
-        # Rolling accuracy kept with an incremental counter so the reporting
-        # fix does not reintroduce an O(N*W) rescan of the window.
+
         correct = int(y_pred == y_t)
         cumulative_correct += correct
         correct_buffer.append(correct)
@@ -300,12 +260,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                 and acc_fired
                 and acc_det_n >= MIN_SAMPLES_PER_STREAM
                 and t - last_detected_acc >= COOLDOWN
-                # A2 fix: the label-noise guard used to sit only on the warning
-                # branch. Since (pre-A1) confirmation always fired first, the
-                # guard was unreachable and a single high-confidence
-                # mislabelled sample could trigger a full LR spike. The
-                # scenarios inject Bernoulli label flips by design, so this
-                # branch needs the guard at least as much as the warning one.
                 and not is_label_noise):
             drifted_points.append(t)
             last_detected_acc = t
@@ -316,14 +270,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
             if controller.react_lr:
                 optimizer = tf.keras.optimizers.Adam(learning_rate=DRIFT_LR_SPIKE)
             steps_since_drift = LR_DECAY_STEPS
-            # A3 fix: the recovery reference must come from BEFORE the drift.
-            # ADWIN confirms with a lag, so a window ending at ``t`` is already
-            # contaminated by the post-drift samples that triggered it; the
-            # reference is taken one further accuracy window back. The old
-            # version compared the *cumulative* accuracy curve against its own
-            # trailing mean -- a test that in practice never passed, leaving
-            # the controller pinned at DRIFT_LR_SPIKE for the rest of the
-            # stream and making ``lr_decay_steps`` dead code.
             ref_end = max(1, t - ACCURACY_WINDOW)
             ref_start = max(0, ref_end - ACCURACY_WINDOW)
             baseline_accuracy = float(np.mean(accuracies[ref_start:ref_end]))
@@ -343,11 +289,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         dps.append(float(dp_val))
         eos.append(float(eo_val))
 
-        # Fairness monitoring. Observation only for now: it records when a
-        # fairness drift would have been signalled, so detector/signal choices
-        # can be compared on detection quality before any reaction is wired to
-        # them. The signal design matters more than the detector -- see
-        # src/models/forest/fairness_signal.py.
         if fairness_detectors is None and controller.detect_fairness_drift:
             fairness_signal = FairnessSignal(
                 FAIR_SIGNAL_MODE, num_groups=number_of_attributes,
@@ -374,10 +315,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         lambdas.append(lambda_t)
         
         if just_confirmed_drift:
-            # A4 fix: hold TEMP_ON_DRIFT for this timestep. Previously the
-            # recovery ramp ran in the same iteration as the confirmation, so
-            # the configured drift temperature was overwritten (0.1 -> 0.102)
-            # before any forward or backward pass ever used it.
             pass
         elif steps_since_drift > 0 and not recovering_from_drift:
             alpha = steps_since_drift / LR_DECAY_STEPS
@@ -417,9 +354,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         if test_then_train:
             _train_t0 = time.perf_counter()
             y_t_tensor = tf.convert_to_tensor([y_t], dtype=tf.int32)
-            # The 'node' fairness gradient is analytic (no tape traversal), so
-            # only 'leaf' needs a second ``.gradient`` call and thus a
-            # persistent tape.
             with tf.GradientTape(
                 persistent=(compute_fairness and constraint_type == 'leaf')
             ) as tape:
@@ -427,13 +361,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
                 y_probs_train = train_out[0] if isinstance(train_out, tuple) else train_out
                 node_decisions_train = train_out[1] if isinstance(train_out, tuple) else None
                 loss = criteria(y_true=y_t_tensor, y_pred=y_probs_train)
-                # B2 fix (2026-06): per-sample slicing MUST happen inside the
-                # tape's with-block so the slice ops are recorded. Slicing
-                # ``node_decisions_train[:, i]`` later in
-                # ``accumulate_fairness_stats`` (after tape __exit__) creates
-                # an untracked tensor and makes ``tape.gradient`` return all
-                # None, silently disabling the fairness regulariser. See
-                # ``DOCS/BUG_REPORT_fairness_regulariser.md``.
                 if compute_fairness and node_decisions_train is not None:
                     node_decisions_per_sample = tf.unstack(
                         node_decisions_train, axis=1
@@ -496,8 +423,6 @@ def evaluate_over_timesteps(model, x_test, y_test, a_test, data_dim,
         'n_samples': n_samples,
         'drifted_points': drifted_points,
         'fairness_drifted_points': fairness_drift_points,
-        # 2.1: lambda at every step (constant lambda_const without the
-        # controller) and the samples where the fairness statistics were reset.
         'lambda': lambdas,
         'fairness_resets': fairness_resets,
         'lambda_controller': (lambda_controller.describe()

@@ -26,42 +26,6 @@ def accumulate_fairness_stats(
         constraint_type='node', gradient_type='vanilla', base_gamma=0.9,
         inputs=None, model=None,
 ):
-    """Accumulate per-(group, label) running fair-gradient stats.
-
-    Analytic fast path (``constraint_type='node'``, requires ``inputs`` and
-    ``model``): the node-level fairness penalty is a function of the node
-    activations themselves, so its gradient is the node's own *local* Jacobian
-    -- there is no upstream chain to assemble and therefore no reason to
-    traverse the tape. With ``n = sigma(z)``, ``z = (W^T x + b) / tau``::
-
-        dn/dW = outer(x, sigma'(z)/tau)      [data_dim, num_internal_nodes]
-        dn/db = sigma'(z)/tau                [num_internal_nodes]
-        sigma'(z) = sigma(z) * (1 - sigma(z))
-
-    ``sigma(z)`` is already the forward pass's ``node_decisions``, so this costs
-    one elementwise product plus one outer product per tree. It is numerically
-    identical to ``tape.gradient(node_decisions_per_sample[i], ...)`` (verified
-    to float32 tolerance, ~1e-6) while removing an entire reverse-mode pass per
-    sample. It also indexes trees directly rather than inferring tree identity
-    from gradient shapes, so it cannot be confused by a ``theta`` whose leading
-    dim happens to equal ``data_dim``.
-
-    The autodiff path below is retained for ``constraint_type='leaf'``, whose
-    target (the prediction) *does* depend on the full downstream chain
-    (leaf mixture, gates, ``theta``) and so genuinely needs the tape.
-
-    IMPORTANT (B2 fix, 2026-06) -- applies to the autodiff path only:
-    ``node_decisions_per_sample`` and ``predictions_per_sample`` MUST be Python
-    lists of per-sample tensors that were produced INSIDE the
-    ``with tf.GradientTape(...) as tape:`` block (via
-    ``tf.unstack(node_decisions_batch, axis=1)`` and
-    ``tf.unstack(predictions_batch, axis=0)`` respectively). Slicing the batch
-    tensors outside the tape's ``with``-block creates new tensors the tape has
-    not recorded, so ``tape.gradient(sliced_tensor, vars)`` returns ``None`` for
-    every var -- which silently disables the entire fairness regulariser. See
-    ``DOCS/BUG_REPORT_fairness_regulariser.md`` for the full diagnosis. The
-    analytic path reads values only and is immune to this.
-    """
     use_analytic = (
         constraint_type == 'node' and inputs is not None and model is not None
     )
@@ -120,10 +84,6 @@ def accumulate_fairness_stats(
             else _infer_variable_layout(fair_gradients, data_dim, num_internal_nodes)
         )
 
-        # Resolved by variable identity, not by shape. The previous version
-        # both guessed the role from the shape and advanced its counters only
-        # on non-None gradients, so a single None shifted every subsequent
-        # tree index by one.
         for position, fair_grad in enumerate(fair_gradients):
             if fair_grad is None:
                 continue
@@ -146,15 +106,6 @@ def accumulate_fairness_stats(
                 )
 
 def build_variable_layout(model, variables=None):
-    """Map each position in ``model.trainable_variables`` to (tree_id, role).
-
-    ``compute_fairness_gradients`` used to infer this from tensor shapes, which
-    silently mis-assigns whenever two variables share a leading dimension --
-    e.g. theta is [num_leaves, num_classes] and is matched by the weight test
-    ``shape[0] == data_dim`` when data_dim == num_leaves (depth 4 with 16
-    features, depth 5 with 32). The penalty then lands on the wrong variable.
-    Resolving by variable identity removes the ambiguity.
-    """
     variables = list(model.trainable_variables if variables is None else variables)
     position_of = {id(v): i for i, v in enumerate(variables)}
     layout = [(None, 'other')] * len(variables)
@@ -201,16 +152,7 @@ def compute_fairness_gradients(
     huber_loss_delta=0.1, dp_sign=1.0, constraint_type='node',
     variable_layout=None,
 ):
-    # NOTE: must match the indexing convention used by ``init_fairness_state``
-    # (line 8) and ``accumulate_fairness_stats`` (lines 28-34), both of which
-    # key state dicts by ``int(a_label)`` -- i.e. the raw 0/1 protected-attribute
-    # value, not a 1-indexed group id. The previous ``range(1, n+1)`` here
-    # caused ``can_compute`` to fail on binary protected attributes
-    # (protected_class_count[2] was never populated because no sample has
-    # a_label == 2), short-circuiting this function to ``return gradients``
-    # unmodified and making ``lambda_const`` dead code during the prequential
-    # train phase. Confirmed via bit-identical FADO/Aranyani-Base results at
-    # lambda=0.1 vs lambda=10.0 on COMPAS abrupt_race (seed 42, 2025-11).
+
     group_ids = range(0, number_of_atributes)
     if fairness_type == 'dp':
         can_compute = all(protected_class_count[a] > 0 for a in group_ids)

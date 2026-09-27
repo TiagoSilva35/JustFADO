@@ -4,7 +4,6 @@ import tensorflow as tf
 import pickle
 import os
 
-from tensorflow.keras import layers, models
 
 import src.models.forest.fdt as fdt
 
@@ -34,8 +33,8 @@ class FairCLIPDecisionForest(tf.Module):
     assert tree_depth > 1
     assert num_trees >= 1
     
-    self.base_model = models.Sequential()
-    self.base_model.add(layers.Flatten())
+    self.base_model = tf.keras.models.Sequential()
+    self.base_model.add(tf.keras.layers.Flatten())
     
     self.layers = []
     for _ in range(num_trees):

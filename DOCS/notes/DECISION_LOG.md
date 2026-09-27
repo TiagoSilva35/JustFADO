@@ -18,7 +18,11 @@ to-do is done, move it to *Decisions* or delete it.
 | 2.4 | Report both the whole-stream average and per-phase / post-drift DP and accuracy | The whole-stream mean dilutes the post-drift period, the only place FADO differs from Base |
 | 2.2 | Deferred. Leaning towards one global adaptive λ plus a fixed node weighting (none / 1/2^l / reach-weighted) as an ablation; per-tree adaptive λ at most an extra ablation | Per-tree λ has no composition rule for ensemble DP, and trees can cancel each other's unfairness |
 | search | Grid for factorial sweeps, random search for sensitivity; report distributions, never an argmax | |
-| tune/report | Tuning seeds `11,22,33,44,55`; reporting seeds `66…202`. COMPAS splits by seed only | COMPAS registers only `no_drift` and `abrupt_race` |
+| tune/report | Tuning seeds `11,22,33,44,55`; reporting seeds `66…202`. The split is by seed: each seed draws its own partition / subsample and its own injected-drift onset, drifted class and permutation | Reported numbers are on unseen streams, not unseen drift types |
+| injected drift | All four `DriftSimulator` types (x_permutations, y_swaps, y_prior_skip, x_exceed_skip) on Adult and COMPAS, abrupt and gradual: 8 `sim_*` scenarios | Tiago, 2026-09-27: test every drift type |
+| ablation scope | All ablations run on injected drift (COMPAS: 8 `sim_*` scenarios; Adult: the 4 abrupt ones) and on Folktables' natural drift (2015 → 2017/2018, 10% subsample). The hand-built scenarios (`abrupt_race`, `abrupt_gender`, …) stay in the code but no sweep uses them. `no_drift` remains only as the monitor sweep's false-alarm control | Tiago, 2026-09-27. Adult gets the abrupt types only: a two-arm Adult seed takes ~32 min, and all 8 would put single sweeps near 200 core-hours |
+| INSECTS | Dropped: no loader, no sweeps | Tiago, 2026-09-27. The downloaded files remain in `~/river_data/Insects` (210 MB, outside the repo) |
+| drift-type budget | The `all_arms_*` sweeps run every arm (FADO, FADO without λ, Base, ARF, RFR) on every drift of their dataset | Drift type is a property of the data, so by the budget rule every arm runs on it |
 
 ### 2.1 λ controller — current state (2026-09-25)
 
@@ -173,11 +177,13 @@ What is not established:
 | overrides | Explicitly passed flags win over `_COMPAS/_FOLKTABLES_FADO_OVERRIDES`; the resolved values are logged to W&B as `static_params` | The overrides silently nullified sweeps; pre-training and evaluation used different λ |
 | windows | Every arm reads one resolved fairness/accuracy window | On COMPAS, FADO/Base used 250 while ARF/RFR used 1000 |
 | sweep metric | `_log_sweep_summary` writes a dict via `wandb.summary.update` | `key in wandb.summary` raised KeyError, so the sweep metric was never written |
-| sweeps | 9 configs + `launch.sh` + `TESTS/check_sweeps.py` | The old configs used unregistered scenarios and could not import `src` |
+| sweeps | 15 configs + `launch.sh` + `TESTS/check_sweeps.py`; how to run them, with costs, is in `src/configs/sweeps/README.md` | The old configs used unregistered scenarios and could not import `src` |
 | 2.4 done | Rows carry `phase_<phase>_<metric>` and `post_drift_<metric>`; W&B gets `delta_*_post_drift`; `significance_tests.py` tests the post-drift metrics by default | Both are means of the same rolling curves, so the whole-stream value is the length-weighted mean of the phases |
 | folktables phases | Folktables phases are its test years (2017, 2018); change point at the year boundary | Detection scoring used to apply Adult's `SPLITS` to Folktables |
 | 3.2 done | `python -m src.plot_lambda_tradeoff`: whole-stream and post-drift panels, FADO/Base curves over λ, ARF/RFR from `sweep_reference_*` | Refuses to mix runs with different configurations |
 | Holm NaN | `significance_tests._holm` keeps untestable comparisons (n < 2 paired seeds) as NaN, outside the family | `max(0.0, nan)` made them p = 0 and `***`; any table built from the old single-seed COMPAS file showed false significance |
+| injected drift, implementation | `dataset_generator.Generator` wraps `DriftSimulator` unchanged and applies it to the encoded test stream: onset seeded by the pipeline seed and drawn in 50–70% of the stream; gradual width 10%; the group label travels with its row; medians for `x_exceed_skip` come from the training split's non-binary columns. With two classes, `y_swaps` relabels each post-onset row of the chosen class with probability 0.5 | The old generator could not run: it counted cells instead of rows, used `instance.X`, dropped the group attribute, and `STREAM_MEDIANS` has no entry for Adult or COMPAS. A full binary swap would make every post-onset row the same class |
+| injected-drift phases | Phases `pre_drift` / `transition` / `drift` and the change point come from each run's actual onset (`drift_info` in the stream), not from `SPLITS` | The onset is random per seed; rows dropped after onset don't move it |
 | sweep outputs | Each W&B run writes to `files/experiments/wandb/<run id>/` and saves its config | Parallel agents overwrote each other in one shared folder |
 | A1 | ADWIN deltas: warn 0.02 / confirm 1e-5 | In river a larger delta is more sensitive; the warning detector must trip first |
 | A2 | Label-noise guard on the confirmation branch | |
@@ -203,6 +209,8 @@ What is not established:
 - [ ] **COMPAS default provenance.** λ=1.0, the ADWIN deltas and `lr_decay_steps=600` in `_COMPAS_FADO_OVERRIDES` were hand-set. Re-derive them on the tuning seeds, or document how they were chosen.
 
 ### Implement
+
+- [ ] **λ windup.** Seen once, on an INSECTS test run before INSECTS was dropped (seed 11, ε = 0.05, λ_base = 0.1): DP stayed ~0.06, just above ε, for both FADO and Base, so λ climbed to an average of 7.4 (cap 10) and FADO lost 1.9 accuracy points for no DP gain. When ε is unreachable the integrator winds up. Points to choosing ε per dataset (below) and possibly an anti-windup rule; check whether it recurs in stage A.
 
 - [ ] **2.1 metric for the claim:** samples above ε after each change point, and time to first return below ε, for every arm (using FADO's ε).
 - [ ] **2.1 plot:** λ_t over the stream with the phase boundaries and resets marked, next to rolling DP.

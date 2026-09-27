@@ -22,11 +22,18 @@ from src.drift.compas_scenarios import (
 from src.drift.scenarios import SCENARIO_DESCRIPTIONS, SCENARIOS
 from src.drift import compas_scenarios as _compas_scenarios
 from src.drift import scenarios as _adult_scenarios
+from src.drift.dataset_generator import (
+    SIM_SCENARIO_DESCRIPTIONS,
+    SIM_SCENARIOS,
+    Generator as DriftGenerator,
+    numeric_medians,
+)
 
 # Unified description map for printing per-scenario headers regardless of dataset.
 ALL_SCENARIO_DESCRIPTIONS = {
     **SCENARIO_DESCRIPTIONS,
     **COMPAS_SCENARIO_DESCRIPTIONS,
+    **SIM_SCENARIO_DESCRIPTIONS,
 }
 from src.helpers.constants import (
     DEFAULT_RANDOM_SEED_MAX,
@@ -447,7 +454,47 @@ def _maybe_subsample_folktables(
     return x_train, y_train, a_train, x_test, y_test, a_test
 
 
+def _scenarios_for_dataset(dataset_key):
+    """Every scenario a dataset can run; --run_all_scenarios runs them all."""
+    dataset_key = str(dataset_key).lower()
+    if dataset_key == 'adult':
+        return list(SCENARIOS) + list(SIM_SCENARIOS)
+    if dataset_key == 'compas':
+        return list(COMPAS_SCENARIOS) + list(SIM_SCENARIOS)
+    if dataset_key == 'folktables':
+        return ['folktables_2015_to_2017_2018']
+    raise ValueError(f"Unsupported dataset for pipeline evaluation: '{dataset_key}'.")
+
+
+def _inject_drift(splits, scenario_name, seed):
+    """Apply an injected-drift scenario to the test stream of ``splits``.
+
+    ``splits`` is the no-drift output of a loader; the drift is seeded by the
+    pipeline seed, so every arm of one seed sees the same drifted stream.
+    """
+    x_train, x_test, y_train, y_test, a_train, a_test, marginals = splits
+    generator = DriftGenerator(scenario_name, seed=int(seed or 0),
+                               medians=numeric_medians(x_train))
+    x_test, y_test, a_test, info = generator.generate(x_test, y_test, a_test)
+    if marginals is not None:
+        marginals = dict(marginals)
+        marginals['test'] = np.asarray(marginals['test'])[generator.kept_index]
+    print(f"[INJECTED DRIFT] {scenario_name}: onset {info['onset']}, "
+          f"{info['rows_changed']} rows changed, {info['rows_dropped']} dropped, "
+          f"{info['n_in']} -> {info['n_out']} samples")
+    return (x_train, x_test, y_train, y_test, a_train, a_test, marginals), info
+
+
 def _load_dataset_splits(dataset_key, scenario_name, seed):
+    """Train/test splits plus ``drift_info`` (the injected onset, or None)."""
+    if scenario_name in SIM_SCENARIOS and dataset_key in ('adult', 'compas'):
+        splits = _load_dataset_splits_base(dataset_key, 'no_drift', seed)
+        splits, info = _inject_drift(splits, scenario_name, seed)
+        return (*splits, info)
+    return (*_load_dataset_splits_base(dataset_key, scenario_name, seed), None)
+
+
+def _load_dataset_splits_base(dataset_key, scenario_name, seed):
     intersectional = bool(FLAGS.intersectional)
     if dataset_key == 'adult':
         x_train, _, y_train, _, a_train, _ = read_adult(False, drift_scenario=None)
@@ -512,15 +559,26 @@ def _load_dataset_splits(dataset_key, scenario_name, seed):
     raise ValueError(f"Unsupported dataset for pipeline evaluation: '{dataset_key}'.")
 
 
-def _phase_layout(dataset_key, n_samples):
+def _phase_layout(dataset_key, n_samples, drift_info=None):
     """The stream's phases as ``[(slug, start, end), ...]`` sample ranges.
 
     Adult and COMPAS scenarios lay a stream out as phases (``SPLITS`` holds the
     phase END fractions, ``PHASE_LABELS`` their names). Folktables has no
     injected drift: its stream is the test years in order, each contributing an
-    equal share (see ``read_folktables``), so each year is a phase.
+    equal share (see ``read_folktables``), so each year is a phase. Injected
+    drift (``drift_info`` from ``dataset_generator``) has a seeded onset:
+    pre-drift, an optional gradual transition, then drift.
     """
     dataset_key = str(dataset_key).lower()
+    n_samples = int(n_samples or 0)
+    if drift_info:
+        onset = min(int(drift_info['onset']), n_samples)
+        end = min(int(drift_info.get('transition_end') or onset), n_samples)
+        phases = [('pre_drift', 0, onset)]
+        if end > onset:
+            phases.append(('transition', onset, end))
+        phases.append(('drift', end, n_samples))
+        return [p for p in phases if p[2] > p[1]] if n_samples else []
     if dataset_key == 'folktables':
         years = FOLKTABLES_PIPELINE_TEST_YEARS
         splits = [(i + 1) / len(years) for i in range(len(years))]
@@ -529,7 +587,6 @@ def _phase_layout(dataset_key, n_samples):
         module = _compas_scenarios if dataset_key == 'compas' else _adult_scenarios
         splits = list(getattr(module, 'SPLITS', []) or [])
         labels = list(getattr(module, 'PHASE_LABELS', []) or [])
-    n_samples = int(n_samples or 0)
     if len(splits) < 2 or len(labels) != len(splits) or not n_samples:
         return []
     ends = [int(float(s) * n_samples) for s in splits]
@@ -539,7 +596,7 @@ def _phase_layout(dataset_key, n_samples):
     return list(zip(slugs, starts, ends))
 
 
-def _change_points(dataset_key, n_samples):
+def _change_points(dataset_key, n_samples, drift_info=None):
     """Sample indices at which the concept actually changes.
 
     Every phase boundary is a change event: COMPAS ``[0.30, 0.70, 1.0]``
@@ -548,6 +605,9 @@ def _change_points(dataset_key, n_samples):
     at the recovery edge as a very late detection of the first drift instead
     of a prompt detection of the second.
     """
+    if drift_info:
+        # A gradual drift is one change that starts at its onset.
+        return [int(drift_info['onset'])] if int(drift_info['onset']) < int(n_samples or 0) else []
     return [start for _, start, _ in _phase_layout(dataset_key, n_samples)[1:]]
 
 
@@ -578,7 +638,7 @@ def _phase_metrics(stream, dataset_key):
         if series is None:
             continue
         values = np.asarray(series, dtype=float).reshape(-1)
-        phases = _phase_layout(dataset_key, len(values))
+        phases = _phase_layout(dataset_key, len(values), stream.get('drift_info'))
         for slug, start, end in phases:
             if end > start:
                 out[f'phase_{slug}_{metric}'] = float(np.nanmean(values[start:end]))
@@ -674,7 +734,8 @@ def _detection_metrics(stream, dataset_key, scenario_name):
         return {}
     n_samples = int(stream.get('n_samples') or 0)
     no_drift = 'no_drift' in str(scenario_name).lower()
-    change_points = [] if no_drift else _change_points(dataset_key, n_samples)
+    drift_info = stream.get('drift_info')
+    change_points = [] if no_drift else _change_points(dataset_key, n_samples, drift_info)
 
     # A detector cannot see a change before its own window has refilled, so the
     # acceptable delay defaults to one window rather than an arbitrary constant.
@@ -1054,7 +1115,7 @@ def _single_scenario(
     print(f"{'#' * 80}\n")
     start = time.time()
 
-    x_train, x_test, y_train, y_test, a_train, a_test, a_marginals = (
+    x_train, x_test, y_train, y_test, a_train, a_test, a_marginals, drift_info = (
         _load_dataset_splits(
             dataset_key=str(dataset_name).lower(),
             scenario_name=scenario_name,
@@ -1083,6 +1144,8 @@ def _single_scenario(
         a_test=a_test,
         seed=seed,
     )
+    if isinstance(stream, dict) and drift_info:
+        stream['drift_info'] = drift_info
     test_metrics = _extract_test_metrics(stream)
     if a_marginals is not None:
         marginal_metrics = _compute_marginal_dp_eo(
@@ -1107,19 +1170,11 @@ def _single_scenario(
 def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filter=None, seed=None):
     dataset_key = str(dataset_name).lower()
     print(f"\n{'=' * 80}")
-    if dataset_key == 'adult':
-        scenarios = list(SCENARIOS.keys())
-        print(f" Running all {len(scenarios)} drift scenarios")
-    elif dataset_key == 'folktables':
-        scenarios = ['folktables_2015_to_2017_2018']
+    scenarios = _scenarios_for_dataset(dataset_key)
+    if dataset_key == 'folktables':
         print(' Running Folktables train-then-test: train=2015, test=2017+2018')
-    elif dataset_key == 'compas':
-        scenarios = list(COMPAS_SCENARIOS.keys())
-        print(f' Running all {len(scenarios)} COMPAS drift scenarios')
     else:
-        raise ValueError(
-            f"Unsupported dataset for pipeline evaluation: '{dataset_name}'."
-        )
+        print(f" {len(scenarios)} {dataset_key} scenarios available")
     print(f" Model: {model_name}")
     print(f" Dataset: {dataset_name}")
     print(f" Output: {os.path.abspath(output_dir)}/")

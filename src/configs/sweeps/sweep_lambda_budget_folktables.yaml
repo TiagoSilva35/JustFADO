@@ -1,14 +1,14 @@
-# Decision log 3.2: equal lambda budget, reported as trade-off curves (adult).
+# Decision log 3.2: equal lambda budget, reported as trade-off curves (folktables).
 #
 # Both arms run on the SAME lambda grid, paired on one pre-trained forest per
 # cell. No lambda is selected: plot each arm's accuracy-vs-DP curve with
-# python -m src.plot_lambda_tradeoff. Scenarios: the 4 abrupt injected-drift scenarios (gradual ones double an already long sweep).
+# python -m src.plot_lambda_tradeoff. Scenarios: natural drift: train on 2015, stream 2017 then 2018 (10% subsample).
 #
-# 7 lambdas x 4 scenario(s) = 28 runs, 5 tuning seeds each.
+# 7 lambdas x 1 scenario(s) = 7 runs, 5 tuning seeds each.
 program: src/main.py
 project: fado-ablations
 method: grid
-name: lambda-budget-adult
+name: lambda-budget-folktables
 metric:
   name: aranyani_base/stream_final_dp
   goal: minimize
@@ -16,13 +16,9 @@ parameters:
   pipeline_model:
     value: 'aranyani,aranyani_base'
   pipeline_dataset:
-    value: adult
-  drift_scenario:
-    values:
-      - sim_x_permutations
-      - sim_y_swaps
-      - sim_y_prior_skip
-      - sim_x_exceed_skip
+    value: folktables
+  folktables_subsample_fraction:
+    value: 0.1   # ~18.7k train + ~18.7k stream (full CA is 187k + 187k)
   lambda_const:
     values: [0.01, 0.03, 0.1, 0.3, 1.0, 3.0, 10.0]
   seeds:
