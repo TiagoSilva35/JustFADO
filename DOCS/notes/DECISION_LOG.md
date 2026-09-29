@@ -218,7 +218,7 @@ What is not established:
 - [ ] **Budget rule:** add a window sweep (fairness/accuracy window) that runs all four arms.
 - [ ] **3.3:** prequential McNemar test as a secondary significance test.
 - [ ] **1.4:** time `FairDecisionTree.__call__` in `TESTS/rec_leaf_prob.py`, replace the "37.12 → 13.22 min" figure, and regenerate the depth-sweep figure.
-- [ ] **Cleanup:** remove the dead `train()` in `src/models/forest/train.py` (it calls removed loaders); drop `age_race_decouple` from `extract_seed_metrics.py`; remove the hard-coded dataset and seed in `create_plots.py`.
+- [ ] **Cleanup:** remove the dead `train()` in `src/models/forest/train.py` (it calls removed loaders); remove the hard-coded dataset and seed in `create_plots.py`.
 
 ### Run
 

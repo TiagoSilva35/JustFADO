@@ -123,27 +123,11 @@ side by side, and reports the Holm-corrected p-value and the conventional
 
 ---
 
-## Summary aggregation
-
-If you only want the mean ± std table (no significance tests),
-`src.extract_seed_metrics` aggregates the per-seed JSON files:
-
-```bash
-python -m src.extract_seed_metrics \
-    --inputs files/experiments/dataset_folktables \
-    --format summary --include-average
-python -m src.extract_seed_metrics \
-    --inputs files/experiments/dataset_compas \
-    --format summary --include-average
-```
-
----
-
 ## Repository layout
 
 * `src/main.py` — entry point; orchestrates per-seed sweeps across the
-  four models (`aranyani` = FADO, `aranyani_base` = controller-free
-  ablation, `arf`, `rfr`).
+  four models (`fado` = Aranyani + drift controller + dual-ascent λ,
+  `aranyani` = the plain forest, `arf`, `rfr`).
 * `src/models/forest/evaluator.py` — FADO prequential evaluator
   (Aranyani + dual-ADWIN + reaction controller).
 * `src/models/forest/baseline_evaluator.py` — controller-free Aranyani
@@ -152,7 +136,8 @@ python -m src.extract_seed_metrics \
 * `src/drift/compas_scenarios.py` — the two active COMPAS drift scenarios.
 * `src/significance_tests.py` — paired Wilcoxon + Welch with Holm
   correction, reads per-seed result JSONs.
-* `src/extract_seed_metrics.py` — mean ± std aggregator.
+* `src/fetch_wandb_arm_metrics.py` — per-seed metrics of a W&B sweep, mean ± std over seeds (CSV).
+* `src/fetch_wandb_trajectories.py` — accuracy / DP / EO over time of a W&B sweep, averaged over seeds (CSV, plots).
 * `files/experiments/dataset_<name>/` — per-seed result outputs from the
   reported sweeps.
 

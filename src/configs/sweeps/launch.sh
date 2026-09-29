@@ -39,6 +39,14 @@ python -m TESTS.check_sweeps
 export PYTHONHASHSEED=0
 for file in "${files[@]}"; do
   echo "== $file"
-  out=$(wandb sweep --project "$PROJECT" ${ENTITY_ARGS[@]+"${ENTITY_ARGS[@]}"} "$file" 2>&1)
+  # `|| status=$?` keeps set -e from exiting before the output is printed:
+  # a failed `wandb sweep` used to end the script silently.
+  status=0
+  out=$(wandb sweep --project "$PROJECT" ${ENTITY_ARGS[@]+"${ENTITY_ARGS[@]}"} "$file" 2>&1) || status=$?
+  if [[ $status -ne 0 ]]; then
+    echo "$out" >&2
+    echo "wandb sweep failed (exit $status) for $file" >&2
+    exit "$status"
+  fi
   echo "$out" | grep -E "Creating sweep|Run sweep agent with" || echo "$out"
 done

@@ -37,9 +37,6 @@ import numpy as np
 from scipy import stats
 
 
-# Mirrors src/extract_seed_metrics.py so the two utilities agree on what
-# counts as a "model" / "scenario" by default. Keep in sync if either list
-# changes.
 DEFAULT_MODELS_REFERENCE = 'fado'
 DEFAULT_MODELS_BASELINES = ('aranyani', 'arf', 'rfr')
 # Whole-stream means plus their post-drift counterparts (decision 2.4). Holm

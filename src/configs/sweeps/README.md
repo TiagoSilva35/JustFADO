@@ -103,18 +103,13 @@ python -m src.significance_tests --inputs files/experiments/wandb/<run id>/datas
   --reference fado --baselines fado_no_lambda,aranyani,arf,rfr
 ```
 
-LaTeX tables (one per metric, a column per scenario, mean ± std over seeds;
-`--include-average` adds an Average column):
+Mean ± std over seeds, as CSV, straight from W&B (only seeds where every model
+finished):
 
 ```bash
-python -m src.extract_seed_metrics --format latex --include-average \
-  --metrics accuracy,dp,eo,post_drift_dp --sweep <sweep id> \
-  --inputs files/experiments/wandb/*/dataset_compas/seed_pipeline_results.json
+python -m src.fetch_wandb_arm_metrics --sweep <sweep id>
+python -m src.fetch_wandb_trajectories --sweep <sweep id> --plot
 ```
-
-Every scenario found is a column; `--scenarios a,b` and `--models fado,aranyani`
-select explicitly. Always pass `--sweep`: without it the script pools every run
-in `--inputs`, whatever sweep it came from.
 
 In W&B, group runs by `drift_scenario` and compare `delta_dp`,
 `delta_dp_post_drift` and `delta_accuracy`. Every run also logs per-arm values

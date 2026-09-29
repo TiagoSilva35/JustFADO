@@ -14,3 +14,5 @@ data/acs-folktables/
 /data/
 DOCS/*.pdf
 files/experiments/dataset_folktables/seed_pipeline_results.json
+files/experiments/wandb_trajectories/
+files/experiments/wandb_arm_metrics/

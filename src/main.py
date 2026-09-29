@@ -1342,6 +1342,11 @@ _ARM_TABLE_METRICS = [
     'post_drift_accuracy', 'post_drift_dp', 'post_drift_eo',
     'stream_final_lambda', 'post_drift_lambda', 'fairness_resets',
     'ms_per_sample',
+    *[f'phase_{phase}_{metric}'
+      for phase in ('pre_drift', 'transition', 'drift')
+      for metric in ('accuracy', 'dp', 'eo', 'lambda')],
+    'accuracy_detections', 'accuracy_true_positives', 'accuracy_false_alarms',
+    'fairness_detections', 'fairness_true_positives', 'fairness_false_alarms',
 ]
 _ARM_TABLE_COLUMNS = ['seed', 'model', 'scenario'] + _ARM_TABLE_METRICS
 
@@ -1378,17 +1383,21 @@ def _log_trajectory_charts(rows):
                 means = points.mean(axis=0)
                 mean_rows.append([model, int(round(means[0]))]
                                  + [float(v) for v in means[1:]])
-        table = wandb.Table(data=mean_rows,
-                            columns=['model', 'timestep', *_TRAJECTORY_METRICS])
         n_seeds = max(len(by_seed) for by_seed in by_model.values())
         suffix = f'mean of {n_seeds} seed(s)'
         labels = {'accuracy': 'Accuracy', 'dp': 'DP', 'eo': 'EO'}
-        wandb.log({
-            f'{metric}_over_time/{scenario}': wandb.plot.line(
-                table, 'timestep', metric, stroke='model',
-                title=f'{labels[metric]} over time: {scenario} ({suffix})')
-            for metric in _TRAJECTORY_METRICS
-        })
+        models = sorted({row[0] for row in mean_rows})
+        # line_series gives each arm its own colour; plot.line with a stroke
+        # column coloured every line by run and only varied the dash.
+        for k, metric in enumerate(_TRAJECTORY_METRICS, start=2):
+            xs, ys = [], []
+            for model in models:
+                points = [row for row in mean_rows if row[0] == model]
+                xs.append([row[1] for row in points])
+                ys.append([row[k] for row in points])
+            wandb.log({f'{metric}_over_time/{scenario}': wandb.plot.line_series(
+                xs=xs, ys=ys, keys=models, xname='timestep',
+                title=f'{labels[metric]} over time: {scenario} ({suffix})')})
 
 
 # Arms whose scores the paired deltas are computed against.
