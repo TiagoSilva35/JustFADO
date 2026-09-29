@@ -1,0 +1,45 @@
+# Paper run: every arm on every COMPAS injected-drift scenario, 30 REPORTING
+# seeds (none of the tuning seeds 11-55, decision log `tune/report`).
+#
+# One seed per run, so the grid is 8 scenarios x 30 seeds = 240 runs. Each
+# run's W&B summary is then that seed's values (not a mean), W&B grouping by
+# drift_scenario averages over seeds correctly, and a crash loses one seed.
+# Every arm of a seed still runs in the same process, on the same
+# pre-trained forest. ~7.5 min per run -> ~30 core-hours.
+program: src/main.py
+project: fado-ablations
+method: grid
+name: all-arms-compas-report30
+metric:
+  name: delta_dp
+  goal: maximize
+parameters:
+  pipeline_model:
+    value: 'fado,fado_no_lambda,aranyani,arf,rfr'
+  pipeline_dataset:
+    value: compas
+  drift_scenario:
+    values:
+      - sim_x_permutations
+      - sim_x_permutations_gradual
+      - sim_y_swaps
+      - sim_y_swaps_gradual
+      - sim_y_prior_skip
+      - sim_y_prior_skip_gradual
+      - sim_x_exceed_skip
+      - sim_x_exceed_skip_gradual
+  seeds:
+    values: ['66', '77', '88', '99', '101', '111', '122', '133', '144', '155', '166', '177', '188', '199', '202', '213', '224', '235', '246', '257', '268', '279', '291', '303', '314', '325', '336', '347', '358', '369']
+  deterministic:
+    value: true
+  wandb_log:
+    value: true
+  wandb_project:
+    value: fado-ablations
+command:
+  - ${env}
+  - PYTHONHASHSEED=0
+  - ${interpreter}
+  - -m
+  - src.main
+  - ${args}
