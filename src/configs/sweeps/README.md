@@ -48,7 +48,7 @@ One seed, one scenario, W&B off, before committing hours to a grid:
 
 ```bash
 PYTHONHASHSEED=0 python -m src.main --pipeline_dataset=compas \
-  --pipeline_model=aranyani,aranyani_base --drift_scenario=sim_y_swaps --seeds=11
+  --pipeline_model=fado,aranyani --drift_scenario=sim_y_swaps --seeds=11
 ```
 
 ### 2. Register the sweeps
@@ -58,7 +58,7 @@ src/configs/sweeps/launch.sh all_arms_compas all_arms_folktables
 ```
 
 `launch.sh` validates, registers each sweep, and prints its
-`wandb agent fado-ablations/<id>` command.
+`wandb agent <entity>/fado-ablations/<id>` command (the "Run sweep agent with" line). Copy it whole: without the entity W&B answers "entityName required".
 
 ### 3. Start agents
 
@@ -66,7 +66,7 @@ Each agent runs one cell at a time on about one core (batch-size-1 updates).
 Run **one agent per free CPU core**, in separate terminals:
 
 ```bash
-wandb agent fado-ablations/<sweep-id>
+wandb agent <entity>/fado-ablations/<sweep-id>   # e.g. tjcsilva04-universidade-de-coimbra/fado-ablations/iwoes46q
 ```
 
 Several agents on the same sweep split its grid between them. Each run writes to
@@ -95,13 +95,26 @@ Per seed: a two-arm run takes ~4.5 min on COMPAS, ~30 min on Folktables and
 ### 5. Read the results
 
 ```bash
-python -m src.plot_lambda_tradeoff                   # stage B: trade-off curves
+python -m src.plot_lambda_tradeoff                   # stage C: trade-off curves
 python -m src.plot_lambda_trajectory \
   --results files/experiments/wandb/<run id>/dataset_compas/seed_pipeline_results.json --seed 11 \
-  --models aranyani,fado_no_lambda,aranyani_base --out lambda_trajectory.png
+  --models fado,fado_no_lambda,aranyani --out lambda_trajectory.png
 python -m src.significance_tests --inputs files/experiments/wandb/<run id>/dataset_compas \
-  --reference aranyani --baselines fado_no_lambda,aranyani_base,arf,rfr
+  --reference fado --baselines fado_no_lambda,aranyani,arf,rfr
 ```
+
+LaTeX tables (one per metric, a column per scenario, mean ± std over seeds;
+`--include-average` adds an Average column):
+
+```bash
+python -m src.extract_seed_metrics --format latex --include-average \
+  --metrics accuracy,dp,eo,post_drift_dp --sweep <sweep id> \
+  --inputs files/experiments/wandb/*/dataset_compas/seed_pipeline_results.json
+```
+
+Every scenario found is a column; `--scenarios a,b` and `--models fado,aranyani`
+select explicitly. Always pass `--sweep`: without it the script pools every run
+in `--inputs`, whatever sweep it came from.
 
 In W&B, group runs by `drift_scenario` and compare `delta_dp`,
 `delta_dp_post_drift` and `delta_accuracy`. Every run also logs per-arm values
@@ -201,7 +214,7 @@ rather than a default. State whichever one you used.
 
 ## Why both arms in every run
 
-Each run evaluates the treatment arm *and* `aranyani_base`, and the metric is
+Each run evaluates the treatment arm *and* `aranyani`, and the metric is
 the paired difference (`delta_dp`, `delta_accuracy`). Both arms share one
 pre-trained forest (`_pretrain_aranyani`), so the pairing is exact and the cost
 is ~1.5x a single arm rather than 2x. Absolute DP moves with the scenario and

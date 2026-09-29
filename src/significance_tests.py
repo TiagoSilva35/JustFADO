@@ -16,8 +16,8 @@ Usage
 -----
     python -m src.significance_tests \\
         --inputs files/experiments/dataset_compas \\
-        --reference aranyani \\
-        --baselines aranyani_base,arf,rfr \\
+        --reference fado \\
+        --baselines aranyani,arf,rfr \\
         --metrics accuracy,dp,eo
 
 The defaults match the COMPAS protocol exactly, so the no-flags invocation is
@@ -40,8 +40,8 @@ from scipy import stats
 # Mirrors src/extract_seed_metrics.py so the two utilities agree on what
 # counts as a "model" / "scenario" by default. Keep in sync if either list
 # changes.
-DEFAULT_MODELS_REFERENCE = 'aranyani'
-DEFAULT_MODELS_BASELINES = ('aranyani_base', 'arf', 'rfr')
+DEFAULT_MODELS_REFERENCE = 'fado'
+DEFAULT_MODELS_BASELINES = ('aranyani', 'arf', 'rfr')
 # Whole-stream means plus their post-drift counterparts (decision 2.4). Holm
 # correction runs within each metric column, so adding columns does not change
 # the correction applied to the existing ones. Per-phase keys
@@ -320,7 +320,7 @@ def main() -> None:
         '--reference',
         default=DEFAULT_MODELS_REFERENCE,
         help='Model name used as the reference in every paired test '
-             '(default: aranyani, i.e. FADO).',
+             '(default: fado).',
     )
     parser.add_argument(
         '--baselines',

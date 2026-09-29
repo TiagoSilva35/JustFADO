@@ -22,6 +22,7 @@ to-do is done, move it to *Decisions* or delete it.
 | injected drift | All four `DriftSimulator` types (x_permutations, y_swaps, y_prior_skip, x_exceed_skip) on Adult and COMPAS, abrupt and gradual: 8 `sim_*` scenarios | Tiago, 2026-09-27: test every drift type |
 | ablation scope | All ablations run on injected drift (COMPAS: 8 `sim_*` scenarios; Adult: the 4 abrupt ones) and on Folktables' natural drift (2015 → 2017/2018, 10% subsample). The hand-built scenarios (`abrupt_race`, `abrupt_gender`, …) stay in the code but no sweep uses them. `no_drift` remains only as the monitor sweep's false-alarm control | Tiago, 2026-09-27. Adult gets the abrupt types only: a two-arm Adult seed takes ~32 min, and all 8 would put single sweeps near 200 core-hours |
 | INSECTS | Dropped: no loader, no sweeps | Tiago, 2026-09-27. The downloaded files remain in `~/river_data/Insects` (210 MB, outside the repo) |
+| arm names | `aranyani` = the plain Aranyani forest (fixed λ, no drift adaptation); `fado` = the drift controller + the dual-ascent λ. Old names `aranyani_base` and `fado_full` still work as aliases. Results saved before the rename (`jlspp7ly`) use the old meaning: there `aranyani` is FADO and `aranyani_base` the plain forest | Tiago, 2026-09-29 |
 | drift-type budget | The `all_arms_*` sweeps run every arm (FADO, FADO without λ, Base, ARF, RFR) on every drift of their dataset | Drift type is a property of the data, so by the budget rule every arm runs on it |
 
 ### 2.1 λ controller — current state (2026-09-25)
@@ -36,7 +37,7 @@ Built in the recommended setting. Unit-tested on synthetic streams and verified 
 | step / cap | η = `--lambda_dual_lr` (0.01), cap `--lambda_max` (10); floor is `--lambda_const`, the same λ Base runs with | `train.py` flags |
 | runs when | Every step, not only after a detection. λ rises while DP > ε and drains back to λ_base once DP < ε | `evaluator.py` |
 | forgetting | On every confirmed drift (accuracy or fairness), the fairness penalty's statistics (`agg_y`, `gradient_w`, `gradient_b`, counts) are reset and rebuilt from post-drift samples | `ControllerConfig.reset_fairness_stats` |
-| FADO arm | `aranyani` / `fado_full` now includes the λ controller, the fairness monitor and the reset | `controller.py` |
+| FADO arm | `fado` now includes the λ controller, the fairness monitor and the reset | `controller.py` |
 | ablations | `fado_no_lambda` (= FADO before 2.1), `fado_lambda_only`, `fado_no_reset`, `fado_no_lr`, `fado_no_temp`, `fado_no_prewarm`, `fado_no_noise_guard`, `fado_detect_only`, `fado_monitor_only`. The old `fado_lr_only`, `fado_temp_only` and `fado_monitor` are gone | `sweep_component_*` |
 | sensitivity | ε ~ U(0.01, 0.10) and η ~ log-U(0.001, 0.1) added to `sweep_sensitivity.yaml` (controller-only, per the budget rule) | |
 | outputs | Per step `lambda`; rows `stream_final_lambda`, `post_drift_lambda`, `phase_<phase>_lambda`, `fairness_resets` | `main.py` |
@@ -46,7 +47,7 @@ Built in the recommended setting. Unit-tested on synthetic streams and verified 
 Each step states what it gives and what justifies it.
 
 **Step 1 — State the goal as a constraint, not a weighted sum.**
-Aranyani-Base minimises `L(θ) + λ·P(θ)` with λ set by hand. What we want is
+Aranyani minimises `L(θ) + λ·P(θ)` with λ set by hand. What we want is
 `min_θ L(θ)  s.t.  DP(θ) ≤ ε`.
 *Justification:* ε is a requirement you can state and defend ("DP at most 0.05"). λ is a knob with no meaning outside one dataset. Under drift, the λ that meets a fixed ε changes, so a fixed λ cannot track it.
 
@@ -141,10 +142,10 @@ Verification run: COMPAS `abrupt_race`, tuning seeds 11, 22, 33, λ_base = 0.3, 
 
 | arm (mean of 3 seeds) | accuracy | DP | post-drift DP | mean λ |
 |---|---|---|---|---|
-| FADO (`aranyani`, with 2.1) | 0.605 | **0.058** | **0.066** | 1.09 |
+| FADO (`fado`; saved as `aranyani`, old name) | 0.605 | **0.058** | **0.066** | 1.09 |
 | FADO, no reset (`fado_no_reset`) | 0.606 | 0.081 | 0.099 | 1.53 |
 | FADO, λ fixed (`fado_no_lambda`) | 0.605 | 0.094 | 0.117 | 0.30 |
-| Aranyani-Base | 0.617 | 0.093 | 0.116 | 0.30 |
+| Aranyani (saved as `aranyani_base`) | 0.617 | 0.093 | 0.116 | 0.30 |
 
 Per seed, DP drops against λ fixed by 54% (seed 11), 18% (seed 22) and 40% (seed 33). The direction is the same on every seed.
 

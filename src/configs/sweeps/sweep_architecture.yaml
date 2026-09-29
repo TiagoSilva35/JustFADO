@@ -18,7 +18,7 @@ metric:
   goal: maximize
 parameters:
   pipeline_model:
-    value: 'aranyani,aranyani_base'
+    value: 'fado,aranyani'
   pipeline_dataset:
     value: compas
   drift_scenario:

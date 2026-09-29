@@ -32,7 +32,7 @@ metric:
   goal: minimize
 parameters:
   pipeline_model:
-    values: ['fado_monitor_only,aranyani_base']
+    values: ['fado_monitor_only,aranyani']
   pipeline_dataset:
     value: compas
   # no_drift is the control, not a drift scenario: false alarms can only be

@@ -4,24 +4,51 @@ import statistics
 from collections import defaultdict
 from pathlib import Path
 
+_SIM_KINDS = (
+    ('x_permutations', 'Feature perm.'),
+    ('y_swaps', 'Label swap'),
+    ('y_prior_skip', 'Prior shift'),
+    ('x_exceed_skip', 'Covariate skip'),
+)
+
 DEFAULT_SCENARIO_ORDER = [
     'no_drift',
+    *[f'sim_{kind}{suffix}' for kind, _ in _SIM_KINDS for suffix in ('', '_gradual')],
+    'folktables_2015_to_2017_2018',
     'abrupt_race',
     'age_race_decouple',
 ]
 
 DEFAULT_SCENARIO_LABELS = {
     'no_drift': 'No Drift',
+    **{f'sim_{kind}': f'{label} (abrupt)' for kind, label in _SIM_KINDS},
+    **{f'sim_{kind}_gradual': f'{label} (gradual)' for kind, label in _SIM_KINDS},
+    'folktables_2015_to_2017_2018': '2015 $\\to$ 2017/18',
     'abrupt_race': 'Abrupt Race',
     'age_race_decouple': 'Age--Race Decouple',
 }
 
-DEFAULT_MODEL_ORDER = ['arf', 'rfr', 'aranyani_base', 'aranyani']
+DEFAULT_MODEL_ORDER = [
+    'arf', 'rfr', 'aranyani',
+    'fado_no_lambda', 'fado_lambda_only', 'fado_no_reset', 'fado_no_lr',
+    'fado_no_temp', 'fado_no_prewarm', 'fado_no_noise_guard',
+    'fado_detect_only', 'fado_monitor_only',
+    'fado',
+]
 DEFAULT_MODEL_LABELS = {
     'arf': 'ARF',
     'rfr': 'RFR',
-    'aranyani_base': 'Aranyani-Base',
-    'aranyani': r'\textbf{Aranyani}',
+    'aranyani': 'Aranyani',
+    'fado_no_lambda': 'FADO, $\\lambda$ fixed',
+    'fado_lambda_only': 'FADO, $\\lambda$ only',
+    'fado_no_reset': 'FADO $-$ reset',
+    'fado_no_lr': 'FADO $-$ LR',
+    'fado_no_temp': 'FADO $-$ temperature',
+    'fado_no_prewarm': 'FADO $-$ prewarm',
+    'fado_no_noise_guard': 'FADO $-$ noise guard',
+    'fado_detect_only': 'FADO, detect only',
+    'fado_monitor_only': 'FADO, monitor only',
+    'fado': r'\textbf{FADO}',
 }
 
 # Synthetic "scenario" key for the across-scenarios aggregate. Picked to be
@@ -97,9 +124,13 @@ def _infer_model_from_path(path):
     return None
 
 
-def _load_seed_runs_from_results_file(path):
+def _load_seed_runs_from_results_file(path, sweep=None):
     with path.open('r') as f:
         payload = json.load(f)
+    if sweep:
+        config = payload.get('config') if isinstance(payload, dict) else None
+        if not isinstance(config, dict) or config.get('wandb_sweep_id') != sweep:
+            return []
     if isinstance(payload, list):
         model_hint = _infer_model_from_payload(payload, default=_infer_model_from_path(path))
         return [{
@@ -130,7 +161,7 @@ def _resolve_input_path(path, experiments_dir):
     return path
 
 
-def _load_seed_runs(paths, experiments_dir):
+def _load_seed_runs(paths, experiments_dir, sweep=None):
     all_runs = []
     for raw_path in paths:
         path = _resolve_input_path(raw_path, experiments_dir)
@@ -139,11 +170,11 @@ def _load_seed_runs(paths, experiments_dir):
             if not results_files:
                 raise ValueError(f'No seed_*/results.json files found under: {path}')
             for results_file in results_files:
-                all_runs.extend(_load_seed_runs_from_results_file(results_file))
+                all_runs.extend(_load_seed_runs_from_results_file(results_file, sweep))
             continue
         if not path.is_file():
             raise FileNotFoundError(f'Input path not found: {path}')
-        all_runs.extend(_load_seed_runs_from_results_file(path))
+        all_runs.extend(_load_seed_runs_from_results_file(path, sweep))
     return all_runs
 
 
@@ -228,16 +259,14 @@ def _sort_models(models):
 
 
 def _sort_scenarios(scenarios):
-    """Sort scenarios using DEFAULT_SCENARIO_ORDER and DROP unlisted ones.
+    """Every scenario found, in DEFAULT_SCENARIO_ORDER, unknown ones last.
 
-    Filtering (rather than sorting unknown scenarios to the end) keeps the
-    default summary/table focused on the cells the order list selects --
-    e.g. the FADO-beats-Base subset on COMPAS. Pass --scenarios=<csv> to
-    override and bring excluded scenarios back.
+    Nothing is dropped: a default that keeps only some scenarios would let a
+    table show a favourable subset without saying so. Pass --scenarios=<csv>
+    to choose columns explicitly.
     """
     order_index = {name: i for i, name in enumerate(DEFAULT_SCENARIO_ORDER)}
-    kept = [s for s in scenarios if s in order_index]
-    return sorted(kept, key=lambda s: order_index[s])
+    return sorted(scenarios, key=lambda s: (order_index.get(s, len(order_index)), s))
 
 
 def _fmt_metric(mean, std):
@@ -245,7 +274,7 @@ def _fmt_metric(mean, std):
 
 
 def _latex_row(model, scenarios, metric, aggregated, model_labels):
-    model_label = model_labels.get(model, model.upper())
+    model_label = model_labels.get(model, model.replace('_', r'\_'))
     cells = []
     for scenario in scenarios:
         values = aggregated[model][scenario][metric]
@@ -344,6 +373,12 @@ def main():
         help='Base directory for experiment outputs (used to resolve relative --inputs).',
     )
     parser.add_argument(
+        '--sweep',
+        default='',
+        help='Only use runs of this W&B sweep id (read from each '
+             'seed_pipeline_results.json), so one table never pools sweeps.',
+    )
+    parser.add_argument(
         '--metrics',
         default='accuracy,dp',
         help='Comma-separated metrics to aggregate.',
@@ -356,7 +391,7 @@ def main():
     parser.add_argument(
         '--models',
         default='',
-        help='Optional comma-separated model filter (e.g., arf,rfr,aranyani).',
+        help='Optional comma-separated model filter (e.g., arf,rfr,fado).',
     )
     parser.add_argument(
         '--scenario-labels',
@@ -398,7 +433,9 @@ def main():
     if not model_filter:
         model_filter = None
 
-    seed_runs = _load_seed_runs(args.inputs, args.experiments_dir)
+    seed_runs = _load_seed_runs(args.inputs, args.experiments_dir, args.sweep.strip() or None)
+    if args.sweep.strip() and not seed_runs:
+        raise ValueError(f'No results in --inputs belong to sweep {args.sweep!r}.')
     aggregated = _aggregate(seed_runs, metrics=metrics, model_filter=model_filter)
     if not aggregated:
         raise ValueError('No matching runs found. Check --inputs/--models.')

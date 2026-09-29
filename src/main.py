@@ -67,8 +67,9 @@ FOLKTABLES_PIPELINE_TEST_YEARS = (2017, 2018)
 flags.DEFINE_string(
     'pipeline_model',
     '',
-    'Optional model to run in main pipeline: aranyani, aranyani_base, arf, or rfr. Empty runs all supported models for the dataset. '
-    '"aranyani" is the full FADO framework (Aranyani + drift detection + reaction); "aranyani_base" is the pure Aranyani baseline without the controller.',
+    'Optional model to run in main pipeline: fado, aranyani, arf, or rfr. Empty runs all supported models for the dataset. '
+    '"fado" is the full framework (Aranyani + drift controller + dual-ascent lambda); "aranyani" is the plain Aranyani forest '
+    '(fixed lambda, no drift adaptation). The old names "fado_full" and "aranyani_base" are accepted as aliases.',
 )
 flags.DEFINE_string(
     'pipeline_dataset',
@@ -227,7 +228,7 @@ def _controller_for_model(model_name):
     """Controller configuration for a pipeline model name."""
     name = str(model_name).strip().lower()
     spec = str(FLAGS.controller_components).strip()
-    if name in ('aranyani', 'fado', 'fado_full'):
+    if name in ('fado', 'fado_full'):
         return ControllerConfig.from_spec(spec) if spec else ControllerConfig()
     if name in CONTROLLER_PRESETS:
         return CONTROLLER_PRESETS[name]
@@ -237,15 +238,20 @@ def _controller_for_model(model_name):
 def _supported_models_for_dataset(dataset_name):
     dataset_key = str(dataset_name).strip().lower()
     supported = {
-        'adult': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
-        'folktables': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
-        'compas': ['aranyani', 'aranyani_base', 'arf', 'rfr'],
+        'adult': ['fado', 'aranyani', 'arf', 'rfr'],
+        'folktables': ['fado', 'aranyani', 'arf', 'rfr'],
+        'compas': ['fado', 'aranyani', 'arf', 'rfr'],
     }
     if dataset_key not in supported:
         raise ValueError(
             f"Unsupported dataset for pipeline evaluation: '{dataset_name}'."
         )
     return supported[dataset_key]
+
+
+# Old arm names. "aranyani" used to mean full FADO; it now means the plain
+# forest, so results saved before the rename must be read with that in mind.
+_MODEL_ALIASES = {'fado_full': 'fado', 'aranyani_base': 'aranyani'}
 
 
 def _resolve_pipeline_models(dataset_name):
@@ -255,6 +261,7 @@ def _resolve_pipeline_models(dataset_name):
         return supported_models
     selectable = supported_models + _ABLATION_MODELS
     models = [token.strip() for token in requested.split(',') if token.strip()]
+    models = list(dict.fromkeys(_MODEL_ALIASES.get(m, m) for m in models))
     for model in models:
         if model not in selectable:
             raise ValueError(
@@ -964,7 +971,7 @@ def _run_aranyani_train_then_test(
         ))
 
     print(
-        "[PIPELINE][ARANYANI-BASE] Drift controller disabled; "
+        "[PIPELINE][ARANYANI] Drift controller disabled; "
         "evaluating with pure Aranyani prequential loop (test-then-train)."
     )
     return _with_pretrain_timing(evaluate_aranyani_baseline_over_timesteps(
@@ -1070,7 +1077,7 @@ def _evaluate_selected_model(
     a_test,
     seed=None,
 ):
-    if model_name == 'aranyani' or model_name in CONTROLLER_PRESETS:
+    if model_name == 'fado' or model_name in CONTROLLER_PRESETS:
         return _run_aranyani_train_then_test(
             x_train,
             y_train,
@@ -1083,7 +1090,7 @@ def _evaluate_selected_model(
             use_drift_controller=True,
             controller=_controller_for_model(model_name),
         )
-    if model_name == 'aranyani_base':
+    if model_name == 'aranyani':
         return _run_aranyani_train_then_test(
             x_train,
             y_train,
@@ -1302,8 +1309,90 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
     return rows
 
 
+# W&B keeps at most wandb.Table.MAX_ROWS (10,000) rows of a logged table and
+# silently drops the rest, which cut whole arms out of the old per-sample
+# table. Trajectories are averaged into this many bins instead.
+_TRAJECTORY_BINS = 300
+_TRAJECTORY_METRICS = ('accuracy', 'dp', 'eo')
+_TRAJECTORY_COLUMNS = ['seed', 'model', 'scenario', 'timestep', *_TRAJECTORY_METRICS]
+
+
+def _binned_trajectory_rows(seed, model_name, scenario, timestep_results):
+    """Per-sample accuracy / DP / EO of one stream, averaged into equal bins."""
+    series = []
+    for name in _TRAJECTORY_METRICS:
+        values = timestep_results.get(name)
+        if values is None:
+            return []
+        series.append(np.asarray(values, dtype=float).reshape(-1))
+    n = min(len(values) for values in series)
+    if n == 0:
+        return []
+    edges = np.unique(np.linspace(0, n, min(_TRAJECTORY_BINS, n) + 1).astype(int))
+    rows = []
+    for start, end in zip(edges[:-1], edges[1:]):
+        rows.append([int(seed), str(model_name), str(scenario), int(end)]
+                    + [float(np.nanmean(values[start:end])) for values in series])
+    return rows
+
+
+_ARM_TABLE_METRICS = [
+    'accuracy', 'dp', 'eo',
+    'stream_final_accuracy', 'stream_final_dp', 'stream_final_eo',
+    'post_drift_accuracy', 'post_drift_dp', 'post_drift_eo',
+    'stream_final_lambda', 'post_drift_lambda', 'fairness_resets',
+    'ms_per_sample',
+]
+_ARM_TABLE_COLUMNS = ['seed', 'model', 'scenario'] + _ARM_TABLE_METRICS
+
+
+def _arm_row(seed, model_name, row):
+    test_metrics = row.get('test_metrics') or {}
+    values = []
+    for name in _ARM_TABLE_METRICS:
+        value = row.get(name, test_metrics.get(name))
+        values.append(_numeric_or_nan(value))
+    return [int(seed), str(model_name), str(row.get('scenario'))] + values
+
+
+def _log_trajectory_charts(rows):
+    """Log the binned trajectories plus ready-made charts per scenario.
+
+    One chart per metric (accuracy, DP, EO), one line per arm, over the stream,
+    averaged over the run's seeds. Seeds share the bin edges only when their
+    streams have the same length, so the mean is taken per (arm, bin index).
+    """
+    wandb.log({'metrics_over_time': wandb.Table(
+        data=rows, columns=_TRAJECTORY_COLUMNS)})
+    grouped = {}
+    for seed, model, scenario, timestep, *values in rows:
+        per_seed = grouped.setdefault(scenario, {}).setdefault(model, {}).setdefault(seed, [])
+        per_seed.append((timestep, *values))
+    for scenario, by_model in grouped.items():
+        mean_rows = []
+        for model, by_seed in by_model.items():
+            curves = list(by_seed.values())
+            length = min(len(c) for c in curves)
+            for i in range(length):
+                points = np.asarray([c[i] for c in curves], dtype=float)
+                means = points.mean(axis=0)
+                mean_rows.append([model, int(round(means[0]))]
+                                 + [float(v) for v in means[1:]])
+        table = wandb.Table(data=mean_rows,
+                            columns=['model', 'timestep', *_TRAJECTORY_METRICS])
+        n_seeds = max(len(by_seed) for by_seed in by_model.values())
+        suffix = f'mean of {n_seeds} seed(s)'
+        labels = {'accuracy': 'Accuracy', 'dp': 'DP', 'eo': 'EO'}
+        wandb.log({
+            f'{metric}_over_time/{scenario}': wandb.plot.line(
+                table, 'timestep', metric, stroke='model',
+                title=f'{labels[metric]} over time: {scenario} ({suffix})')
+            for metric in _TRAJECTORY_METRICS
+        })
+
+
 # Arms whose scores the paired deltas are computed against.
-_BASELINE_ARM = 'aranyani_base'
+_BASELINE_ARM = 'aranyani'
 
 
 def _log_sweep_summary(summary, models_to_run):
@@ -1369,7 +1458,7 @@ def _log_sweep_summary(summary, models_to_run):
 
     # Unprefixed aliases for the primary arm, so a sweep config can name a
     # metric without knowing which arm it is.
-    primary = next((m for m in ('aranyani', 'fado_full') if m in by_model),
+    primary = next((m for m in ('fado', 'fado_full') if m in by_model),
                    treatments[0] if treatments else None)
     if primary:
         for metric in ('delta_dp', 'delta_eo', 'delta_accuracy',
@@ -1511,6 +1600,7 @@ def main(_):
 
     seed_runs = []
     wandb_timestep_rows = []
+    wandb_arm_rows = []
     base_output_dir = os.path.join(OUTPUT_DIR, f'dataset_{dataset_name}')
     if wb_run is not None:
         # Sweep agents run in parallel; a shared directory would let every run
@@ -1553,26 +1643,10 @@ def main(_):
                     if isinstance(static_used, dict):
                         wb_log.update({f'static_{k}': v for k, v in static_used.items()})
                     wandb.log(wb_log)
+                    wandb_arm_rows.append(_arm_row(seed, model_name, row))
 
-                    acc_values = ts.get('accuracy')
-                    dp_values = ts.get('dp')
-                    if isinstance(acc_values, np.ndarray):
-                        acc_values = acc_values.reshape(-1).tolist()
-                    if isinstance(dp_values, np.ndarray):
-                        dp_values = dp_values.reshape(-1).tolist()
-                    if isinstance(acc_values, (list, tuple)) and isinstance(dp_values, (list, tuple)):
-                        for timestep, (acc_value, dp_value) in enumerate(
-                            zip(acc_values, dp_values), start=1
-                        ):
-                            if isinstance(acc_value, numbers.Number) and isinstance(dp_value, numbers.Number):
-                                wandb_timestep_rows.append([
-                                    int(seed),
-                                    str(model_name),
-                                    str(row.get('scenario')),
-                                    int(timestep),
-                                    float(acc_value),
-                                    float(dp_value),
-                                ])
+                    wandb_timestep_rows.extend(_binned_trajectory_rows(
+                        seed, model_name, row.get('scenario'), ts))
             seed_runs.append({'seed': seed, 'model': model_name, 'results': results})
 
     if FLAGS.run_all_scenarios:
@@ -1629,12 +1703,13 @@ def main(_):
     print(f"\nSeed pipeline results saved to: {output_path}")
     if wb_run is not None:
         if wandb_timestep_rows:
-            wandb.log({
-                'accuracy_dp_over_time': wandb.Table(
-                    data=wandb_timestep_rows,
-                    columns=['seed', 'model', 'scenario', 'timestep', 'accuracy', 'dp'],
-                )
-            })
+            _log_trajectory_charts(wandb_timestep_rows)
+        if wandb_arm_rows:
+            # One row per (seed, arm, scenario): a W&B table panel can group
+            # these by `model`, which run-level grouping cannot (every run
+            # holds several arms).
+            wandb.log({'arm_metrics': wandb.Table(
+                data=wandb_arm_rows, columns=_ARM_TABLE_COLUMNS)})
         wandb.summary['results_file'] = output_path
         _log_sweep_summary(summary, models_to_run)
         if summary['mode'] == 'single':

@@ -36,7 +36,7 @@ metric:
   goal: maximize
 parameters:
   pipeline_model:
-    value: 'aranyani,aranyani_base'
+    value: 'fado,aranyani'
   pipeline_dataset:
     value: compas
   # Sampled like any other parameter, so the reported distribution covers

@@ -21,9 +21,9 @@ from src.drift import compas_scenarios, scenarios  # noqa: E402
 
 # Validated default categorical palette (dataviz skill), fixed order.
 STYLE = {
-    'aranyani': ('FADO (λ controller)', '#2a78d6'),
+    'fado': ('FADO (λ controller)', '#2a78d6'),
     'fado_no_lambda': ('FADO, λ fixed', '#1baf7a'),
-    'aranyani_base': ('Aranyani-Base', '#eb6834'),
+    'aranyani': ('Aranyani', '#eb6834'),
     'fado_no_reset': ('FADO, no reset', '#eda100'),
 }
 TEXT, MUTED, GRID = '#0b0b0b', '#52514e', '#e4e3df'
@@ -44,7 +44,7 @@ def main():
   parser.add_argument('--results', required=True)
   parser.add_argument('--seed', type=int, required=True)
   parser.add_argument('--scenario', default=None)
-  parser.add_argument('--models', default='aranyani,fado_no_lambda,aranyani_base')
+  parser.add_argument('--models', default='fado,fado_no_lambda,aranyani')
   parser.add_argument('--out', required=True)
   args = parser.parse_args()
 
@@ -73,10 +73,10 @@ def main():
     dp = np.asarray(ts['dp'], dtype=float)
     n = max(n, len(dp))
     label, color = STYLE.get(model, (model, MUTED))
-    ax_dp.plot(dp, color=color, linewidth=2 if model == 'aranyani' else 1.5,
+    ax_dp.plot(dp, color=color, linewidth=2 if model == 'fado' else 1.5,
                label=label)
     used = ts.get('static_params_used') or {}
-    if model == 'aranyani':
+    if model == 'fado':
       epsilon = used.get('fairness_target')
       lam = np.asarray(ts.get('lambda') or [], dtype=float)
       ax_lam.plot(lam, color=color, linewidth=2)

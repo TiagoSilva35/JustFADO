@@ -10,11 +10,11 @@ project: fado-ablations
 method: grid
 name: lambda-budget-folktables
 metric:
-  name: aranyani_base/stream_final_dp
+  name: aranyani/stream_final_dp
   goal: minimize
 parameters:
   pipeline_model:
-    value: 'aranyani,aranyani_base'
+    value: 'fado,aranyani'
   pipeline_dataset:
     value: folktables
   folktables_subsample_fraction:

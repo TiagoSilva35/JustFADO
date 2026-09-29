@@ -2,7 +2,7 @@
 #
 # Grid over the nine controller presets on the 4 abrupt injected-drift scenarios (gradual ones double an already long sweep).
 # Every arm runs with identical hyperparameters; only the enabled components
-# differ. Each run evaluates the preset and aranyani_base on one pre-trained
+# differ. Each run evaluates the preset and aranyani on one pre-trained
 # forest, and the metric is their paired difference.
 #
 # 9 presets x 4 scenario(s) = 36 runs, 5 tuning seeds each.
@@ -16,15 +16,15 @@ metric:
 parameters:
   pipeline_model:
     values:
-      - 'aranyani,aranyani_base'            # full controller
-      - 'fado_no_lambda,aranyani_base'      # FADO before 2.1: lambda fixed
-      - 'fado_lambda_only,aranyani_base'    # lambda controller, no LR/temp
-      - 'fado_no_reset,aranyani_base'       # - fairness-stat reset on drift
-      - 'fado_no_lr,aranyani_base'          # - LR reaction, - prewarm
-      - 'fado_no_temp,aranyani_base'        # - temperature reaction
-      - 'fado_no_prewarm,aranyani_base'     # - warning stage
-      - 'fado_no_noise_guard,aranyani_base' # - label-noise guard
-      - 'fado_detect_only,aranyani_base'    # detects, reacts to nothing
+      - 'fado,aranyani'                 # full controller
+      - 'fado_no_lambda,aranyani'       # FADO before 2.1: lambda fixed
+      - 'fado_lambda_only,aranyani'     # lambda controller, no LR/temp
+      - 'fado_no_reset,aranyani'        # - fairness-stat reset on drift
+      - 'fado_no_lr,aranyani'           # - LR reaction, - prewarm
+      - 'fado_no_temp,aranyani'         # - temperature reaction
+      - 'fado_no_prewarm,aranyani'      # - warning stage
+      - 'fado_no_noise_guard,aranyani'  # - label-noise guard
+      - 'fado_detect_only,aranyani'     # detects, reacts to nothing
   pipeline_dataset:
     value: adult
   drift_scenario:

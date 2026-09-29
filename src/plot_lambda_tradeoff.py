@@ -1,6 +1,6 @@
 """Accuracy-vs-DP trade-off curves over the lambda grid (decision 3.2).
 
-No lambda is selected. Each Aranyani arm (FADO, Aranyani-Base) is drawn as a
+No lambda is selected. Each Aranyani-family arm (FADO, Aranyani) is drawn as a
 curve through every lambda it ran with; ARF and RFR, which have no lambda, are
 single reference points. The claim to read off is whether FADO's curve lies
 beyond Base's -- up and to the left, i.e. more accurate at equal DP.
@@ -34,14 +34,14 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 
 
-LAMBDA_ARMS = ('aranyani', 'aranyani_base')
+LAMBDA_ARMS = ('fado', 'aranyani')
 REFERENCE_ARMS = ('arf', 'rfr')
 
 # Fixed order from the validated default categorical palette (dataviz skill,
 # slots 1-4); each arm also has its own marker so identity is not colour alone.
 STYLE = {
-    'aranyani': {'label': 'FADO', 'color': '#2a78d6', 'marker': 'o'},
-    'aranyani_base': {'label': 'Aranyani-Base', 'color': '#eb6834', 'marker': 's'},
+    'fado': {'label': 'FADO', 'color': '#2a78d6', 'marker': 'o'},
+    'aranyani': {'label': 'Aranyani', 'color': '#eb6834', 'marker': 's'},
     'arf': {'label': 'ARF', 'color': '#1baf7a', 'marker': '^'},
     'rfr': {'label': 'RFR', 'color': '#eda100', 'marker': 'D'},
 }
@@ -189,7 +189,7 @@ def _plot_panel(ax, rows, title, acc_key, dp_key):
       # is then readable without a number on every point.
       # FADO labels sit above its points, Base labels below, so the two
       # curves' labels do not collide where the curves run close.
-      offset = (6, 5) if model == 'aranyani' else (6, -13)
+      offset = (6, 5) if model == 'fado' else (6, -13)
       for r in (arm[0], arm[-1]) if len(arm) > 1 else arm:
         ax.annotate(f"λ={r['lambda_const']:g}",
                     (r[f'{dp_key}_mean'], r[f'{acc_key}_mean']),

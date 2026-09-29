@@ -13,7 +13,7 @@ metric:
   goal: maximize
 parameters:
   pipeline_model:
-    value: 'aranyani,fado_no_lambda,aranyani_base,arf,rfr'
+    value: 'fado,fado_no_lambda,aranyani,arf,rfr'
   pipeline_dataset:
     value: adult
   drift_scenario:
