@@ -18,3 +18,4 @@ absl-py==2.3.1
 folktables==0.0.12
 torch==2.9.1
 capymoa==0.14.0
+tabulate

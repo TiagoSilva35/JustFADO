@@ -9,10 +9,22 @@ from src.drift.inject_drift import DRIFT_CONFIGS, DriftSimulator
 DRIFT_REGION = (0.5, 0.7)
 GRADUAL_WIDTH_FRACTION = 0.1
 BINARY_SWAP_PROBA = 0.5
+# Group-conditional scenarios (`sim_<kind>_group[_gradual]`) drift only the rows
+# of this protected group; the other group's rows pass through unchanged, so
+# the drift moves the gap between groups instead of both groups alike. On
+# COMPAS 0 = non-White (1 = White).
+GROUP_DRIFT_TARGET = 0
+# Label drifts of the group scenarios always WIDEN the gap between groups:
+# the targeted class is chosen from the pre-onset label rates (push the target
+# group further from the other group), not at random. y_swaps relabels every
+# targeted row (prob. 1); y_prior_skip drops targeted rows with this prob.
+GROUP_SWAP_PROBA = 1.0
+GROUP_SKIP_PROBA = 0.75
 
 SIM_SCENARIOS = {
-    f'sim_{kind}{suffix}': (kind, gradual)
+    f'sim_{kind}{group_suffix}{suffix}': (kind, gradual, group)
     for kind in DRIFT_CONFIGS
+    for group_suffix, group in (('', None), ('_group', GROUP_DRIFT_TARGET))
     for suffix, gradual in (('', False), ('_gradual', True))
 }
 
@@ -24,8 +36,9 @@ _KIND_DESCRIPTIONS = {
 }
 SIM_SCENARIO_DESCRIPTIONS = {
     name: (f"Injected {'gradual' if gradual else 'abrupt'} drift: "
-           f"{_KIND_DESCRIPTIONS[kind]}")
-    for name, (kind, gradual) in SIM_SCENARIOS.items()
+           f"{_KIND_DESCRIPTIONS[kind]}"
+           + ('' if group is None else f', group {group} only'))
+    for name, (kind, gradual, group) in SIM_SCENARIOS.items()
 }
 
 
@@ -44,7 +57,7 @@ class Generator:
     if scenario not in SIM_SCENARIOS:
       raise ValueError(f"Unknown injected-drift scenario {scenario!r}; "
                        f"choose from {sorted(SIM_SCENARIOS)}")
-    self.kind, self.gradual = SIM_SCENARIOS[scenario]
+    self.kind, self.gradual, self.group = SIM_SCENARIOS[scenario]
     self.scenario = scenario
     self.seed = int(seed)
     self.medians = dict(medians or {})
@@ -73,6 +86,11 @@ class Generator:
       simulator.fit(n)
       binary = len(simulator.schema.get_label_indexes()) == 2
 
+      onset = int(simulator.fitted['drift_onset'])
+      group_label = self.group is not None and self.kind in ('y_swaps', 'y_prior_skip')
+      if group_label:
+        from_class = self._widening_class(y[:onset], a[:onset])
+
       keep_x, keep_y, keep_a, kept = [], [], [], []
       changed = dropped = 0
       transition_end = None
@@ -81,7 +99,19 @@ class Generator:
         if idx == simulator.fitted['drift_onset'] + width:
           transition_end = len(keep_y)
         x_row, y_row = x[idx], int(y[idx])
-        if simulator.apply_drift(idx):
+        # apply_drift runs for every row so the RNG sequence, and with it the
+        # gradual mixing, does not depend on the group filter.
+        drifting = simulator.apply_drift(idx)
+        if drifting and group_label and int(a[idx]) == self.group:
+          if y_row == from_class:
+            if self.kind == 'y_prior_skip':
+              if np.random.random() < GROUP_SKIP_PROBA:
+                dropped += 1
+                continue
+            elif np.random.random() < GROUP_SWAP_PROBA:
+              y_row = 1 - y_row
+              changed += 1
+        elif drifting and (self.group is None or int(a[idx]) == self.group):
           out = simulator.transform(instance)
           if out is None:
             dropped += 1
@@ -102,21 +132,34 @@ class Generator:
       STREAM_MEDIANS.pop(name, None)
 
     self.kept_index = np.asarray(kept, dtype=np.int64)
-    onset = int(simulator.fitted['drift_onset'])
     info = {
         'scenario': self.scenario,
         'type': self.kind,
         'gradual': bool(self.gradual),
+        'group': self.group,
         'onset': onset,
         'transition_end': transition_end if self.gradual else onset,
         'n_in': n,
         'n_out': len(keep_y),
         'rows_changed': changed,
         'rows_dropped': dropped,
-        'drifted_class': int(simulator.fitted['y_selected_label']),
+        'drifted_class': (int(from_class) if group_label
+                          else int(simulator.fitted['y_selected_label'])),
     }
     if self.kind == 'x_exceed_skip':
       info['exceed_feature'] = simulator.fitted['x_exceed_attr']
       info['exceed_median'] = float(simulator.fitted['x_exceed_val'])
     return (np.asarray(keep_x, dtype=np.float32), np.asarray(keep_y, dtype=np.int32),
             np.asarray(keep_a, dtype=np.int32), info)
+
+  def _widening_class(self, y_pre, a_pre):
+    """The class whose target-group rows to relabel or drop so the gap grows.
+
+    If the target group's positive rate is at or above the other group's,
+    removing its negatives (relabel 0 -> 1, or drop 0s) raises it further;
+    otherwise removing its positives lowers it further.
+    """
+    target = a_pre == self.group
+    rate_target = float(y_pre[target].mean()) if target.any() else 0.0
+    rate_other = float(y_pre[~target].mean()) if (~target).any() else 0.0
+    return 0 if rate_target >= rate_other else 1

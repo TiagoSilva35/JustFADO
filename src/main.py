@@ -1567,7 +1567,9 @@ def main(_):
         'batch_size': int(FLAGS.batch_size),
         'depth': int(FLAGS.depth),
         'num_trees': int(FLAGS.num_trees),
-        'lambda_const': float(FLAGS.lambda_const),
+        # Effective value: the flag default is 0.1, but COMPAS overrides it
+        # to 1.0 unless --lambda_const is passed.
+        'lambda_const': _effective_lambda(),
         'drift_scenario': FLAGS.drift_scenario,
         'drift_adwin_delta_warn': float(FLAGS.drift_adwin_delta_warn),
         'drift_adwin_delta_confirm': float(FLAGS.drift_adwin_delta_confirm),

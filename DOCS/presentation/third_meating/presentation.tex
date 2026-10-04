@@ -150,74 +150,59 @@
   \ctitle{Outline}
   \body{
     \begin{enumerate}
+      \item \textbf{The $\lambda$ controller}: New objective function;
+      \item \textbf{Ablations}: Experiments on compas with new drift generator;
       \item \textbf{Weekly reviews}: KANs;
-      \item \textbf{Review pass}: what we found, what we fixed, a correction;
-      \item \textbf{Decisions taken};
-      \item \textbf{The $\lambda$ controller}: the answer to the novelty critique;
-      \item \textbf{First results} and how they happened;
-      \item \textbf{Ablation plan}, open questions and next steps.
+      \item \textbf{The KAM-KAN?} maybe.
     \end{enumerate}
   }
 \end{frame}
 
-\pageset{Weekly reviews - KANs}{02}
-\begin{frame}
-    \ctitle{KANs}
-    \tb{3.9}{4.72}{2.55}{\includegraphics[width=3.9in]{assets/D3KAN.png}}
-    \tb{3.9}{0.45}{2.55}{\includegraphics[width=3.9in]{assets/ClassicKAN.png}}
-    \tb{3.9}{8.99}{2.55}{\includegraphics[width=3.9in]{assets/fairKAN.png}}
-    \tb[align=center]{3.9}{0.45}{4.35}{\color{body}\fs{12}{14}\textbf{Kolmogorov-Arnold Networks}\par\smallskip
-      Activation functions are placed on edges instead of nodes.}
-    \tb[align=center]{3.9}{4.72}{4.35}{\color{body}\fs{12}{14}\textbf{$D^3$KAN}\par\smallskip
-      A denoising and data-complexity-adaptive KAN for long-term forecasting.}
-    \tb[align=center]{3.9}{8.99}{4.35}{\color{body}\fs{12}{14}\textbf{Learning Fair Representations with KANs}\par\smallskip
-      KANs applied to learning fair representations.}
-\end{frame}
 
 % ===================================================== LAMBDA CONTROLLER (06)
-\pageset{The $\lambda$ controller}{03}
+\pageset{The $\lambda$ controller}{02}
 \begin{frame}
   \ctitle{\normalsize We change the objective function from $\mathcal{L} + \lambda \mathcal{P}(\theta)$ to $\min_{\theta} \mathcal{L}(\theta)$ s.t. $DP(\theta) <= \epsilon$ 
   so we can ensure more flexibility during drift and avoid the need for a per dataset tunable hyperparameter $\lambda$}
-\begin{center}
-  \begin{theorem}
-    \centering
-    $\min_{\theta} \mathcal{L}(\theta)$ s.t. $DP(\theta) <= \epsilon$ is equivalent to $\min_{\theta}\max_{\mu >= 0}\mathcal{L}$
-  \end{theorem}
-\end{center}
-\begin{proof}
-  Let $DP = max_g|D_g|, D_g = \hat{r} - r_{g}$ where $r_{g}$ is group g's positive-prediction rate and 
-  $\hat{r}$ is the mean of those rates (e.g. with two groups deviations are always mirror images meaning $D_{0} = -D_{1}$). Using the fact that 
-  $|x| \leq \epsilon \equiv -x \leq \epsilon \land x \leq \epsilon$ then we can rewrite $|D_g| \leq \epsilon$ as $D_g \leq \epsilon$ and $D_g \geq -\epsilon$ : Same requirement 
-  without absolute value and, additionally, we know which side is beeing violated.
-  
-  We can now rewrite the Loss function using the Lagrange multiplier $\mu$ as follows:
-  $\mathcal{L}(\theta, \mu) = \mathcal{L}(\theta) + \sum_{g} (\mu_{g+}(D_g - \epsilon) + \mu_{g-}(-D_g - \epsilon))$
-  with $\mu_k \geq 0, \forall \mu_k$.
-
-  If we assume a fair classifier where $DP - \epsilon \leq 0$ then $\mu(DP - \epsilon) \to -\infty$ as $\mu$ increases, whereas 
-  if we assume an unfair classifier where $DP - \epsilon > 0$ then $\mu(DP - \epsilon) \to +\infty$. 
-  Therefore, the Lagrange multiplier $\mu$ will be maximized when the classifier is unfair and minimized when the classifier is fair. 
-  This means that the optimization problem can be reformulated as a min-max problem, where we minimize the loss function with respect 
-  to the model parameters $\theta$ while maximizing it with respect to the Lagrange multiplier $\mu$ (if we instead chose to minimize
-  the $\mu$ player would just choose 0 everytime). This leads to the equivalent formulation:
   \begin{center}
-    $\min_{\theta}\max_{\mu >= 0}\mathcal{L}(\theta, \mu)$.
+    \begin{theorem}
+      \centering
+      $\min_{\theta} \mathcal{L}(\theta)$ s.t. $DP(\theta) <= \epsilon$ is equivalent to $\min_{\theta}\max_{\mu >= 0}\mathcal{L}$
+    \end{theorem}
   \end{center}
-\end{proof}
-This also means we can find the price, $\mu$, by dual ascent making $\lambda$ adaptative, dataset agnostic and not requiring hyperparameter tuning. 
-This is a more flexible approach that allows the model to adapt to changing conditions and ensure fairness without the need for 
-manual tuning of $\lambda$. The dual ascent finds the optimal value of $\mu$ in the following way:
-\begin{center}
-  $\frac{\partial\mathcal{L}}{\partial\mu_{g_{\pm}}}$ $=$ $\pm(D_g-\epsilon)$.
-\end{center}
-
-Updating $\mu$ as: $\mu_{g_{\pm}}$ = clip$(\mu_{g_{\pm}} + \eta(\pm D_g -\epsilon), 0, \lambda_{\max})$ where $\eta$ is the learning rate 
-and $\lambda_{\max}$ is the maximum value of $\lambda$ (which we can set to infinity). This way we keep non-negative prices and
-bound the duality requirement + accuracy trade-off. 
+  \begin{proof}
+    Let $DP = max_g|D_g|, D_g = \hat{r} - r_{g}$ where $r_{g}$ is group g's positive-prediction rate and 
+    $\hat{r}$ is the mean of those rates (e.g. with two groups deviations are always mirror images meaning $D_{0} = -D_{1}$). Using the fact that 
+    $|x| \leq \epsilon \equiv -x \leq \epsilon \land x \leq \epsilon$ then we can rewrite $|D_g| \leq \epsilon$ as $D_g \leq \epsilon$ and $D_g \geq -\epsilon$ : Same requirement 
+    without absolute value and, additionally, we know which side is beeing violated.
+    
+    We can now rewrite the Loss function using the Lagrange multiplier $\mu$ as follows:
+    $\mathcal{L}(\theta, \mu) = \mathcal{L}(\theta) + \sum_{g} (\mu_{g+}(D_g - \epsilon) + \mu_{g-}(-D_g - \epsilon))$
+    with $\mu_k \geq 0, \forall \mu_k$.
+    
+    If we assume a fair classifier where $DP - \epsilon \leq 0$ then $\mu(DP - \epsilon) \to -\infty$ as $\mu$ increases, whereas 
+    if we assume an unfair classifier where $DP - \epsilon > 0$ then $\mu(DP - \epsilon) \to +\infty$. 
+    Therefore, the Lagrange multiplier $\mu$ will be maximized when the classifier is unfair and minimized when the classifier is fair. 
+    This means that the optimization problem can be reformulated as a min-max problem, where we minimize the loss function with respect 
+    to the model parameters $\theta$ while maximizing it with respect to the Lagrange multiplier $\mu$ (if we instead chose to minimize
+    the $\mu$ player would just choose 0 everytime). This leads to the equivalent formulation:
+    \begin{center}
+      $\min_{\theta}\max_{\mu >= 0}\mathcal{L}(\theta, \mu)$.
+    \end{center}
+  \end{proof}
+  This also means we can find the price, $\mu$, by dual ascent making $\lambda$ adaptative, dataset agnostic and not requiring hyperparameter tuning. 
+  This is a more flexible approach that allows the model to adapt to changing conditions and ensure fairness without the need for 
+  manual tuning of $\lambda$. The dual ascent finds the optimal value of $\mu$ in the following way:
+  \begin{center}
+    $\frac{\partial\mathcal{L}}{\partial\mu_{g_{\pm}}}$ $=$ $\pm(D_g-\epsilon)$.
+  \end{center}
+  
+  Updating $\mu$ as: $\mu_{g_{\pm}}$ = clip$(\mu_{g_{\pm}} + \eta(\pm D_g -\epsilon), 0, \lambda_{\max})$ where $\eta$ is the learning rate 
+  and $\lambda_{\max}$ is the maximum value of $\lambda$ (which we can set to infinity). This way we keep non-negative prices and
+  bound the duality requirement + accuracy trade-off. 
 \end{frame}
 
-\pageset{The $\lambda$ controller}{04}
+\pageset{The $\lambda$ controller}{03}
 \begin{frame}
   \frametitle{The $\lambda$ controller}
   \ctitle{\normalsize How can we estimate $D_g$?}
@@ -238,19 +223,92 @@ bound the duality requirement + accuracy trade-off.
   \end{center}
   \begin{theorem}
     \centering
-      $\mathbb{E}[v]$ = $D_g$: The estimator is right on average.
+    $\mathbb{E}[v]$ = $D_g$: The estimator is right on average.
   \end{theorem}
-
+  
   \begin{proof}
     Let the estimator $v_{t, g}$ be defined as $\frac{1}{G}\sum_h(u_{t,h} - u_{t,g})$.
     Because $\mathbb{E}[u_{t,g}]$ = $\frac{1}{\pi_g}(\pi_g \times r_g) + 0(1 - \pi_g \times r_g)$ = $r_g$, we have:
-
+    
     \begin{center}
       $\mathbb{E}[v_{t,g}]$ = $\frac{1}{G}\sum_h(\mathbb{E}[u_{t,h}] - \mathbb{E}[u_{t,g}])$ = $\frac{1}{G}\sum_h(r_h - r_g)$ = $\hat{r} - r_g$ = $D_g$.
     \end{center}
     And thus we prove that the estimator is right on average.
   \end{proof}
   \slidefoot{Limitations: Samples are independent given the model but not identically distributed (in online learning model's distribution changes over time)}
+\end{frame}
+
+\pageset{Ablations}{04}
+\begin{frame}
+  \ctitle{Group-targeted drift, 5 seeds: FADO adapts and stays fair}
+  \tb{11.6}{0.85}{1.95}{\color{body}\fs{13}{16}\texttt{sim\_y\_swaps\_group}: after a random onset (50--70\% of the stream), every label of one class
+    in group 0 (non-White) is flipped, always in the direction that \emph{widens} the gap
+    (label-rate gap $\approx$ +0.09 $\rightarrow$ +0.60). Group 1 is untouched.
+    $\lambda_{\text{base}} = 1$, $\epsilon = 0.05$, $\eta = 0.01$, $\lambda_{\max} = 10$.}
+  \tb{11.6}{0.85}{2.75}{\color{ink}\bfseries\fs{13}{15}Before / after the drift}
+  \tb{11.6}{0.85}{3.05}{\fs{11.5}{13.5}%
+    \begin{tabular}{lccccc}
+      \toprule
+      Model & Acc pre $\uparrow$ & Acc post $\uparrow$ & DP pre $\downarrow$ & DP post $\downarrow$ & EO post $\downarrow$ \\
+      \midrule
+      ARF & $0.660 \pm 0.013$ & $0.632 \pm 0.055$ & $0.105 \pm 0.032$ & $0.163 \pm 0.035$ & $0.119 \pm 0.035$ \\
+      RFR & $0.668 \pm 0.016$ & $0.728 \pm 0.031$ & $0.107 \pm 0.024$ & $0.173 \pm 0.040$ & $0.121 \pm 0.037$ \\
+      Aranyani & $0.673 \pm 0.011$ & $0.706 \pm 0.015$ & $0.036 \pm 0.007$ & $0.043 \pm 0.021$ & $0.046 \pm 0.008$ \\
+      \textbf{FADO} & $0.673 \pm 0.011$ & $\mathbf{0.729 \pm 0.014}$ & $0.035 \pm 0.007$ & $\mathbf{0.038 \pm 0.017}$ & $\mathbf{0.043 \pm 0.007}$ \\
+      \bottomrule
+    \end{tabular}}
+  \tb{11.6}{0.85}{4.55}{\color{ink}\bfseries\fs{13}{15}Whole stream and controller}
+  \tb{11.6}{0.85}{4.85}{\fs{11.5}{13.5}%
+    \begin{tabular}{lcccccc}
+      \toprule
+      Model & Acc $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ & $\lambda$ post & Acc.\ drifts & Resets \\
+      \midrule
+      ARF & $0.648 \pm 0.027$ & $0.128 \pm 0.028$ & $0.119 \pm 0.025$ & -- & -- & -- \\
+      RFR & $0.695 \pm 0.015$ & $0.136 \pm 0.031$ & $0.126 \pm 0.032$ & -- & -- & -- \\
+      Aranyani & $0.688 \pm 0.006$ & $0.039 \pm 0.008$ & $0.056 \pm 0.010$ & $1$ (fixed) & -- & -- \\
+      \textbf{FADO} & $\mathbf{0.697 \pm 0.010}$ & $\mathbf{0.037 \pm 0.006}$ & $\mathbf{0.055 \pm 0.010}$ & $1.32 \pm 0.10$ & $1$ & $1$ \\
+      \bottomrule
+    \end{tabular}}
+  \slidefoot{\textbf{Only 5 tuning seeds (11--55), one scenario}: mean $\pm$ std, no significance test yet.}
+\end{frame}
+
+\pageset{Ablations}{05}
+\begin{frame}
+  \ctitle{Folktables, 5 seeds: post-drift results}
+  \tb{11.6}{0.85}{2.05}{\color{ink}\bfseries\fs{13}{15}After the drift}
+  \tb{11.6}{0.85}{2.35}{\fs{11.5}{13.5}%
+    \begin{tabular}{lcccc}
+      \toprule
+      Model & Acc $\uparrow$ & DP $\downarrow$ & EO $\downarrow$ & ms/sample $\downarrow$ \\
+      \midrule
+      ARF & $0.715 \pm 0.007$ & $0.066 \pm 0.015$ & $0.077 \pm 0.014$ & -- \\
+      RFR & $0.781 \pm 0.003$ & $0.069 \pm 0.015$ & $0.057 \pm 0.013$ & -- \\
+      Aranyani & $\mathbf{0.807 \pm 0.005}$ & $0.055 \pm 0.005$ & $0.038 \pm 0.004$ & $63.4 \pm 1.2$ \\
+      \textbf{FADO} & $0.804 \pm 0.004$ & $\mathbf{0.041 \pm 0.006}$ & $\mathbf{0.026 \pm 0.006}$ & $67.3 \pm 0.9$ \\
+      \bottomrule
+    \end{tabular}}
+  \slidefoot{\textbf{5 seeds (11--55), Folktables}: mean $\pm$ std, no significance test yet.}
+\end{frame}
+
+\pageset{Weekly reviews - KANs}{06}
+\begin{frame}
+    \ctitle{KANs}
+    \tb{3.9}{4.72}{2.55}{\includegraphics[width=3.9in]{assets/D3KAN.png}}
+    \tb{3.9}{0.45}{2.55}{\includegraphics[width=3.9in]{assets/ClassicKAN.png}}
+    \tb{3.9}{8.99}{2.55}{\includegraphics[width=3.9in]{assets/fairKAN.png}}
+    \tb[align=center]{3.9}{0.45}{4.35}{\color{body}\fs{12}{14}\textbf{Kolmogorov-Arnold Networks}\par\smallskip
+      Activation functions are placed on edges instead of nodes.}
+    \tb[align=center]{3.9}{4.72}{4.35}{\color{body}\fs{12}{14}\textbf{$D^3$KAN}\par\smallskip
+      A denoising and data-complexity-adaptive KAN for long-term forecasting.}
+    \tb[align=center]{3.9}{8.99}{4.35}{\color{body}\fs{12}{14}\textbf{Learning Fair Representations with KANs}\par\smallskip
+      KANs applied to learning fair representations.}
+\end{frame}
+
+\pageset{KAM-KAN}{07}
+\begin{frame}
+  \ctitle{KKN: KAM-KAN Networks - A KAN for online learning under concept drift}
+  \tb{3.9}{4.72}{2.55}{\includegraphics[width=3.9in]{assets/kam_kan_online_drift_architecture.png}}
+  
 \end{frame}
 
 \end{document}
