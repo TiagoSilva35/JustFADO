@@ -13,13 +13,13 @@ metric:
   goal: maximize
 parameters:
   pipeline_model:
-    value: 'fado,fado_no_lambda,aranyani,arf,rfr'
+    values: ['fado', 'fado_no_lambda', 'aranyani', 'arf', 'rfr']
   pipeline_dataset:
     value: folktables
   folktables_subsample_fraction:
     value: 0.1   # ~18.7k train + ~18.7k stream (full CA is 187k + 187k)
   seeds:
-    value: '11,22,33,44,55'
+    values: ['66', '77', '88', '99', '101', '111', '122', '133', '144', '155', '166', '177', '188', '199', '202', '213', '224', '235', '246', '257', '268', '279', '291', '303', '314', '325', '336', '347', '358', '369']
   deterministic:
     value: true
   wandb_log:
