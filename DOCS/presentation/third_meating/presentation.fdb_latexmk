@@ -1,5 +1,6 @@
 # Fdb version 4
-["pdflatex"] 1790936814.96168 "presentation.tex" "presentation.pdf" "presentation" 1790936815.96322 0
+["pdflatex"] 1791392541.90785 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/presentation/third_meating/presentation.tex" "presentation.pdf" "presentation" 1791392542.97628 0
+  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/presentation/third_meating/presentation.tex" 1791392541.57495 16082 d1923230d303f7e845a2c1a659b3e04f ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/tex-gyre/q-ec.enc" 1772380719 2457 aaabbccba4df2a7f7371410ee4e075a3 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/tex-gyre/q-ts1.enc" 1772380719 3124 3813fd4c981d99822890a2861b0d274c ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/fontname/texfonts.map" 1772380719 3524 cb3e574dea2d1052e39280babc910dc8 ""
@@ -238,10 +239,10 @@
   "assets/cisuc_logo.png" 1790764593.09315 19925 1837c95a9a90b8b3739bbc8f894b6b5c ""
   "assets/fairKAN.png" 1790764593.09418 82840 fc881b5a5aee9ca8e4ee758070418aef ""
   "assets/kam_kan_online_drift_architecture.png" 1790871261.56758 418394 ab3c1e1a0bcc8e228b020c8b3e698bf3 ""
-  "presentation.aux" 1790936815.88802 2985 ab1b21ffa63d314bea4b0b87772367d8 "pdflatex"
-  "presentation.nav" 1790936815.88861 1011 83c4ff004b77303d878240d0bcc95e05 "pdflatex"
-  "presentation.out" 1790936815.27651 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
-  "presentation.tex" 1790936814.89829 16082 d1923230d303f7e845a2c1a659b3e04f ""
+  "presentation.aux" 1791392542.91802 2985 ab1b21ffa63d314bea4b0b87772367d8 "pdflatex"
+  "presentation.nav" 1791392542.91873 1011 83c4ff004b77303d878240d0bcc95e05 "pdflatex"
+  "presentation.out" 1791392542.29108 0 d41d8cd98f00b204e9800998ecf8427e "pdflatex"
+  "presentation.tex" 1791392541.57495 16082 d1923230d303f7e845a2c1a659b3e04f ""
   (generated)
   "presentation.aux"
   "presentation.log"

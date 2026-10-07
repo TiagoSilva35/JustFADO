@@ -1,7 +1,7 @@
 PWD /Users/tiagosilva/Documents/Aranyani2.0/DOCS/presentation/third_meating
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/web2c/texmf.cnf
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-var/web2c/pdftex/pdflatex.fmt
-INPUT presentation.tex
+INPUT /Users/tiagosilva/Documents/Aranyani2.0/DOCS/presentation/third_meating/presentation.tex
 OUTPUT presentation.log
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/beamer/beamer.cls
 INPUT /opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/beamer/beamer.cls
