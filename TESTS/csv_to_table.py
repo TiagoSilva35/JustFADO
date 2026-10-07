@@ -1,36 +1,73 @@
+from pathlib import Path
+
 import pandas as pd
 
-#df = pd.read_csv("TESTS/artifacts/wandb_export_2026-10-01T21_50_17.968+01_00.csv")
-df = pd.read_csv("TESTS/artifacts/folktables5seeds.csv")
 
-summary = (df.drop(columns="seed")
-             .groupby(["scenario", "model"])
-             .agg(["mean", "std"]))
+BASE_DIR = Path(__file__).resolve().parent
+INPUT_PATH = BASE_DIR / "artifacts" / "arm_metrics_all.csv"
+OUTPUT_DIR = BASE_DIR / "artifacts"
 
-# Pick the metrics for the table and the label each one gets
-metrics = {"post_drift_accuracy": "Accuracy",
-           "post_drift_dp": "DP",
-           "post_drift_eo": "EO",
-           "ms_per_sample": "ms/sample"}
-decimals = {"ms_per_sample": 1}   # 3 decimals for everything else
+df = pd.read_csv(INPUT_PATH)
+required_columns = {"scenario", "model", "seed"}
+missing_columns = required_columns - set(df.columns)
+if missing_columns:
+    missing = ", ".join(sorted(missing_columns))
+    raise ValueError(f"{INPUT_PATH} is missing required columns: {missing}")
 
-def fmt(m, pm="±"):
-    d = decimals.get(m, 3)
-    return [f"{a:.{d}f} {pm} {b:.{d}f}" if pd.notna(a) else "NaN"
-            for a, b in zip(summary[(m, "mean")], summary[(m, "std")])]
+metric_labels = {
+    "accuracy": "Accuracy",
+    "dp": "DP",
+    "eo": "EO",
+    "ms_per_sample": "ms/sample",
+}
+metrics = {
+    column: label
+    for column, label in metric_labels.items()
+    if column in df.columns
+}
+if not metrics:
+    raise ValueError(f"{INPUT_PATH} contains none of the supported metric columns")
 
-n = df.groupby(["scenario", "model"]).seed.nunique()
+summary = (
+    df.groupby(["scenario", "model"], sort=True)[list(metrics)]
+    .agg(["mean", "std"])
+)
+
+
+def format_metric(metric: str, plus_minus: str = "±") -> list[str]:
+    decimals = 1 if metric == "ms_per_sample" else 3
+    means = summary[(metric, "mean")]
+    standard_deviations = summary[(metric, "std")]
+    return [
+        f"{mean:.{decimals}f} {plus_minus} {std:.{decimals}f}"
+        if pd.notna(mean)
+        else "NaN"
+        for mean, std in zip(means, standard_deviations)
+    ]
+
+
+grouped = df.groupby(["scenario", "model"], sort=True)
+n = grouped["seed"].nunique()
 
 # Readable table (CSV / Markdown)
-table = pd.DataFrame({lbl: fmt(m) for m, lbl in metrics.items()}, index=summary.index)
+table = pd.DataFrame(
+    {label: format_metric(metric) for metric, label in metrics.items()},
+    index=summary.index,
+)
 table.insert(0, "n", n)
-table.to_csv("TESTS/artifacts/seed_table.csv")
-table.reset_index().to_markdown("TESTS/artifacts/seed_table.md", index=False)
+table.to_csv(OUTPUT_DIR / "seed_table.csv")
+table.reset_index().to_markdown(OUTPUT_DIR / "seed_table.md", index=False)
 
 # LaTeX version (uses $\pm$ and escapes underscores)
-tex = pd.DataFrame({lbl: fmt(m, r"$\pm$") for m, lbl in metrics.items()}, index=summary.index)
+tex = pd.DataFrame(
+    {label: format_metric(metric, r"$\pm$") for metric, label in metrics.items()},
+    index=summary.index,
+)
 tex.insert(0, "n", n)
-tex.index = tex.index.set_levels([lvl.str.replace("_", r"\_") for lvl in tex.index.levels])
-tex.to_latex("TESTS/artifacts/seed_table.tex", multirow=True)
+tex.index = pd.MultiIndex.from_tuples(
+    [(str(scenario).replace("_", r"\_"), str(model).replace("_", r"\_"))
+     for scenario, model in tex.index]
+)
+tex.to_latex(OUTPUT_DIR / "seed_table.tex", multirow=True)
 
 print(table.to_string())

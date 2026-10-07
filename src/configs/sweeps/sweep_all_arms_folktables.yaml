@@ -13,7 +13,7 @@ metric:
   goal: maximize
 parameters:
   pipeline_model:
-    values: ['fado', 'fado_no_lambda', 'aranyani', 'arf', 'rfr']
+    value: 'fado,fado_no_lambda,aranyani,arf,rfr'
   pipeline_dataset:
     value: folktables
   folktables_subsample_fraction:

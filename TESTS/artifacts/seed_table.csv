@@ -1,6 +1,6 @@
-scenario,model,n,Accuracy,DP,EO,ms/sample
-folktables,aranyani,5,0.807 ± 0.005,0.055 ± 0.005,0.038 ± 0.004,63.4 ± 1.2
-folktables,arf,5,0.715 ± 0.007,0.066 ± 0.015,0.077 ± 0.014,NaN
-folktables,fado,5,0.804 ± 0.004,0.041 ± 0.006,0.026 ± 0.006,67.3 ± 0.9
-folktables,fado_no_lambda,5,0.786 ± 0.006,0.036 ± 0.011,0.032 ± 0.004,67.1 ± 1.0
-folktables,rfr,5,0.781 ± 0.003,0.069 ± 0.015,0.057 ± 0.013,NaN
+scenario,model,n,Accuracy,DP,EO
+folktables,aranyani,30,0.808 ± 0.003,0.057 ± 0.004,0.036 ± 0.003
+folktables,arf,30,0.731 ± 0.004,0.072 ± 0.012,0.077 ± 0.016
+folktables,fado,30,0.805 ± 0.003,0.042 ± 0.003,0.025 ± 0.003
+folktables,fado_no_lambda,30,0.797 ± 0.003,0.050 ± 0.005,0.035 ± 0.004
+folktables,rfr,30,0.779 ± 0.003,0.075 ± 0.006,0.059 ± 0.006
