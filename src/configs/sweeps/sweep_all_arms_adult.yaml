@@ -18,8 +18,6 @@ parameters:
     value: adult
   drift_scenario:
     values:
-      - sim_x_permutations
-      - sim_y_swaps
       - sim_y_prior_skip
       - sim_x_exceed_skip
   seeds:
