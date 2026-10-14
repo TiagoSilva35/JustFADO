@@ -1,0 +1,37 @@
+# Every arm on every drift of this dataset (adult): the main results table.
+#
+# the 4 abrupt injected-drift scenarios (gradual ones double an already long sweep). The drift is a property of the data, so by the budget rule every
+# arm runs on it: FADO, FADO without the lambda controller, Base, ARF, RFR.
+#
+# 4 run(s), 5 tuning seeds each.
+program: src/main.py
+project: fado-ablations
+method: grid
+name: all-arms-adult
+metric:
+  name: delta_dp
+  goal: maximize
+parameters:
+  pipeline_model:
+    value: 'fado,aranyani,arf,rfr'
+  pipeline_dataset:
+    value: adult
+  drift_scenario:
+    values:
+      - sim_x_permutations
+      - sim_y_swaps
+      - sim_y_prior_skip
+      - sim_x_exceed_skip
+  seeds:
+    values: ['66', '77', '88', '99', '101', '111', '122', '133', '144', '155', '166', '177', '188', '199', '202', '213', '224', '235', '246', '257', '268', '279', '291', '303', '314', '325', '336', '347', '358', '369']
+  deterministic:
+    value: true
+  wandb_log:
+    value: true
+  wandb_project:
+    value: fado-ablations
+command:
+  - D:/FADO/JustFADO/venv/Scripts/python.exe
+  - -m
+  - src.main
+  - ${args}
