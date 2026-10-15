@@ -1,145 +1,196 @@
-# FADO: A Reaction Controller for Fairness-Aware Online Learning Under Concept Drift
+# Fairness-Aware Online Learning Under Concept Drift With an Adaptive Fairness Constraint
 
-This repository contains the implementation, configuration, and per-seed
-result files for the paper *FADO: A Reaction Controller for Fairness-Aware
-Online Learning Under Concept Drift*.
+This repository contains the implementation, configuration files, seed
+manifests, and per-seed result files for the paper *Fairness-Aware Online
+Learning Under Concept Drift With an Adaptive Fairness Constraint*. It
+reproduces Table III of the paper and lists, for each dataset, the exact
+commands that produced every reported row: the per-seed sweep, the paired
+Wilcoxon and Welch significance run, and the summary aggregation.
 
-`FADO` wraps the `Aranyani` fair oblique decision forest
-(<https://github.com/brcsomnath/Aranyani>, MIT-licensed) with a dual-threshold
-ADWIN drift detector and a reaction controller that modulates the optimiser
-learning rate and the soft-routing temperature on confirmed drift.
+`FADO` (Fairness-Aware Drift-Aware Online Learning) builds on the `Aranyani`
+fair oblique decision forest (<https://github.com/brcsomnath/Aranyani>,
+MIT-licensed) and adds three mechanisms:
+
+* an **adaptive fairness constraint**: the fixed fairness weight of Aranyani
+  becomes the dual price `λ_t` of a demographic-parity bound `DP ≤ ε`, tracked
+  online by projected stochastic dual ascent on an unbiased per-sample
+  Horvitz–Thompson estimate of each group's disparity;
+* **drift detection with forgetting**: a dual-threshold ADWIN detector on the
+  error stream and a per-group fairness ADWIN on the disparity signal, both
+  resetting the fairness penalty's running statistics on a detected change;
+* a **reaction controller** that pre-warms or spikes the learning rate and
+  sharpens a routing temperature (added by FADO; `τ = 1` recovers Aranyani)
+  on drift, annealing both back during recovery.
 
 ---
 
 ## Setup
 
+Python 3.11 or newer, and Java 17 or newer on the `PATH` (CapyMOA, used for
+the injected drifts and its detectors; check with `java -version`).
+
 ```bash
-git clone https://github.com/TiagoSilva35/Aranyani2.0.git
-cd Aranyani2.0
+git clone https://github.com/TiagoSilva35/JustFADO.git
+cd JustFADO
 python -m venv venv
-source venv/bin/activate
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
+wandb login                     # the reported sweeps log to W&B
 ```
 
 Datasets:
 
-* **COMPAS** — `data/compas/*.csv` (included).
-* **Folktables (ACS Income, CA)** — downloaded automatically by the
-  `folktables` library on first run; cached locally.
+* **Adult** — `data/adult/adult.data` and `adult.test` (included). The test
+  split is the stream; one of four drifts is injected into it per run.
+* **Folktables (ACS Income, CA)** — read from `data/acs-folktables/` if
+  present, otherwise downloaded by the `folktables` library on the first run.
+  Training is 2015; the stream is 2017 then 2018.
 
 ---
 
-## Reported results
+## Reported results (Table III)
 
-Mean ± std over 30 random seeds, paired Wilcoxon Holm-corrected
-significance vs every baseline on the **FADO** row
-(`*` p<0.05, `**` p<0.01, `***` p<0.001).
-**Bold** marks the best mean per metric within each dataset.
+Whole-stream prequential metrics, mean ± std over 30 seeds. Superscripts on
+the FADO row mark a paired Wilcoxon test, Holm-corrected across the three
+baselines, significant against **every** baseline in FADO's favor
+(`*` p<0.05, `**` p<0.01, `***` p<0.001). **Bold** is the best mean per
+metric within each block.
 
-| Dataset    | Model        | Accuracy ↑          | DP ↓                  | EO ↓                  |
-|------------|--------------|---------------------|-----------------------|-----------------------|
-| Folktables | **FADO**     | 0.8033 ± 0.0053     | **0.0284 ± 0.0041**\*\* | 0.0281 ± 0.0027       |
-| Folktables | Aranyani     | **0.8053 ± 0.0049** | 0.0299 ± 0.0032       | **0.0257 ± 0.0024**   |
-| Folktables | ARF          | 0.7447 ± 0.0104     | 0.0722 ± 0.0108       | 0.0743 ± 0.0153       |
-| Folktables | RFR          | 0.7780 ± 0.0047     | 0.0733 ± 0.0063       | 0.0586 ± 0.0065       |
-| COMPAS     | **FADO**     | 0.6434 ± 0.0105     | **0.0611 ± 0.0094**\*\*\* | **0.0923 ± 0.0130**\*\* |
-| COMPAS     | Aranyani     | **0.6451 ± 0.0100** | 0.0679 ± 0.0065       | 0.0979 ± 0.0104       |
-| COMPAS     | ARF          | 0.6313 ± 0.0133     | 0.0808 ± 0.0183       | 0.1053 ± 0.0234       |
-| COMPAS     | RFR          | 0.6404 ± 0.0154     | 0.0813 ± 0.0160       | 0.1067 ± 0.0226       |
+| Data / drift              | Model    | Accuracy ↑        | DP ↓                    | EO ↓                    |
+|---------------------------|----------|-------------------|-------------------------|-------------------------|
+| Folktables, natural       | FADO     | 0.805 ± 0.003     | **0.042 ± 0.003**\*\*\* | **0.025 ± 0.003**\*\*\* |
+|                           | Aranyani | **0.808 ± 0.003** | 0.057 ± 0.004           | 0.036 ± 0.003           |
+|                           | ARF      | 0.731 ± 0.004     | 0.072 ± 0.012           | 0.077 ± 0.016           |
+|                           | RFR      | 0.779 ± 0.003     | 0.075 ± 0.006           | 0.059 ± 0.006           |
+| Adult, x_permutations     | FADO     | **0.838 ± 0.003** | **0.061 ± 0.004**\*\*\* | **0.053 ± 0.009**\*\*\* |
+|                           | Aranyani | 0.837 ± 0.004     | 0.083 ± 0.007           | 0.073 ± 0.010           |
+|                           | ARF      | 0.826 ± 0.004     | 0.090 ± 0.003           | 0.110 ± 0.013           |
+|                           | RFR      | 0.837 ± 0.002     | 0.100 ± 0.004           | 0.091 ± 0.010           |
+| Adult, y_swaps            | all      | *running*         |                         |                         |
+| Adult, y_prior_skip       | all      | *running*         |                         |                         |
+| Adult, x_exceed_skip      | all      | *running*         |                         |                         |
+| Adult, mean of the four   | all      | *pending*         |                         |                         |
 
-(`Aranyani` here is the controller-free ablation: the bare `Aranyani` base
-learner run prequentially under the same protocol, with the dual-ADWIN
-detector and reaction controller disabled. It shares the seed-pinned data
-ordering with `FADO`, so the FADO-vs-Aranyani gap is attributable to the
-controller alone.)
-
----
-
-## Reproducing the results
-
-Each command below regenerates the per-seed `results.json` files under
-`files/experiments/dataset_<name>/model_<name>/seed_<N>/results.json` for
-all four models on the 30-seed sweep.
-
-### COMPAS (30 seeds × 4 models × 2 scenarios)
-
-```bash
-python -m src.main \
-    --dataset compas \
-    --seeds 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30
-```
-
-The dataset-specific hyperparameter overrides for COMPAS
-(`adwin_delta_confirm = 0.2`, `fairness_window = 250`,
-`lr_decay_steps = 600`, `min_samples_per_stream = 20`,
-`lambda_const = 1.0`) are applied automatically by `_COMPAS_FADO_OVERRIDES`
-in `src/main.py` when `--dataset compas` is selected. No CLI flag needed.
-
-### Folktables (30 seeds × 4 models, 10% uniform subsample per seed)
-
-```bash
-python -m src.main \
-    --dataset folktables \
-    --seeds 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30 \
-    --folktables_subsample_fraction 0.10 \
-    --lambda_const 1.0
-```
-
-`--folktables_subsample_fraction 0.10` slims each split from ~187k to
-~18.7k samples per seed, drawn deterministically from the per-seed RNG so
-all four models within a seed see identical rows (paired tests remain
-valid). Removing the flag runs on the full splits.
+`Aranyani` is the controller-free baseline: the same forest, loss,
+initialization, rolling-window statistics, and seed-pinned data ordering as
+FADO, with the fixed weight `λ = λ_base` and the adaptive constraint, the
+detectors, and the reaction controller disabled. The FADO-vs-Aranyani gap is
+therefore attributable to FADO's additions alone. ARF is the Adaptive Random
+Forest; RFR is robust fairness regularization.
 
 ---
 
-## Reproducing the significance tests
+## Reproducing Table III
 
-Once the per-seed result files exist, the paired Wilcoxon + Welch tests
-(both with Holm--Bonferroni correction across baseline comparisons within
-each metric column) are computed by `src.significance_tests`. It reads the
-per-seed `results.json` files directly:
+All four models (`fado`, `aranyani`, `arf`, `rfr`) are run under the same
+batch-size-1 test-then-train protocol. Within a seed they share the data
+split, the forest initialization, and the stream order: the NumPy, Python, and
+TensorFlow generators are pinned per seed, TensorFlow op determinism is on,
+and `PYTHONHASHSEED=0`.
 
-```bash
-# COMPAS — reproduces the COMPAS rows of the table above
-python -m src.significance_tests \
-    --inputs files/experiments/dataset_compas \
-    --reference aranyani \
-    --baselines aranyani_base,arf,rfr \
-    --metrics accuracy,dp,eo
+**Reporting seeds** (30, disjoint from the tuning seeds `11,22,33,44,55`):
 
-# Folktables — reproduces the Folktables rows of the table above
-python -m src.significance_tests \
-    --inputs files/experiments/dataset_folktables \
-    --reference aranyani \
-    --baselines aranyani_base,arf,rfr \
-    --metrics accuracy,dp,eo
+```text
+66,77,88,99,101,111,122,133,144,155,166,177,188,199,202,213,224,235,246,257,268,279,291,303,314,325,336,347,358,369
 ```
 
-The script restricts to scenarios common to every model under comparison
-(so the paired test is apples-to-apples across models with different
-scenario coverage), prints both the paired Wilcoxon and the Welch t-test
-side by side, and reports the Holm-corrected p-value and the conventional
-`*` / `**` / `***` marker for each comparison.
+**Hyperparameters** are the defaults in `src/main.py` (Table II of the paper).
+The Folktables overrides (`drift_lr_spike_mult = 3`,
+`temperature_on_drift = 0.5`, `lr_decay_steps = 1000`) are applied
+automatically by `_FOLKTABLES_FADO_OVERRIDES` when the dataset is Folktables;
+no flag is needed.
+
+### 1. Per-seed sweep
+
+The reported rows come from the W&B grid sweeps in `src/configs/sweeps/`,
+one cell per (seed, drift scenario), each cell running all four models:
+
+| Rows                  | Config                                     | Scenarios |
+|-----------------------|--------------------------------------------|-----------|
+| Folktables, natural   | `sweep_all_arms_folktables.yaml` (10% subsample per seed) | natural cross-year drift |
+| Adult, all four drifts | `sweep_all_arms_adult.yaml`               | `sim_x_permutations`, `sim_y_swaps`, `sim_y_prior_skip`, `sim_x_exceed_skip` |
+
+The Adult scenarios were split across several sweeps (and machines) for
+wall-clock parallelism; edit the `drift_scenario` list of
+`sweep_all_arms_adult.yaml` to choose which scenarios a sweep covers. Then
+register the sweep and start one agent per free CPU core:
+
+```bash
+src/configs/sweeps/launch.sh all_arms_folktables all_arms_adult
+wandb agent <entity>/fado-ablations/<sweep-id>
+```
+
+Each run writes its per-seed `results.json` files to
+`files/experiments/wandb/<run id>/dataset_<name>/model_<name>/seed_<N>/`.
+`src/configs/sweeps/README.md` covers the agents, costs, and the Windows
+specifics (W&B's `${env}` does not work there; use a config that calls the
+venv's `python.exe` directly, as in `sweep_all_arms_adult_win.yaml`).
+
+A single cell can be run without W&B, e.g. to check the setup:
+
+```bash
+PYTHONHASHSEED=0 python -m src.main --pipeline_dataset=adult \
+    --pipeline_model=fado,aranyani,arf,rfr --drift_scenario=sim_x_permutations --seeds=66
+```
+
+### 2. Summary aggregation
+
+Download every finished run's per-seed metrics of a sweep (keeping only the
+seeds on which every model finished):
+
+```bash
+python -m src.fetch_wandb_arm_metrics --sweep <sweep-id> --models fado,aranyani,arf,rfr
+```
+
+This writes `files/experiments/wandb_arm_metrics/<sweep-id>/raw.csv` (one row
+per seed, model, and scenario) and `summary.csv` (mean, std, and number of
+seeds per scenario and model, plus an `average` scenario: each seed averaged
+over the scenarios first).
+
+### 3. Significance tests and the table rows
+
+```bash
+# Folktables block
+python DOCS/paper_icde/scripts/paper_stats.py \
+    files/experiments/wandb_arm_metrics/<folktables-sweep-id>/raw.csv
+
+# Adult blocks: pass the raw.csv of every Adult sweep; prints one block per
+# drift and the "mean of 4" block
+python DOCS/paper_icde/scripts/paper_stats.py \
+    files/experiments/wandb_arm_metrics/<adult-sweep-id-1>/raw.csv \
+    files/experiments/wandb_arm_metrics/<adult-sweep-id-2>/raw.csv
+```
+
+For each block the script prints the whole-stream mean ± std of accuracy,
+DP, and EO per model, and FADO against each baseline under the paired
+Wilcoxon signed-rank test and the Welch t-test, each Holm-corrected within
+the metric across the three baselines, with the number of seeds on which
+FADO is better. Pass one dataset per call: with several scenarios the script
+adds a "mean of N" block that averages each seed over them. Running
+`paper_stats.py adult` instead reads the local Adult run folders under
+`files/experiments/wandb/` directly, without downloading from W&B.
 
 ---
 
 ## Repository layout
 
-* `src/main.py` — entry point; orchestrates per-seed sweeps across the
-  four models (`fado` = Aranyani + drift controller + dual-ascent λ,
-  `aranyani` = the plain forest, `arf`, `rfr`).
-* `src/models/forest/evaluator.py` — FADO prequential evaluator
-  (Aranyani + dual-ADWIN + reaction controller).
+* `src/main.py` — entry point; runs the per-seed pipeline for the selected
+  models (`fado`, `aranyani`, `arf`, `rfr`) and holds the default
+  hyperparameters and the Folktables overrides.
+* `src/models/forest/evaluator.py` — FADO prequential evaluator (Aranyani
+  forest + adaptive fairness constraint + detectors + reaction controller).
 * `src/models/forest/baseline_evaluator.py` — controller-free Aranyani
   prequential evaluator.
 * `src/models/arf/`, `src/models/rfr/` — streaming baselines.
-* `src/drift/compas_scenarios.py` — the two active COMPAS drift scenarios.
-* `src/significance_tests.py` — paired Wilcoxon + Welch with Holm
-  correction, reads per-seed result JSONs.
-* `src/fetch_wandb_arm_metrics.py` — per-seed metrics of a W&B sweep, mean ± std over seeds (CSV).
-* `src/fetch_wandb_trajectories.py` — accuracy / DP / EO over time of a W&B sweep, averaged over seeds (CSV, plots).
-* `files/experiments/dataset_<name>/` — per-seed result outputs from the
-  reported sweeps.
+* `src/drift/` — drift injection for the Adult stream (`sim_*` scenarios).
+* `src/configs/sweeps/` — W&B sweep configs, `launch.sh`, and their README.
+* `src/fetch_wandb_arm_metrics.py` — per-seed metrics of a W&B sweep, mean ±
+  std over seeds (CSV).
+* `src/fetch_wandb_trajectories.py` — accuracy / DP / EO over time of a W&B
+  sweep, averaged over seeds (CSV, plots).
+* `DOCS/paper_icde/scripts/paper_stats.py` — Table III means, standard
+  deviations, and Holm-corrected Wilcoxon and Welch p-values.
+* `files/experiments/` — per-seed result outputs.
 
 ---
 
