@@ -44,14 +44,19 @@ def _run_table(run, cache_dir, table_name=TABLE_NAME):
 
 
 def fetch(entity, project, sweep_id, cache_dir, table_name=TABLE_NAME):
-  """Every finished run's `table_name` table, stacked, with a `run` column."""
+  """Every finished run's `table_name` table, stacked, with a `run` column.
+
+  `sweep_id` may list several sweeps separated by commas (one dataset run
+  as several sweeps); their runs are pooled.
+  """
   # artifact.get() downloads into ./artifacts unless told otherwise.
   os.environ['WANDB_ARTIFACT_DIR'] = cache_dir
   import wandb
   api = wandb.Api(timeout=60)
-  sweep = api.sweep(f'{entity}/{project}/{sweep_id}')
+  runs = [run for sid in sweep_id.split(',') if sid.strip()
+          for run in api.sweep(f'{entity}/{project}/{sid.strip()}').runs]
   frames, skipped = [], []
-  for run in sweep.runs:
+  for run in runs:
     if run.state != 'finished':
       skipped.append((run.name, run.state))
       continue
@@ -127,7 +132,8 @@ def plot(mean, out_dir):
 
 def main():
   parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
-  parser.add_argument('--sweep', required=True, help='W&B sweep id')
+  parser.add_argument('--sweep', required=True,
+                      help='W&B sweep id, or several separated by commas')
   parser.add_argument('--entity', default=os.environ.get(
       'WANDB_ENTITY', 'tjcsilva04-universidade-de-coimbra'))
   parser.add_argument('--project', default='fado-ablations')
@@ -138,7 +144,7 @@ def main():
   parser.add_argument('--plot', action='store_true')
   args = parser.parse_args()
 
-  out_dir = os.path.join(args.out, args.sweep)
+  out_dir = os.path.join(args.out, args.sweep.replace(',', '+'))
   os.makedirs(out_dir, exist_ok=True)
   raw = fetch(args.entity, args.project, args.sweep,
               cache_dir=os.path.join(out_dir, 'artifacts'))

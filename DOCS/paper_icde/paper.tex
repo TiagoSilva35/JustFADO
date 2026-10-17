@@ -39,7 +39,7 @@
 \begin{document}
 
 % Template rules: no abbreviations, subtitles, math, or symbols in the title.
-\title{Fairness-Aware Online Learning Under\\Concept Drift With an Adaptive Fairness Constraint}
+\title{Adaptative Fairness-Aware Online Learning Under\\Concept Drift}
 
 \author{\IEEEauthorblockN{Anonymous Author(s)}
 \IEEEauthorblockA{Affiliation withheld for double-blind review}}
@@ -158,9 +158,9 @@ adaptive-but-not-fair baseline.
 Jiang et al.~\cite{jiang2023chasingfairnessdistributionshift} model distribution shift as a bounded weight-space perturbation and optimize for worst-case
 fairness under that perturbation, producing the sharpness-aware reweighting (\rfr{}) that we use as our fair-but-not-adaptive baseline.
 
-Finally, fairness can be imposed as a constraint rather than as a weighted penalty. Zafar et al.~\cite{zafar2017constraints} bound a covariance proxy of disparate
-impact, Agarwal et al.~\cite{agarwal2018reductions} reduce fair classification to a saddle-point problem solved by a sequence of cost-sensitive learners, and Cotter
-et al.~\cite{cotter2019constraints} optimize nondifferentiable rate constraints with a proxy-Lagrangian game. These methods solve the problem offline on a fixed
+Finally, fairness can be imposed as a constraint rather than as a weighted penalty. Zafar et al.~\cite{zafar2017fairnessconstraintsmechanismsfair} bound a covariance proxy of disparate
+impact, Agarwal et al.~\cite{agarwal2018reductionsapproachfairclassification} reduce fair classification to a saddle-point problem solved by a sequence of cost-sensitive learners, and Cotter
+et al.~\cite{cotter2018optimizationnondifferentiableconstraintsapplications} optimize nondifferentiable rate constraints with a proxy-Lagrangian game. These methods solve the problem offline on a fixed
 training set; online convex optimization with long-term constraints~\cite{mahdavi2012trading} provides the primal--dual template that \fado{} follows one sample at a
 time.
 
@@ -185,7 +185,7 @@ regularizer is nonadaptive: when the distribution moves it continues to optimize
 disparity acceptable changes with the data, and convergence to the new optimum is slow;
 \item \textbf{L4 -- Drift-aware fair methods rely on assumptions that do not transfer to streams.} Approaches such
 as~\cite{jiang2023chasingfairnessdistributionshift} treat distribution shift as a bounded weight-space perturbation, which is useful in worst-case analysis but
-does not yield an actionable online detector or controller, and constrained fair learners~\cite{zafar2017constraints,agarwal2018reductions,cotter2019constraints}
+does not yield an actionable online detector or controller, and constrained fair learners~\cite{zafar2017fairnessconstraintsmechanismsfair,cotter2018optimizationnondifferentiableconstraintsapplications,agarwal2018reductionsapproachfairclassification}
 solve their problem offline.
 \end{itemize}
 \fado{} addresses L1--L4 directly by retaining the node-level fairness regularizer of \ara{} as the in-processing base learner and adding on top of it (i)~an
@@ -201,7 +201,7 @@ modulates the optimizer learning rate and a routing temperature added to the for
 \label{sec:problem:online}
 We consider an online binary classification problem over a data stream $\{(x_t, y_t, a_t)\}_{t=1}^{T}$, where $x_t \in \mathbb{R}^d$ is the feature vector
 observed at time $t$, $y_t \in \{0,1\}$ is the binary target label, and $a_t \in \mathcal{A}$ is a sensitive attribute taking values in a finite set with
-$|\mathcal{A}|=K \ge 2$. Following the formulation of previous work~\cite{chowdhury2024enhancing,ijcai2019p205}, at each time step the learner receives $x_t$,
+$|\mathcal{A}|=K \ge 2$. Following the formulation of previous work~\cite{chowdhury2024enhancing,zhang2019fahtadaptivefairnessawaredecision}, at each time step the learner receives $x_t$,
 produces a prediction $\hat{y}_t = \arg\max f_t(x_t)$, then observes $(y_t, a_t)$ and updates its parameters under a prequential, test-then-train protocol. The
 fairness formulation introduced below supports arbitrary $K$; in our study each dataset has one binary protected attribute (sex), so $K=2$.
 
@@ -382,7 +382,7 @@ group $a$. Consequently $\pm v_t[a]-\varepsilon$ is an unbiased estimate of the 
 \end{proposition}
 \begin{IEEEproof}
 $u_t[a]$ is nonzero only if $a_t=a$ and $\hat y_t=1$, an event of probability $\pi_a\hat p_a$, in which case it equals $1/\pi_a$. Hence
-$\mathbb{E}[u_t[a]]=\hat p_a$, the Horvitz--Thompson identity~\cite{horvitz1952generalization}. By linearity,
+$\mathbb{E}[u_t[a]]=\hat p_a$, the Horvitz--Thompson identity~\cite{bbbe4e97-7833-3faa-820c-4c61f82fe965}. By linearity,
 $\mathbb{E}[v_t[a]]=\frac1K\sum_{a'}\hat p_{a'}-\hat p_a=D_a$. The constraints in~\eqref{eq:onesided} are linear in $D_a$, which gives the last claim.
 \end{IEEEproof}
 
@@ -402,7 +402,7 @@ step $2\eta_\lambda$.
 \label{sec:method:drift}
 The controller observes the online error stream $e_t = \mathbf{1}[\hat{y}_t \neq y_t]$ 
 through two independent adaptive windowing (ADWIN)
-detectors~\cite{bifet2007adwin}: a pre-warm detector $D_w$ and a confirmation 
+detectors~\cite{doi:10.1137/1.9781611972771.42}: a pre-warm detector $D_w$ and a confirmation 
 detector $D_c$, parameterized by significance levels $\delta_w$ and
 $\delta_c<\delta_w$ (in ADWIN a larger $\delta$ is more sensitive, so the pre-warm 
 detector fires first). Both are paired with a label-noise guard that excludes a
@@ -440,8 +440,8 @@ are reported in Table~\ref{tab:hparams}.
 
 \subsection{Datasets and Preprocessing}
 \label{sec:method:data}
-Table~\ref{tab:datasets} summarizes the two datasets. \folk{} (ACS Income, CA)~\cite{ding2021retiring} supplies a large natural cross-year shift between 2015
-(training) and 2017--2018 (prequential test); \adult{}~\cite{kohavi1996scaling} provides a controlled testbed on which we inject concept-drift perturbations of a
+Table~\ref{tab:datasets} summarizes the two datasets. \folk{} (ACS Income, CA)~\cite{ding2022retiringadultnewdatasets} supplies a large natural cross-year shift between 2015
+(training) and 2017--2018 (prequential test); \adult{}~\cite{adult_2} provides a controlled testbed on which we inject concept-drift perturbations of a
 known form on the test stream. Both datasets are processed through a shared tabular pipeline: numerical features are standardized using training-set means and
 standard deviations, and categorical variables are one-hot encoded. The encoder is fitted on the training split alone and reused unchanged for the test stream, so
 the streaming protocol remains free of test-time information leakage.
@@ -489,7 +489,7 @@ We compare \fado{} against three streaming baselines that span the
 accuracy/fairness/adaptivity design space:
 \begin{itemize}
 \item \textbf{\arf{}}~\cite{10.1007/s10994-017-5642-8}: the Adaptive Random Forest 
-from the River library~\cite{montiel2021river}, used as an accuracy-oriented
+from the River library~\cite{montiel2020rivermachinelearningstreaming}, used as an accuracy-oriented
 streaming reference that handles drift through per-tree warning and drift detectors 
 and background trees, but without any fairness mechanism;
 \item \textbf{\rfr{}}: a sharpness-aware reweighting variant that applies the \rfr{} 
@@ -580,7 +580,7 @@ $m_0$ & $30$ & -- & minimum samples before first activation \\
 \subsection{Evaluation Protocol}
 \label{sec:method:protocol}
 All methods are evaluated under a strict prequential, ${batch size=1}$, test-then-train 
-protocol~\cite{gama2013evaluating}: at each step the model emits
+protocol~\cite{10.1007/s10994-012-5320-9}: at each step the model emits
 $\hat{y}_t$, the prequential metrics are updated, and only then is the parameter update 
 performed using the just-observed $(y_t, a_t)$. We report mean and
 standard deviation over $30$ reporting seeds, disjoint from the 
@@ -628,40 +628,33 @@ Method & Acc.\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ \\
 \rfr{} & $0.779\pm 0.003$ & $0.075\pm 0.006$ & $0.059\pm 0.006$ \\
 \midrule
 \multicolumn{4}{@{}l}{{\adult{}, x\_permutations}} \\
-\fado{} & $\mathbf{0.838\pm 0.003}$ & $\mathbf{0.061\pm 0.004}\sig{***}$ & $\mathbf{0.053\pm 0.009}\sig{***}$ \\
-\ara{} & $0.837\pm 0.004$ & $0.083\pm 0.007$ & $0.073\pm 0.010$ \\
+\fado{} & $\mathbf{0.838\pm 0.003}$ & $\mathbf{0.060\pm 0.004}\sig{***}$ & $\mathbf{0.053\pm 0.009}\sig{***}$ \\
+\ara{} & $0.836\pm 0.004$ & $0.083\pm 0.007$ & $0.073\pm 0.010$ \\
 \arf{} & $0.826\pm 0.004$ & $0.090\pm 0.003$ & $0.110\pm 0.013$ \\
 \rfr{} & $0.837\pm 0.002$ & $0.100\pm 0.004$ & $0.091\pm 0.010$ \\
 \midrule
 \multicolumn{4}{@{}l}{{\adult{}, y\_swaps}} \\
-\fado{} & \tbd & \tbd & \tbd \\
-\ara{} & \tbd & \tbd & \tbd \\
-\arf{} & \tbd & \tbd & \tbd \\
-\rfr{} & \tbd & \tbd & \tbd \\
+\fado{} & $0.803\pm 0.051$ & $\mathbf{0.048\pm 0.004}\sig{***}$ & $\mathbf{0.048\pm 0.006}\sig{**}$ \\
+\ara{} & $\mathbf{0.805\pm 0.050}$ & $0.071\pm 0.010$ & $0.056\pm 0.010$ \\
+\arf{} & $0.786\pm 0.048$ & $0.084\pm 0.005$ & $0.096\pm 0.011$ \\
+\rfr{} & $0.798\pm 0.049$ & $0.089\pm 0.015$ & $0.084\pm 0.015$ \\
 \midrule
 \multicolumn{4}{@{}l}{{\adult{}, y\_prior\_skip}} \\
-\fado{} & \tbd & \tbd & \tbd \\
-\ara{} & \tbd & \tbd & \tbd \\
-\arf{} & \tbd & \tbd & \tbd \\
-\rfr{} & \tbd & \tbd & \tbd \\
+\fado{} & $0.855\pm 0.017$ & $\mathbf{0.059\pm 0.011}\sig{***}$ & $\mathbf{0.049\pm 0.008}\sig{**}$ \\
+\ara{} & $\mathbf{0.860\pm 0.015}$ & $0.083\pm 0.017$ & $0.054\pm 0.006$ \\
+\arf{} & $0.838\pm 0.020$ & $0.091\pm 0.022$ & $0.093\pm 0.019$ \\
+\rfr{} & $0.849\pm 0.016$ & $0.099\pm 0.021$ & $0.084\pm 0.012$ \\
 \midrule
 \multicolumn{4}{@{}l}{{\adult{}, x\_exceed\_skip}} \\
-\fado{} & \tbd & \tbd & \tbd \\
-\ara{} & \tbd & \tbd & \tbd \\
-\arf{} & \tbd & \tbd & \tbd \\
-\rfr{} & \tbd & \tbd & \tbd \\
-\midrule
-\multicolumn{4}{@{}l}{{\adult{}, mean of the four drifts}} \\
-\fado{} & \tbd & \tbd & \tbd \\
-\ara{} & \tbd & \tbd & \tbd \\
-\arf{} & \tbd & \tbd & \tbd \\
-\rfr{} & \tbd & \tbd & \tbd \\
+\fado{} & $0.854\pm 0.004$ & $\mathbf{0.057\pm 0.005}\sig{***}$ & $0.048\pm 0.007$ \\
+\ara{} & $\mathbf{0.857\pm 0.004}$ & $0.076\pm 0.007$ & $\mathbf{0.047\pm 0.006}$ \\
+\arf{} & $0.840\pm 0.005$ & $0.083\pm 0.006$ & $0.090\pm 0.013$ \\
+\rfr{} & $0.846\pm 0.005$ & $0.093\pm 0.005$ & $0.081\pm 0.010$ \\
 \bottomrule
 \end{tabular}
 \tnote{$^{\mathrm{a}}$Mean $\pm$ standard deviation over 30 seeds, over the whole stream. Bold marks the best mean per
 metric within each block. Superscripts on \fado{} mark a paired Wilcoxon test, Holm-corrected, significant against \emph{every} baseline in \fado{}'s favor
-($^{*}p<0.05$, $^{**}p<0.01$, $^{***}p<0.001$); columns with no marker have mixed per-baseline directions and are dissected in the text. \tbd{} marks runs still in
-progress.}
+($^{*}p<0.05$, $^{**}p<0.01$, $^{***}p<0.001$); columns with no marker have mixed per-baseline directions and are dissected in the text.}
 \end{table}
 We report the prequential results on the natural cross-year shift of \folk{} and on the 
 four injected drifts of \adult{} (Table~\ref{tab:results}), as mean

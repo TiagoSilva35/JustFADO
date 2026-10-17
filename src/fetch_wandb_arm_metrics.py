@@ -82,7 +82,8 @@ def summarise(raw, metrics):
 
 def main():
   parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
-  parser.add_argument('--sweep', required=True, help='W&B sweep id')
+  parser.add_argument('--sweep', required=True,
+                      help='W&B sweep id, or several separated by commas')
   parser.add_argument('--entity', default=os.environ.get(
       'WANDB_ENTITY', 'tjcsilva04-universidade-de-coimbra'))
   parser.add_argument('--project', default='fado-ablations')
@@ -94,7 +95,7 @@ def main():
   parser.add_argument('--out', default='files/experiments/wandb_arm_metrics')
   args = parser.parse_args()
 
-  out_dir = os.path.join(args.out, args.sweep)
+  out_dir = os.path.join(args.out, args.sweep.replace(',', '+'))
   os.makedirs(out_dir, exist_ok=True)
   raw = fetch(args.entity, args.project, args.sweep,
               cache_dir=os.path.join(out_dir, 'artifacts'), table_name=TABLE_NAME)
