@@ -1,15 +1,15 @@
 # Fdb version 4
-["bibtex paper"] 1792070190.61453 "paper.aux" "paper.bbl" "paper" 1792250723.23876 0
+["bibtex paper"] 1792530056.76135 "paper.aux" "paper.bbl" "paper" 1792530057.24919 0
   "./IEEEabrv.bib" 1792067617.86494 17394 5f68ac6bd88a4483a55f39046634d899 ""
   "./references.bib" 1792070010.82248 24400 29f5c71a8f8aa6f841f7ea80209d594c ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/bibtex/bst/ieeetran/IEEEtran.bst" 1772380719 57748 7c8250ecf02814ce6ddc0cdbb63df1dd ""
-  "paper.aux" 1792250723.05375 10158 50595f6d81ca1fb18246605a2a6cfd31 "pdflatex"
+  "paper.aux" 1792530057.08035 10158 3c802b104235ad7e69769a2f53511f99 "pdflatex"
   (generated)
   "paper.bbl"
   "paper.blg"
   (rewritten before read)
-["pdflatex"] 1792250722.77231 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper_icde/paper.tex" "paper.pdf" "paper" 1792250723.23887 0
-  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper_icde/paper.tex" 1792250722.57963 50073 2ceb57c6441cc6a6fc10639a607953b2 ""
+["pdflatex"] 1792530056.80259 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper_icde/paper.tex" "paper.pdf" "paper" 1792530057.24931 0
+  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper_icde/paper.tex" 1792530055.62931 53107 8f13032487296dc25488c274f8b102f2 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/base/8r.enc" 1772380719 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/fontname/texfonts.map" 1772380719 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/pdftex/updmap/pdftex.map" 1772380719 5541360 f183aac233c4cd1e5ef882fcbe8e7096 ""
@@ -124,9 +124,9 @@
   "IEEEtran.cls" 1792067617.86535 281957 5b2e4fa15b0f7eabb840ebf67df4c0f7 ""
   "figures/fado_architecture.pdf" 1792067617.86657 131228 5e78bdd942bfb8b06607733659096db9 ""
   "figures/fado_architecture.tex" 1792067617.86667 7139 e89d251b690b55cd5187ce440f4ad4bf ""
-  "paper.aux" 1792250723.05375 10158 50595f6d81ca1fb18246605a2a6cfd31 "pdflatex"
-  "paper.bbl" 1792070190.65717 10316 1b155dfc7f9217ad97fb98e654ab277f "bibtex paper"
-  "paper.tex" 1792250722.57963 50073 2ceb57c6441cc6a6fc10639a607953b2 ""
+  "paper.aux" 1792530057.08035 10158 3c802b104235ad7e69769a2f53511f99 "pdflatex"
+  "paper.bbl" 1792530056.80127 10316 1b155dfc7f9217ad97fb98e654ab277f "bibtex paper"
+  "paper.tex" 1792530055.62931 53107 8f13032487296dc25488c274f8b102f2 ""
   (generated)
   "paper.aux"
   "paper.log"

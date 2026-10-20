@@ -611,51 +611,53 @@ standard deviations, and Holm-corrected $p$-values are computed from.
 \section{Results and Discussion}
 \label{sec:results}
 
-\begin{table}[t]
+\begin{table*}[t]
 \centering
 \caption{Prequential Accuracy, Demographic Parity, and Equalized Odds Over 30 Seeds$^{\mathrm{a}}$}
 \label{tab:results}
 \setlength{\tabcolsep}{4pt}
 \footnotesize
-\begin{tabular}{@{}l ccc@{}}
+\begin{tabular}{@{}l ccccc@{}}
 \toprule
-Method & Acc.\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ \\
+Method & Acc.\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & F1$^{\mathrm{c}}$\,$\uparrow$ & \fado{} $\bar{\lambda}_t$$^{\mathrm{b}}$ \\
 \midrule
-\multicolumn{4}{@{}l}{{\folk{}, natural cross-year shift}} \\
-\fado{} & $0.805\pm 0.003$ & $\mathbf{0.042\pm 0.003}\sig{***}$ & $\mathbf{0.025\pm 0.003}\sig{***}$ \\
-\ara{} & $\mathbf{0.808\pm 0.003}$ & $0.057\pm 0.004$ & $0.036\pm 0.003$ \\
-\arf{} & $0.731\pm 0.004$ & $0.072\pm 0.012$ & $0.077\pm 0.016$ \\
-\rfr{} & $0.779\pm 0.003$ & $0.075\pm 0.006$ & $0.059\pm 0.006$ \\
+\multicolumn{6}{@{}l}{{\folk{}, natural cross-year shift}} \\
+\fado{} & $0.805\pm 0.003$ & $\mathbf{0.042\pm 0.003}\sig{***}$ & $\mathbf{0.025\pm 0.003}\sig{***}$ & $0.758\pm 0.005$ & $0.45\pm 0.06$ \\
+\ara{} & $\mathbf{0.808\pm 0.003}$ & $0.057\pm 0.004$ & $0.036\pm 0.003$ & $\mathbf{0.762\pm 0.005}$ &  \\
+\arf{} & $0.731\pm 0.004$ & $0.072\pm 0.012$ & $0.077\pm 0.016$ & $0.640\pm 0.009$ &  \\
+\rfr{} & $0.779\pm 0.003$ & $0.075\pm 0.006$ & $0.059\pm 0.006$ & $0.729\pm 0.005$ &  \\
 \midrule
-\multicolumn{4}{@{}l}{{\adult{}, x\_permutations}} \\
-\fado{} & $\mathbf{0.838\pm 0.003}$ & $\mathbf{0.060\pm 0.004}\sig{***}$ & $\mathbf{0.053\pm 0.009}\sig{***}$ \\
-\ara{} & $0.836\pm 0.004$ & $0.083\pm 0.007$ & $0.073\pm 0.010$ \\
-\arf{} & $0.826\pm 0.004$ & $0.090\pm 0.003$ & $0.110\pm 0.013$ \\
-\rfr{} & $0.837\pm 0.002$ & $0.100\pm 0.004$ & $0.091\pm 0.010$ \\
+\multicolumn{6}{@{}l}{{\adult{}, x\_permutations}} \\
+\fado{} & $\mathbf{0.838\pm 0.003}$ & $\mathbf{0.060\pm 0.004}\sig{***}$ & $\mathbf{0.053\pm 0.009}\sig{***}$ &  & $1.47\pm 0.47$ \\
+\ara{} & $0.836\pm 0.004$ & $0.083\pm 0.007$ & $0.073\pm 0.010$ &  &  \\
+\arf{} & $0.826\pm 0.004$ & $0.090\pm 0.003$ & $0.110\pm 0.013$ &  &  \\
+\rfr{} & $0.837\pm 0.002$ & $0.100\pm 0.004$ & $0.091\pm 0.010$ &  &  \\
 \midrule
-\multicolumn{4}{@{}l}{{\adult{}, y\_swaps}} \\
-\fado{} & $0.803\pm 0.051$ & $\mathbf{0.048\pm 0.004}\sig{***}$ & $\mathbf{0.048\pm 0.006}\sig{**}$ \\
-\ara{} & $\mathbf{0.805\pm 0.050}$ & $0.071\pm 0.010$ & $0.056\pm 0.010$ \\
-\arf{} & $0.786\pm 0.048$ & $0.084\pm 0.005$ & $0.096\pm 0.011$ \\
-\rfr{} & $0.798\pm 0.049$ & $0.089\pm 0.015$ & $0.084\pm 0.015$ \\
+\multicolumn{6}{@{}l}{{\adult{}, y\_swaps}} \\
+\fado{} & $0.803\pm 0.051$ & $\mathbf{0.048\pm 0.004}\sig{***}$ & $\mathbf{0.048\pm 0.006}\sig{**}$ &  & $0.94\pm 0.34$ \\
+\ara{} & $\mathbf{0.805\pm 0.050}$ & $0.071\pm 0.010$ & $0.056\pm 0.010$ &  &  \\
+\arf{} & $0.786\pm 0.048$ & $0.084\pm 0.005$ & $0.096\pm 0.011$ &  &  \\
+\rfr{} & $0.798\pm 0.049$ & $0.089\pm 0.015$ & $0.084\pm 0.015$ &  &  \\
 \midrule
-\multicolumn{4}{@{}l}{{\adult{}, y\_prior\_skip}} \\
-\fado{} & $0.855\pm 0.017$ & $\mathbf{0.059\pm 0.011}\sig{***}$ & $\mathbf{0.049\pm 0.008}\sig{**}$ \\
-\ara{} & $\mathbf{0.860\pm 0.015}$ & $0.083\pm 0.017$ & $0.054\pm 0.006$ \\
-\arf{} & $0.838\pm 0.020$ & $0.091\pm 0.022$ & $0.093\pm 0.019$ \\
-\rfr{} & $0.849\pm 0.016$ & $0.099\pm 0.021$ & $0.084\pm 0.012$ \\
+\multicolumn{6}{@{}l}{{\adult{}, y\_prior\_skip}} \\
+\fado{} & $0.855\pm 0.017$ & $\mathbf{0.059\pm 0.011}\sig{***}$ & $\mathbf{0.049\pm 0.008}\sig{**}$ & $0.676\pm 0.051$ & $1.41\pm 0.60$ \\
+\ara{} & $\mathbf{0.860\pm 0.015}$ & $0.083\pm 0.017$ & $0.054\pm 0.006$ & $\mathbf{0.695\pm 0.049}$ &  \\
+\arf{} & $0.838\pm 0.020$ & $0.091\pm 0.022$ & $0.093\pm 0.019$ & $0.631\pm 0.059$ &  \\
+\rfr{} & $0.849\pm 0.016$ & $0.099\pm 0.021$ & $0.084\pm 0.012$ & $0.671\pm 0.058$ &  \\
 \midrule
-\multicolumn{4}{@{}l}{{\adult{}, x\_exceed\_skip}} \\
-\fado{} & $0.854\pm 0.004$ & $\mathbf{0.057\pm 0.005}\sig{***}$ & $0.048\pm 0.007$ \\
-\ara{} & $\mathbf{0.857\pm 0.004}$ & $0.076\pm 0.007$ & $\mathbf{0.047\pm 0.006}$ \\
-\arf{} & $0.840\pm 0.005$ & $0.083\pm 0.006$ & $0.090\pm 0.013$ \\
-\rfr{} & $0.846\pm 0.005$ & $0.093\pm 0.005$ & $0.081\pm 0.010$ \\
+\multicolumn{6}{@{}l}{{\adult{}, x\_exceed\_skip}} \\
+\fado{} & $0.854\pm 0.004$ & $\mathbf{0.057\pm 0.005}\sig{***}$ & $0.048\pm 0.007$ & $0.633\pm 0.016$ & $1.08\pm 0.43$ \\
+\ara{} & $\mathbf{0.857\pm 0.004}$ & $0.076\pm 0.007$ & $\mathbf{0.047\pm 0.006}$ & $\mathbf{0.647\pm 0.016}$ &  \\
+\arf{} & $0.840\pm 0.005$ & $0.083\pm 0.006$ & $0.090\pm 0.013$ & $0.586\pm 0.022$ &  \\
+\rfr{} & $0.846\pm 0.005$ & $0.093\pm 0.005$ & $0.081\pm 0.010$ & $0.620\pm 0.016$ &  \\
 \bottomrule
 \end{tabular}
 \tnote{$^{\mathrm{a}}$Mean $\pm$ standard deviation over 30 seeds, over the whole stream. Bold marks the best mean per
 metric within each block. Superscripts on \fado{} mark a paired Wilcoxon test, Holm-corrected, significant against \emph{every} baseline in \fado{}'s favor
-($^{*}p<0.05$, $^{**}p<0.01$, $^{***}p<0.001$); columns with no marker have mixed per-baseline directions and are dissected in the text.}
-\end{table}
+($^{*}p<0.05$, $^{**}p<0.01$, $^{***}p<0.001$); columns with no marker have mixed per-baseline directions and are dissected in the text.
+$^{\mathrm{b}}$\fado{}'s fairness weight $\lambda_t$ averaged over the whole stream, mean $\pm$ standard deviation over seeds; $\lambda_t$ starts at, and never falls below, $\lambda_{\mathrm{base}}=0.1$.
+$^{\mathrm{c}}$F1 of the positive class (income $>$ \$50k), computed from the per-sample predictions over the whole stream (one confusion matrix per run). Bold and superscripts as in~a. Empty cells: not yet computed.}
+\end{table*}
 We report the prequential results on the natural cross-year shift of \folk{} and on the 
 four injected drifts of \adult{} (Table~\ref{tab:results}), as mean
 $\pm$ standard deviation over $30$ seeds, with the demographic-parity regularizer as the 

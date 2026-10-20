@@ -1,10 +1,9 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Homebrew) (preloaded format=pdflatex 2026.3.4)  17 OCT 2026 16:25
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Homebrew) (preloaded format=pdflatex 2026.3.4)  20 OCT 2026 22:20
 entering extended mode
  restricted \write18 enabled.
- file:line:error style messages enabled.
  %&-line parsing enabled.
-**/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper_icde/paper.tex
-(/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper_icde/paper.tex
+**paper.tex
+(./paper.tex
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
 (./IEEEtran.cls
@@ -18,15 +17,19 @@ Document Class: IEEEtran 2015/08/26 V1.8b by Michael Shell
 \@IEEEtrantmpcountB=\count276
 \@IEEEtrantmpcountC=\count277
 \@IEEEtrantmptoksA=\toks17
-LaTeX Font Info:    Trying to load font information for OT1+ptm on input line 503.
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/psnfss/ot1ptm.fd
+LaTeX Font Info:    Trying to load font information for OT1+ptm on input line 5
+03.
+
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/psnfss/ot1ptm
+.fd
 File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
 )
 -- Using 8.5in x 11in (letter) paper.
 -- Using PDF output.
 \@IEEEnormalsizeunitybaselineskip=\dimen151
 -- This is a 10 point document.
-LaTeX Encoding Info:    Redeclaring text command \textunderscore (encoding ?) on input line 937.
+LaTeX Encoding Info:    Redeclaring text command \textunderscore (encoding ?) o
+n input line 937.
 \CLASSINFOnormalsizebaselineskip=\dimen152
 \CLASSINFOnormalsizeunitybaselineskip=\dimen153
 \IEEEnormaljot=\dimen154
@@ -34,42 +37,52 @@ LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <5> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <5> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <7> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <8> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <9> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <10> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <11> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <11> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <12> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <17> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <17> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <20> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <20> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <24> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <24> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
+
 \IEEEquantizedlength=\dimen155
 \IEEEquantizedlengthdiff=\dimen156
 \IEEEquantizedtextheightdiff=\dimen157
@@ -106,25 +119,36 @@ LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <24> not available
 \@IEEEtranrubishbin=\box54
 )
 ** ATTENTION: Overriding command lockouts (line 11).
+
 (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/cite/cite.sty
 LaTeX Info: Redefining \cite on input line 302.
 LaTeX Info: Redefining \nocite on input line 332.
 Package: cite 2015/02/27  v 5.5
-) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amsmath.sty
+)
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amsma
+th.sty
 Package: amsmath 2025/07/09 v2.17z AMS math features
 \@mathmargin=\skip52
 
 For additional information on amsmath, use the `?' option.
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amstext.sty
+
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amste
+xt.sty
 Package: amstext 2024/11/17 v2.01 AMS text
- (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amsgen.sty
+
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amsge
+n.sty
 File: amsgen.sty 1999/11/30 v2.0 generic functions
 \@emptytoks=\toks18
 \ex@=\dimen172
-)) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amsbsy.sty
+))
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amsbs
+y.sty
 Package: amsbsy 1999/11/29 v1.2d Bold Symbols
 \pmbraise@=\dimen173
-) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amsopn.sty
+)
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amsop
+n.sty
 Package: amsopn 2022/04/08 v2.04 operator names
 )
 \inf@bad=\count290
@@ -174,40 +198,62 @@ LaTeX Info: Redefining \Relbar on input line 970.
 \mathdisplay@stack=\toks22
 LaTeX Info: Redefining \[ on input line 2950.
 LaTeX Info: Redefining \] on input line 2951.
-) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsfonts/amssymb.sty
+)
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsfonts/amss
+ymb.sty
 Package: amssymb 2013/01/14 v3.01 AMS font symbols
- (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsfonts/amsfonts.sty
+
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsfonts/amsf
+onts.sty
 Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
 \symAMSa=\mathgroup4
 \symAMSb=\mathgroup5
 LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
 LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
 (Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
-)) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/graphicx.sty
+))
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/grap
+hicx.sty
 Package: graphicx 2024/12/31 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
- (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/keyval.sty
+
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/keyv
+al.sty
 Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
 \KV@toks@=\toks23
-) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/graphics.sty
+)
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/grap
+hics.sty
 Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
- (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/trig.sty
+
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/trig
+.sty
 Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
-) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics-cfg/graphics.cfg
+)
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics-cfg/
+graphics.cfg
 File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
 )
 Package graphics Info: Driver file: pdftex.def on input line 106.
- (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics-def/pdftex.def
+
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics-def/
+pdftex.def
 File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
 ))
 \Gin@req@height=\dimen181
 \Gin@req@width=\dimen182
-) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/xcolor/xcolor.sty
+)
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/xcolor/xcolor
+.sty
 Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
- (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics-cfg/color.cfg
+
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics-cfg/
+color.cfg
 File: color.cfg 2016/01/02 v1.6 sample color configuration
 )
 Package xcolor Info: Driver file: pdftex.def on input line 274.
- (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/mathcolor.ltx)
+
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/math
+color.ltx)
 Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
 Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1353.
 Package xcolor Info: Model `RGB' extended on input line 1365.
@@ -217,7 +263,9 @@ Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1369.
 Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
 Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
 Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
-) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/booktabs/booktabs.sty
+)
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/booktabs/book
+tabs.sty
 Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \heavyrulewidth=\dimen183
 \lightrulewidth=\dimen184
@@ -236,13 +284,17 @@ Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
 \@thisruleclass=\count304
 \@lastruleclass=\count305
 \@thisrulewidth=\dimen195
-) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/multirow/multirow.sty
+)
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/multirow/mult
+irow.sty
 Package: multirow 2024/11/12 v2.9 Span multiple rows of a table
 \multirow@colwidth=\skip55
 \multirow@cntb=\count306
 \multirow@dima=\skip56
 \bigstrutjot=\dimen196
-) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/tools/array.sty
+)
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/tools/array.s
+ty
 Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
 \col@sep=\dimen197
 \ar@mcellbox=\box57
@@ -251,12 +303,22 @@ Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
 \extratabsurround=\skip57
 \backup@length=\skip58
 \ar@cellbox=\box58
-) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/algorithmicx/algpseudocode.sty
+)
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/algorithmicx/
+algpseudocode.sty
 Package: algpseudocode 
- (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/base/ifthen.sty
+
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/base/ifthen.s
+ty
 Package: ifthen 2024/03/16 v1.1e Standard LaTeX ifthen package (DPC)
-) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/algorithmicx/algorithmicx.sty
-Package: algorithmicx 2005/04/27 v1.2 Al@rem=\count308
+)
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/algorithmicx/
+algorithmicx.sty
+Package: algorithmicx 2005/04/27 v1.2 Algorithmicx
+
+Document Style algorithmicx 1.2 - a greatly improved `algorithmic' style
+\c@ALG@line=\count307
+\c@ALG@rem=\count308
 \c@ALG@nested=\count309
 \ALG@tlm=\skip59
 \ALG@thistlm=\skip60
@@ -371,301 +433,13 @@ File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 5
 04.
 
-(/orew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsfonts/umsb.fd
-File: umsb.fd 2013/01/14 v3.01 AMS symbols B
-)
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 1 undefined on input line 102.
-
-[1{/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/pdftex/updmap/pdftex.map}{/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/base/8r.enc}
-
-
-]
-
-LaTeX Warning: Citation `10.1145/3770855.3819070' on page 2 undefined on input line 113.
-
-
-LaTeX Warning: Citation `10.1007/s10994-017-5642-8' on page 2 undefined on input line 114.
-
-
-LaTeX Warning: Citation `jiang2023chasingfairnessdistributionshift' on page 2 undefined on input line 115.
-
-
-LaTeX Warning: Citation `Salazar_2026' on page 2 undefined on input line 131.
-
-
-LaTeX Warning: Citation `Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024' on page 2 undefined on input line 136.
-
-
-LaTeX Warning: Citation `zeng2024fairrrpreprocessinggroupfairness' on page 2 undefined on input line 139.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 2 undefined on input line 148.
-
-
-LaTeX Warning: Citation `10.1007/s10994-017-5642-8' on page 2 undefined on input line 154.
-
-
-LaTeX Warning: Citation `jiang2023chasingfairnessdistributionshift' on page 2 undefined on input line 158.
-
-
-LaTeX Warning: Citation `zafar2017fairnessconstraintsmechanismsfair' on page 2 undefined on input line 161.
-
-
-LaTeX Warning: Citation `agarwal2018reductionsapproachfairclassification' on page 2 undefined on input line 162.
-
-
-LaTeX Warning: Citation `cotter2018optimizationnondifferentiableconstraintsapplications' on page 2 undefined on input line 163.
-
-
-LaTeX Warning: Citation `mahdavi2012trading' on page 2 undefined on input line 164.
-
-
-LaTeX Warning: Citation `NIPS2016_6a9659fe' on page 2 undefined on input line 168.
-
-
-LaTeX Warning: Citation `Mishler_2021' on page 2 undefined on input line 169.
-
-
-LaTeX Warning: Citation `Small_2024' on page 2 undefined on input line 170.
-
-[2]
-
-LaTeX Warning: Citation `10.1007/s10994-017-5642-8' on page 3 undefined on input line 181.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 3 undefined on input line 183.
-
-
-LaTeX Warning: Citation `jiang2023chasingfairnessdistributionshift' on page 3 undefined on input line 187.
-
-
-LaTeX Warning: Citation `zafar2017fairnessconstraintsmechanismsfair' on page 3 undefined on input line 188.
-
-
-LaTeX Warning: Citation `cotter2018optimizationnondifferentiableconstraintsapplications' on page 3 undefined on input line 188.
-
-
-LaTeX Warning: Citation `agarwal2018reductionsapproachfairclassification' on page 3 undefined on input line 188.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 3 undefined on input line 204.
-
-
-LaTeX Warning: Citation `zhang2019fahtadaptivefairnessawaredecision' on page 3 undefined on input line 204.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 3 undefined on input line 210.
-
-
-Underfull \hbox (badness 1466) in paragraph at lines 210--215
-[]\OT1/ptm/m/n/10 We fo-cus on \OT1/ptm/m/it/10 group fair-ness\OT1/ptm/m/n/10 , which as-sesses whether
- []
-
-
-LaTeX Warning: Reference `sec:method:model' on page 3 undefined on input line 226.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 3 undefined on input line 235.
-
-
-LaTeX Warning: Reference `eq:ht' on page 3 undefined on input line 236.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 3 undefined on input line 240.
-
-
-LaTeX Warning: Reference `sec:method:model' on page 3 undefined on input line 241.
-
-
-LaTeX Warning: Reference `eq:cons' on page 3 undefined on input line 248.
-
-[3]
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 4 undefined on input line 255.
-
-
-LaTeX Warning: Reference `sec:method:model' on page 4 undefined on input line 256.
-
-
-LaTeX Warning: Reference `fig:drift-pipeline' on page 4 undefined on input line 256.
-
-
-LaTeX Warning: Reference `sec:method:lambda' on page 4 undefined on input line 257.
-
-
-LaTeX Warning: Reference `sec:method:drift' on page 4 undefined on input line 259.
-
-
-LaTeX Warning: Reference `sec:method:data' on page 4 undefined on input line 260.
-
-
-LaTeX Warning: Reference `sec:method:reproducibility' on page 4 undefined on input line 260.
-
-<figures/fado_architecture.pdf, id=26, 514.14986pt x 253.41978pt>
-File: figures/fado_architecture.pdf Graphic file (type pdf)
-<use figures/fado_architecture.pdf>
-Package pdftex.def Info: figures/fado_architecture.pdf  used on input line 265.
-(pdftex.def)             Requested size: 514.1486pt x 253.41916pt.
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 4 undefined on input line 269.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 4 undefined on input line 269.
-
-
-LaTeX Warning: Reference `fig:alg' on page 4 undefined on input line 273.
-
-
-LaTeX Warning: Reference `tab:hparams' on page 4 undefined on input line 278.
-
-
-LaTeX Warning: Reference `eq:ht' on page 4 undefined on input line 289.
-
-
-LaTeX Warning: Reference `sec:method:protocol' on page 4 undefined on input line 303.
-
-
-LaTeX Warning: Reference `sec:method:reproducibility' on page 4 undefined on input line 304.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 4 undefined on input line 308.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 4 undefined on input line 308.
-
-
-LaTeX Warning: Reference `eq:dp' on page 4 undefined on input line 311.
-
-
-LaTeX Warning: Reference `sec:method:lambda' on page 4 undefined on input line 323.
-
-
-LaTeX Warning: Reference `sec:method:drift' on page 4 undefined on input line 326.
-
-
-LaTeX Warning: Reference `eq:cons' on page 4 undefined on input line 330.
-
-
-LaTeX Warning: Reference `eq:reg' on page 4 undefined on input line 330.
-
-
-LaTeX Warning: Reference `eq:cons' on page 4 undefined on input line 349.
-
-
-LaTeX Warning: Citation `boyd2004convex' on page 4 undefined on input line 349.
-
-
-LaTeX Warning: Citation `mahdavi2012trading' on page 4 undefined on input line 355.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 4 undefined on input line 368.
-
-[4]
-
-LaTeX Warning: Reference `eq:onesided' on page 5 undefined on input line 381.
-
-
-LaTeX Warning: Citation `bbbe4e97-7833-3faa-820c-4c61f82fe965' on page 5 undefined on input line 385.
-
-
-LaTeX Warning: Reference `eq:onesided' on page 5 undefined on input line 386.
-
-
-LaTeX Warning: Reference `eq:dual' on page 5 undefined on input line 389.
-
-
-LaTeX Warning: Reference `eq:ht' on page 5 undefined on input line 391.
-
-
-LaTeX Warning: Reference `eq:onesided' on page 5 undefined on input line 397.
-
-
-LaTeX Warning: Citation `doi:10.1137/1.9781611972771.42' on page 5 undefined on input line 405.
-
-[5 <./figures/fado_architecture.pdf>]
-
-LaTeX Warning: Reference `sec:method:model' on page 6 undefined on input line 418.
-
-
-LaTeX Warning: Reference `sec:method:model' on page 6 undefined on input line 420.
-
-
-LaTeX Warning: Reference `sec:method:lambda' on page 6 undefined on input line 430.
-
-
-LaTeX Warning: Reference `eq:ht' on page 6 undefined on input line 435.
-
-
-LaTeX Warning: Reference `tab:hparams' on page 6 undefined on input line 439.
-
-
-LaTeX Warning: Reference `tab:datasets' on page 6 undefined on input line 443.
-
-
-LaTeX Warning: Citation `ding2022retiringadultnewdatasets' on page 6 undefined on input line 443.
-
-
-LaTeX Warning: Citation `adult_2' on page 6 undefined on input line 444.
-
-LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 459.
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/psnfss/ts1ptm.fd
-File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
-)
-
-LaTeX Warning: Citation `10.1145/3770855.3819070' on page 6 undefined on input line 474.
-
-
-LaTeX Warning: Citation `10.1007/s10994-017-5642-8' on page 6 undefined on input line 491.
-
-
-LaTeX Warning: Citation `montiel2020rivermachinelearningstreaming' on page 6 undefined on input line 492.
-
-
-LaTeX Warning: Citation `jiang2023chasingfairnessdistributionshift' on page 6 undefined on input line 496.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 6 undefined on input line 499.
-
-LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 504.
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/psnfss/ot1pcr.fd
+(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/psnfss/ot1pcr
+.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
-)
-
-LaTeX Warning: Reference `tab:hparams' on page 6 undefined on input line 510.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 6 undefined on input line 512.
-
-[6]
-
-LaTeX Warning: Reference `rem:dyn' on page 7 undefined on input line 519.
-
-
-LaTeX Warning: Citation `chowdhury2024enhancing' on page 7 undefined on input line 523.
-
-
-LaTeX Warning: Citation `10.1007/s10994-012-5320-9' on page 7 undefined on input line 583.
-
-
+) [6]
 Underfull \hbox (badness 1533) in paragraph at lines 582--591
 []\OT1/ptm/m/n/10 All meth-ods are eval-u-ated un-der a strict pre-quen-tial,
  []
-
-
-LaTeX Warning: Citation `demsar2006statistical' on page 7 undefined on input line 596.
-
-
-LaTeX Warning: Reference `sec:method:baselines' on page 7 undefined on input line 597.
-
-
-LaTeX Warning: Reference `sec:method:reproducibility' on page 7 undefined on input line 598.
-
-
-LaTeX Warning: Reference `tab:results' on page 7 undefined on input line 604.
-
-
-LaTeX Warning: Reference `tab:results' on page 7 undefined on input line 660.
 
 (./paper.bbl
 Underfull \vbox (badness 1102) has occurred while \output is active []
@@ -676,7 +450,7 @@ Underfull \hbox (badness 2285) in paragraph at lines 82--83
  []
 
 
-Underfull \vbox (badness 1270) has occurred while \output is active []
+Underfull \vbox (badness 1400) has occurred while \output is active []
 
  [8])
 
@@ -697,24 +471,56 @@ Before submitting the final camera ready copy, remember to:
 LaTeX2e <2025-11-01>
 L3 programming layer <2026-01-19>
  ***********
-
-
-LaTeX Warning: There were undefined references.
-
-
-LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
-
  ) 
 Here is how much of TeX's memory you used:
  5047 strings out of 467525
- 80846 string characters out of 5408440
- 521626 words of memory out of 5000000
- 33886 multiletter control sequences out of 15000+600000
+ 80726 string characters out of 5408440
+ 520195 words of memory out of 5000000
+ 33887 multiletter control sequences out of 15000+600000
  673208 words of font info for 126 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 57i,11n,65p,704b,366s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/newtx/NewTXMI5.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/newtx/NewTXMI7.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx8.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmex10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex8.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi8.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy5.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/newtx/txexs.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/newtx/txmiaX.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/newtx/txsym.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/newtx/txsys.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/utmbi8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/utmri8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/newtx/ztmb.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/newtx/ztmr.pfb>
-Output written on paper.pdf (9 pages, 450490 bytes).
+ 57i,11n,65p,648b,330s stack positions out of 10000i,1000n,20000p,200000b,200000s
+</opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/ne
+wtx/NewTXMI5.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/
+type1/public/newtx/NewTXMI7.pfb></opt/homebrew/Cellar/texlive/20260301/share/te
+xmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></opt/homebrew/Cellar/texliv
+e/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx8.pfb></opt/home
+brew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cm
+ex10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/pu
+blic/amsfonts/cmextra/cmex8.pfb></opt/homebrew/Cellar/texlive/20260301/share/te
+xmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></opt/homebrew/Cellar/texliv
+e/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></opt/home
+brew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cm
+mi6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/pub
+lic/amsfonts/cm/cmmi7.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-di
+st/fonts/type1/public/amsfonts/cm/cmmi8.pfb></opt/homebrew/Cellar/texlive/20260
+301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></opt/homebrew/Ce
+llar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb>
+</opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsf
+onts/cm/cmr6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/
+type1/public/amsfonts/cm/cmr7.pfb></opt/homebrew/Cellar/texlive/20260301/share/
+texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></opt/homebrew/Cellar/texliv
+e/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></opt/hom
+ebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/c
+msy5.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/pu
+blic/amsfonts/cm/cmsy6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-d
+ist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></opt/homebrew/Cellar/texlive/2026
+0301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></opt/homebrew/C
+ellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/symbols/msb
+m10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/pub
+lic/newtx/txexs.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fon
+ts/type1/public/newtx/txmiaX.pfb></opt/homebrew/Cellar/texlive/20260301/share/t
+exmf-dist/fonts/type1/public/newtx/txsym.pfb></opt/homebrew/Cellar/texlive/2026
+0301/share/texmf-dist/fonts/type1/public/newtx/txsys.pfb></opt/homebrew/Cellar/
+texlive/20260301/share/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></opt/home
+brew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/utmb8a.pfb>
+</opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/u
+tmbi8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/
+urw/times/utmr8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fo
+nts/type1/urw/times/utmri8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/te
+xmf-dist/fonts/type1/public/newtx/ztmb.pfb></opt/homebrew/Cellar/texlive/202603
+01/share/texmf-dist/fonts/type1/public/newtx/ztmr.pfb>
+Output written on paper.pdf (9 pages, 450917 bytes).
 PDF statistics:
  219 PDF objects out of 1000 (max. 8388607)
  139 compressed objects within 2 object streams

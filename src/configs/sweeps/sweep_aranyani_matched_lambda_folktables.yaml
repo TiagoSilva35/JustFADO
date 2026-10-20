@@ -1,0 +1,40 @@
+# Aranyani with a stronger, fixed lambda on Folktables: is FADO still fairer when
+# the baseline gets at least FADO's average fairness weight?
+#
+# lambda_const = 0.5 >= FADO's whole-stream mean lambda on Folktables (0.45,
+# Table III; default lambda_base = 0.1). Aranyani also pre-trains with this lambda.
+#
+# Same 10% subsample and 30 reporting seeds as the paper runs (sweep jo5dqqhy):
+# each run pairs by seed with the existing FADO run.
+# 30 runs, Aranyani only (~20 min each).
+program: src/main.py
+project: fado-ablations
+method: grid
+name: aranyani-matched-lambda-folktables
+metric:
+  name: aranyani/stream_final_dp
+  goal: minimize
+parameters:
+  pipeline_model:
+    value: 'aranyani'
+  pipeline_dataset:
+    value: folktables
+  folktables_subsample_fraction:
+    value: 0.1
+  lambda_const:
+    value: 0.5
+  seeds:
+    values: ['66', '77', '88', '99', '101', '111', '122', '133', '144', '155', '166', '177', '188', '199', '202', '213', '224', '235', '246', '257', '268', '279', '291', '303', '314', '325', '336', '347', '358', '369']
+  deterministic:
+    value: true
+  wandb_log:
+    value: true
+  wandb_project:
+    value: fado-ablations
+command:
+  - ${env}
+  - PYTHONHASHSEED=0
+  - ${interpreter}
+  - -m
+  - src.main
+  - ${args}
