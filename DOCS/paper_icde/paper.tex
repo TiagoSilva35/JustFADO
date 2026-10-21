@@ -628,16 +628,16 @@ Method & Acc.\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & F1$^{\mathrm{c
 \rfr{} & $0.779\pm 0.003$ & $0.075\pm 0.006$ & $0.059\pm 0.006$ & $0.729\pm 0.005$ &  \\
 \midrule
 \multicolumn{6}{@{}l}{{\adult{}, x\_permutations}} \\
-\fado{} & $\mathbf{0.838\pm 0.003}$ & $\mathbf{0.060\pm 0.004}\sig{***}$ & $\mathbf{0.053\pm 0.009}\sig{***}$ &  & $1.47\pm 0.47$ \\
-\ara{} & $0.836\pm 0.004$ & $0.083\pm 0.007$ & $0.073\pm 0.010$ &  &  \\
-\arf{} & $0.826\pm 0.004$ & $0.090\pm 0.003$ & $0.110\pm 0.013$ &  &  \\
-\rfr{} & $0.837\pm 0.002$ & $0.100\pm 0.004$ & $0.091\pm 0.010$ &  &  \\
+\fado{} & $\mathbf{0.838\pm 0.003}$ & $\mathbf{0.060\pm 0.004}\sig{***}$ & $\mathbf{0.053\pm 0.009}\sig{***}$ & $0.612\pm 0.010$ & $1.47\pm 0.47$ \\
+\ara{} & $0.836\pm 0.004$ & $0.083\pm 0.007$ & $0.073\pm 0.010$ & $0.609\pm 0.019$ &  \\
+\arf{} & $0.826\pm 0.004$ & $0.090\pm 0.003$ & $0.110\pm 0.013$ & $0.571\pm 0.011$ &  \\
+\rfr{} & $0.837\pm 0.002$ & $0.100\pm 0.004$ & $0.091\pm 0.010$ & $\mathbf{0.626\pm 0.006}$ &  \\
 \midrule
 \multicolumn{6}{@{}l}{{\adult{}, y\_swaps}} \\
-\fado{} & $0.803\pm 0.051$ & $\mathbf{0.048\pm 0.004}\sig{***}$ & $\mathbf{0.048\pm 0.006}\sig{**}$ &  & $0.94\pm 0.34$ \\
-\ara{} & $\mathbf{0.805\pm 0.050}$ & $0.071\pm 0.010$ & $0.056\pm 0.010$ &  &  \\
-\arf{} & $0.786\pm 0.048$ & $0.084\pm 0.005$ & $0.096\pm 0.011$ &  &  \\
-\rfr{} & $0.798\pm 0.049$ & $0.089\pm 0.015$ & $0.084\pm 0.015$ &  &  \\
+\fado{} & $0.803\pm 0.051$ & $\mathbf{0.048\pm 0.004}\sig{***}$ & $\mathbf{0.048\pm 0.006}\sig{**}$ & $0.645\pm 0.058$ & $0.94\pm 0.34$ \\
+\ara{} & $\mathbf{0.805\pm 0.050}$ & $0.071\pm 0.010$ & $0.056\pm 0.010$ & $\mathbf{0.647\pm 0.047}$ &  \\
+\arf{} & $0.786\pm 0.048$ & $0.084\pm 0.005$ & $0.096\pm 0.011$ & $0.616\pm 0.063$ &  \\
+\rfr{} & $0.798\pm 0.049$ & $0.089\pm 0.015$ & $0.084\pm 0.015$ & $0.635\pm 0.063$ &  \\
 \midrule
 \multicolumn{6}{@{}l}{{\adult{}, y\_prior\_skip}} \\
 \fado{} & $0.855\pm 0.017$ & $\mathbf{0.059\pm 0.011}\sig{***}$ & $\mathbf{0.049\pm 0.008}\sig{**}$ & $0.676\pm 0.051$ & $1.41\pm 0.60$ \\
@@ -656,7 +656,7 @@ Method & Acc.\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & F1$^{\mathrm{c
 metric within each block. Superscripts on \fado{} mark a paired Wilcoxon test, Holm-corrected, significant against \emph{every} baseline in \fado{}'s favor
 ($^{*}p<0.05$, $^{**}p<0.01$, $^{***}p<0.001$); columns with no marker have mixed per-baseline directions and are dissected in the text.
 $^{\mathrm{b}}$\fado{}'s fairness weight $\lambda_t$ averaged over the whole stream, mean $\pm$ standard deviation over seeds; $\lambda_t$ starts at, and never falls below, $\lambda_{\mathrm{base}}=0.1$.
-$^{\mathrm{c}}$F1 of the positive class (income $>$ \$50k), computed from the per-sample predictions over the whole stream (one confusion matrix per run). Bold and superscripts as in~a. Empty cells: not yet computed.}
+$^{\mathrm{c}}$F1 of the positive class (income $>$ \$50k), computed from the per-sample predictions over the whole stream (one confusion matrix per run). Bold and superscripts as in~a.}
 \end{table*}
 We report the prequential results on the natural cross-year shift of \folk{} and on the 
 four injected drifts of \adult{} (Table~\ref{tab:results}), as mean

@@ -7,7 +7,8 @@
 \providecommand{\BIBentrySTDinterwordspacing}{\spaceskip=0pt\relax}
 \providecommand{\BIBentryALTinterwordstretchfactor}{4}
 \providecommand{\BIBentryALTinterwordspacing}{\spaceskip=\fontdimen2\font plus
-\BIBentryALTinterwordstretchfactor\fontdimen3\font minus \fontdimen4\font\relax}
+\BIBentryALTinterwordstretchfactor\fontdimen3\font minus
+  \fontdimen4\font\relax}
 \providecommand{\BIBforeignlanguage}[2]{{%
 \expandafter\ifx\csname l@#1\endcsname\relax
 \typeout{** WARNING: IEEEtran.bst: No hyphenation pattern has been}%
@@ -22,135 +23,215 @@
 
 \bibitem{chowdhury2024enhancing}
 \BIBentryALTinterwordspacing
-S.~B.~R. Chowdhury \emph{et~al.}, ``Enhancing group fairness in online settings using oblique decision forests,'' in \emph{The Twelfth International Conference on Learning Representations}, 2024. [Online]. Available: \url{https://openreview.net/forum?id=E1NxN5QMOE}
+S.~B.~R. Chowdhury \emph{et~al.}, ``Enhancing group fairness in online settings
+  using oblique decision forests,'' in \emph{The Twelfth International
+  Conference on Learning Representations}, 2024. [Online]. Available:
+  \url{https://openreview.net/forum?id=E1NxN5QMOE}
 \BIBentrySTDinterwordspacing
 
 \bibitem{8474918}
-K.~Shailaja, B.~Seetharamulu, and M.~A. Jabbar, ``Machine learning in healthcare: A review,'' in \emph{Proc. 2nd Int. Conf. Electron., Commun. Aerosp. Technol. (ICECA)}, 2018, pp. 910--914.
+K.~Shailaja, B.~Seetharamulu, and M.~A. Jabbar, ``Machine learning in
+  healthcare: A review,'' in \emph{Proc. 2nd Int. Conf. Electron., Commun.
+  Aerosp. Technol. (ICECA)}, 2018, pp. 910--914.
 
 \bibitem{10467221}
-N.~T. Singh, M.~Mehra, I.~Verma, N.~Singh, D.~Gandhi, and M.~A. Alladin, ``Advancing crime analysis and prediction: A comprehensive exploration of machine learning applications in criminal justice,'' in \emph{Proc. 2nd Int. Conf. Intell. Data Commun. Technol. Internet Things (IDCIoT)}, 2024, pp. 1339--1343.
+N.~T. Singh, M.~Mehra, I.~Verma, N.~Singh, D.~Gandhi, and M.~A. Alladin,
+  ``Advancing crime analysis and prediction: A comprehensive exploration of
+  machine learning applications in criminal justice,'' in \emph{Proc. 2nd Int.
+  Conf. Intell. Data Commun. Technol. Internet Things (IDCIoT)}, 2024, pp.
+  1339--1343.
 
 \bibitem{10.1145/3351095.3372828}
-M.~Raghavan, S.~Barocas, J.~Kleinberg, and K.~Levy, ``Mitigating bias in algorithmic hiring: Evaluating claims and practices,'' in \emph{Proc. Conf. Fairness, Accountability, Transparency (FAT*)}, 2020, pp. 469--481.
+M.~Raghavan, S.~Barocas, J.~Kleinberg, and K.~Levy, ``Mitigating bias in
+  algorithmic hiring: Evaluating claims and practices,'' in \emph{Proc. Conf.
+  Fairness, Accountability, Transparency (FAT*)}, 2020, pp. 469--481.
 
 \bibitem{10.1145/3457607}
-N.~Mehrabi, F.~Morstatter, N.~Saxena, K.~Lerman, and A.~Galstyan, ``A survey on bias and fairness in machine learning,'' \emph{ACM Comput. Surv.}, vol.~54, no.~6, pp. 115:1--115:35, Jul. 2021.
+N.~Mehrabi, F.~Morstatter, N.~Saxena, K.~Lerman, and A.~Galstyan, ``A survey on
+  bias and fairness in machine learning,'' \emph{ACM Comput. Surv.}, vol.~54,
+  no.~6, pp. 115:1--115:35, Jul. 2021.
 
 \bibitem{10.1145/2090236.2090255}
-C.~Dwork, M.~Hardt, T.~Pitassi, O.~Reingold, and R.~Zemel, ``Fairness through awareness,'' in \emph{Proc. 3rd Innov. Theor. Comput. Sci. Conf. (ITCS)}, 2012, pp. 214--226.
+C.~Dwork, M.~Hardt, T.~Pitassi, O.~Reingold, and R.~Zemel, ``Fairness through
+  awareness,'' in \emph{Proc. 3rd Innov. Theor. Comput. Sci. Conf. (ITCS)},
+  2012, pp. 214--226.
 
 \bibitem{NIPS2016_6a9659fe}
-M.~Hardt, E.~Price, and N.~Srebro, ``Equality of opportunity in supervised learning,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)}, vol.~29, 2016.
+M.~Hardt, E.~Price, and N.~Srebro, ``Equality of opportunity in supervised
+  learning,'' in \emph{Proc. Adv. Neural Inf. Process. Syst. (NeurIPS)},
+  vol.~29, 2016.
 
 \bibitem{DBLP:journals/corr/WebbHCNP15}
 \BIBentryALTinterwordspacing
-G.~I. Webb \emph{et~al.}, ``Characterizing concept drift,'' \emph{CoRR}, vol. abs/1511.03816, 2015. [Online]. Available: \url{http://arxiv.org/abs/1511.03816}
+G.~I. Webb \emph{et~al.}, ``Characterizing concept drift,'' \emph{CoRR}, vol.
+  abs/1511.03816, 2015. [Online]. Available:
+  \url{http://arxiv.org/abs/1511.03816}
 \BIBentrySTDinterwordspacing
 
 \bibitem{10.1007/s10994-017-5642-8}
 \BIBentryALTinterwordspacing
-H.~M. Gomes, A.~Bifet \emph{et~al.}, ``Adaptive random forests for evolving data stream classification,'' \emph{Mach. Learn.}, vol. 106, no. 9–10, p. 1469–1495, Oct. 2017. [Online]. Available: \url{https://doi.org/10.1007/s10994-017-5642-8}
+H.~M. Gomes, A.~Bifet \emph{et~al.}, ``Adaptive random forests for evolving
+  data stream classification,'' \emph{Mach. Learn.}, vol. 106, no. 9–10, p.
+  1469–1495, Oct. 2017. [Online]. Available:
+  \url{https://doi.org/10.1007/s10994-017-5642-8}
 \BIBentrySTDinterwordspacing
 
 \bibitem{KLAIBER20231261}
 \BIBentryALTinterwordspacing
-M.~Klaiber, M.~Rössle, and A.~Theissler, ``The 10 most popular concept drift algorithms: An overview and optimization potentials,'' \emph{Procedia Computer Science}, vol. 225, pp. 1261--1271, 2023, 27th International Conference on Knowledge Based and Intelligent Information and Engineering Sytems (KES 2023). [Online]. Available: \url{https://www.sciencedirect.com/science/article/pii/S1877050923012723}
+M.~Klaiber, M.~Rössle, and A.~Theissler, ``The 10 most popular concept drift
+  algorithms: An overview and optimization potentials,'' \emph{Procedia
+  Computer Science}, vol. 225, pp. 1261--1271, 2023, 27th International
+  Conference on Knowledge Based and Intelligent Information and Engineering
+  Sytems (KES 2023). [Online]. Available:
+  \url{https://www.sciencedirect.com/science/article/pii/S1877050923012723}
 \BIBentrySTDinterwordspacing
 
 \bibitem{deho2024faircomparativeevaluationfairness}
 \BIBentryALTinterwordspacing
-O.~B. Deho, M.~Bewong, S.~Kwashie, J.~Li, J.~Liu, L.~Liu, and S.~Joksimovic, ``Is it still fair? a comparative evaluation of fairness algorithms through the lens of covariate drift,'' 2024. [Online]. Available: \url{https://arxiv.org/abs/2409.12428}
+O.~B. Deho, M.~Bewong, S.~Kwashie, J.~Li, J.~Liu, L.~Liu, and S.~Joksimovic,
+  ``Is it still fair? a comparative evaluation of fairness algorithms through
+  the lens of covariate drift,'' 2024. [Online]. Available:
+  \url{https://arxiv.org/abs/2409.12428}
 \BIBentrySTDinterwordspacing
 
 \bibitem{10.1145/3770855.3819070}
 \BIBentryALTinterwordspacing
-V.~Cerqueira, H.~M. Gomes, M.~Heyden, B.~Pfahringer, and A.~Bifet, ``A framework for evaluating and benchmarking concept drift detection methods,'' in \emph{Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.2}, ser. KDD '26.\hskip 1em plus 0.5em minus 0.4em\relax New York, NY, USA: Association for Computing Machinery, 2026, p. 8671–8682. [Online]. Available: \url{https://doi.org/10.1145/3770855.3819070}
+V.~Cerqueira, H.~M. Gomes, M.~Heyden, B.~Pfahringer, and A.~Bifet, ``A
+  framework for evaluating and benchmarking concept drift detection methods,''
+  in \emph{Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery
+  and Data Mining V.2}, ser. KDD '26.\hskip 1em plus 0.5em minus 0.4em\relax
+  New York, NY, USA: Association for Computing Machinery, 2026, p. 8671–8682.
+  [Online]. Available: \url{https://doi.org/10.1145/3770855.3819070}
 \BIBentrySTDinterwordspacing
 
 \bibitem{jiang2023chasingfairnessdistributionshift}
 \BIBentryALTinterwordspacing
-Z.~Jiang \emph{et~al.}, ``Chasing fairness under distribution shift: A model weight perturbation approach,'' 2023. [Online]. Available: \url{https://arxiv.org/abs/2303.03300}
+Z.~Jiang \emph{et~al.}, ``Chasing fairness under distribution shift: A model
+  weight perturbation approach,'' 2023. [Online]. Available:
+  \url{https://arxiv.org/abs/2303.03300}
 \BIBentrySTDinterwordspacing
 
 \bibitem{Salazar_2026}
 \BIBentryALTinterwordspacing
-T.~Salazar, J.~Gama, H.~Araújo, and P.~H. Abreu, ``Unveiling group-specific distributed concept drift: A fairness imperative in federated learning,'' \emph{IEEE Transactions on Neural Networks and Learning Systems}, vol.~37, no.~1, p. 161–175, Jan. 2026. [Online]. Available: \url{http://dx.doi.org/10.1109/TNNLS.2025.3601834}
+T.~Salazar, J.~Gama, H.~Araújo, and P.~H. Abreu, ``Unveiling group-specific
+  distributed concept drift: A fairness imperative in federated learning,''
+  \emph{IEEE Transactions on Neural Networks and Learning Systems}, vol.~37,
+  no.~1, p. 161–175, Jan. 2026. [Online]. Available:
+  \url{http://dx.doi.org/10.1109/TNNLS.2025.3601834}
 \BIBentrySTDinterwordspacing
 
 \bibitem{Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024}
-Z.~Xiong, N.~Dalmasso, A.~Mishler, V.~K. Potluru, T.~Balch, and M.~Veloso, ``{FairWASP}: Fast and optimal fair {Wasserstein} pre-processing,'' in \emph{Proc. AAAI Conf. Artif. Intell.}, vol.~38, no.~14, Mar. 2024, pp. 16\,120--16\,128.
+Z.~Xiong, N.~Dalmasso, A.~Mishler, V.~K. Potluru, T.~Balch, and M.~Veloso,
+  ``{FairWASP}: Fast and optimal fair {Wasserstein} pre-processing,'' in
+  \emph{Proc. AAAI Conf. Artif. Intell.}, vol.~38, no.~14, Mar. 2024, pp.
+  16\,120--16\,128.
 
 \bibitem{zeng2024fairrrpreprocessinggroupfairness}
 \BIBentryALTinterwordspacing
-X.~Zeng, J.~Ward, and G.~Cheng, ``{FairRR}: Pre-processing for group fairness through randomized response,'' arXiv:2403.07780, 2024. [Online]. Available: \url{https://arxiv.org/abs/2403.07780}
+X.~Zeng, J.~Ward, and G.~Cheng, ``{FairRR}: Pre-processing for group fairness
+  through randomized response,'' arXiv:2403.07780, 2024. [Online]. Available:
+  \url{https://arxiv.org/abs/2403.07780}
 \BIBentrySTDinterwordspacing
 
 \bibitem{zafar2017fairnessconstraintsmechanismsfair}
 \BIBentryALTinterwordspacing
-M.~B. Zafar, I.~Valera, M.~G. Rodriguez, and K.~P. Gummadi, ``Fairness constraints: Mechanisms for fair classification,'' 2017. [Online]. Available: \url{https://arxiv.org/abs/1507.05259}
+M.~B. Zafar, I.~Valera, M.~G. Rodriguez, and K.~P. Gummadi, ``Fairness
+  constraints: Mechanisms for fair classification,'' 2017. [Online]. Available:
+  \url{https://arxiv.org/abs/1507.05259}
 \BIBentrySTDinterwordspacing
 
 \bibitem{agarwal2018reductionsapproachfairclassification}
 \BIBentryALTinterwordspacing
-A.~Agarwal, A.~Beygelzimer, M.~Dudík, J.~Langford, and H.~Wallach, ``A reductions approach to fair classification,'' 2018. [Online]. Available: \url{https://arxiv.org/abs/1803.02453}
+A.~Agarwal, A.~Beygelzimer, M.~Dudík, J.~Langford, and H.~Wallach, ``A
+  reductions approach to fair classification,'' 2018. [Online]. Available:
+  \url{https://arxiv.org/abs/1803.02453}
 \BIBentrySTDinterwordspacing
 
 \bibitem{cotter2018optimizationnondifferentiableconstraintsapplications}
 \BIBentryALTinterwordspacing
-A.~Cotter, H.~Jiang, S.~Wang, T.~Narayan, M.~Gupta, S.~You, and K.~Sridharan, ``Optimization with non-differentiable constraints with applications to fairness, recall, churn, and other goals,'' 2018. [Online]. Available: \url{https://arxiv.org/abs/1809.04198}
+A.~Cotter, H.~Jiang, S.~Wang, T.~Narayan, M.~Gupta, S.~You, and K.~Sridharan,
+  ``Optimization with non-differentiable constraints with applications to
+  fairness, recall, churn, and other goals,'' 2018. [Online]. Available:
+  \url{https://arxiv.org/abs/1809.04198}
 \BIBentrySTDinterwordspacing
 
 \bibitem{mahdavi2012trading}
-M.~Mahdavi, R.~Jin, and T.~Yang, ``Trading regret for efficiency: Online convex optimization with long term constraints,'' \emph{J. Mach. Learn. Res.}, vol.~13, pp. 2503--2528, 2012.
+M.~Mahdavi, R.~Jin, and T.~Yang, ``Trading regret for efficiency: Online convex
+  optimization with long term constraints,'' \emph{J. Mach. Learn. Res.},
+  vol.~13, pp. 2503--2528, 2012.
 
 \bibitem{Mishler_2021}
 \BIBentryALTinterwordspacing
-A.~Mishler, E.~H. Kennedy, and A.~Chouldechova, ``Fairness in risk assessment instruments: Post-processing to achieve counterfactual equalized odds,'' in \emph{Proc. ACM Conf. Fairness, Accountability, Transparency (FAccT)}, Mar. 2021, pp. 386--400. [Online]. Available: \url{http://dx.doi.org/10.1145/3442188.3445902}
+A.~Mishler, E.~H. Kennedy, and A.~Chouldechova, ``Fairness in risk assessment
+  instruments: Post-processing to achieve counterfactual equalized odds,'' in
+  \emph{Proc. ACM Conf. Fairness, Accountability, Transparency (FAccT)}, Mar.
+  2021, pp. 386--400. [Online]. Available:
+  \url{http://dx.doi.org/10.1145/3442188.3445902}
 \BIBentrySTDinterwordspacing
 
 \bibitem{Small_2024}
 \BIBentryALTinterwordspacing
-E.~Small, K.~Sokol, D.~Manning, F.~D. Salim, and J.~Chan, ``Equalised odds is not equal individual odds: Post-processing for group and individual fairness,'' in \emph{Proc. ACM Conf. Fairness, Accountability, Transparency (FAccT)}, Jun. 2024, pp. 1559--1578. [Online]. Available: \url{http://dx.doi.org/10.1145/3630106.3658989}
+E.~Small, K.~Sokol, D.~Manning, F.~D. Salim, and J.~Chan, ``Equalised odds is
+  not equal individual odds: Post-processing for group and individual
+  fairness,'' in \emph{Proc. ACM Conf. Fairness, Accountability, Transparency
+  (FAccT)}, Jun. 2024, pp. 1559--1578. [Online]. Available:
+  \url{http://dx.doi.org/10.1145/3630106.3658989}
 \BIBentrySTDinterwordspacing
 
 \bibitem{zhang2019fahtadaptivefairnessawaredecision}
 \BIBentryALTinterwordspacing
-W.~Zhang and E.~Ntoutsi, ``Faht: An adaptive fairness-aware decision tree classifier,'' 2019. [Online]. Available: \url{https://arxiv.org/abs/1907.07237}
+W.~Zhang and E.~Ntoutsi, ``Faht: An adaptive fairness-aware decision tree
+  classifier,'' 2019. [Online]. Available:
+  \url{https://arxiv.org/abs/1907.07237}
 \BIBentrySTDinterwordspacing
 
 \bibitem{boyd2004convex}
-S.~Boyd and L.~Vandenberghe, \emph{Convex Optimization}.\hskip 1em plus 0.5em minus 0.4em\relax Cambridge, U.K.: Cambridge Univ. Press, 2004.
+S.~Boyd and L.~Vandenberghe, \emph{Convex Optimization}.\hskip 1em plus 0.5em
+  minus 0.4em\relax Cambridge, U.K.: Cambridge Univ. Press, 2004.
 
 \bibitem{bbbe4e97-7833-3faa-820c-4c61f82fe965}
 \BIBentryALTinterwordspacing
-D.~G. Horvitz and D.~J. Thompson, ``A generalization of sampling without replacement from a finite universe,'' \emph{Journal of the American Statistical Association}, vol.~47, no. 260, pp. 663--685, 1952. [Online]. Available: \url{http://www.jstor.org/stable/2280784}
+D.~G. Horvitz and D.~J. Thompson, ``A generalization of sampling without
+  replacement from a finite universe,'' \emph{Journal of the American
+  Statistical Association}, vol.~47, no. 260, pp. 663--685, 1952. [Online].
+  Available: \url{http://www.jstor.org/stable/2280784}
 \BIBentrySTDinterwordspacing
 
 \bibitem{doi:10.1137/1.9781611972771.42}
 \BIBentryALTinterwordspacing
-A.~Bifet and R.~Gavaldà, \emph{Learning from Time-Changing Data with Adaptive Windowing}, pp. 443--448. [Online]. Available: \url{https://epubs.siam.org/doi/abs/10.1137/1.9781611972771.42}
+A.~Bifet and R.~Gavaldà, \emph{Learning from Time-Changing Data with Adaptive
+  Windowing}, pp. 443--448. [Online]. Available:
+  \url{https://epubs.siam.org/doi/abs/10.1137/1.9781611972771.42}
 \BIBentrySTDinterwordspacing
 
 \bibitem{ding2022retiringadultnewdatasets}
 \BIBentryALTinterwordspacing
-F.~Ding, M.~Hardt, J.~Miller, and L.~Schmidt, ``Retiring adult: New datasets for fair machine learning,'' 2022. [Online]. Available: \url{https://arxiv.org/abs/2108.04884}
+F.~Ding, M.~Hardt, J.~Miller, and L.~Schmidt, ``Retiring adult: New datasets
+  for fair machine learning,'' 2022. [Online]. Available:
+  \url{https://arxiv.org/abs/2108.04884}
 \BIBentrySTDinterwordspacing
 
 \bibitem{adult_2}
-B.~Becker and R.~Kohavi, ``{Adult},'' UCI Machine Learning Repository, 1996, {DOI}: https://doi.org/10.24432/C5XW20.
+B.~Becker and R.~Kohavi, ``{Adult},'' UCI Machine Learning Repository, 1996,
+  {DOI}: https://doi.org/10.24432/C5XW20.
 
 \bibitem{montiel2020rivermachinelearningstreaming}
 \BIBentryALTinterwordspacing
-J.~Montiel, M.~Halford, S.~M. Mastelini, G.~Bolmier, R.~Sourty, R.~Vaysse, A.~Zouitine, H.~M. Gomes, J.~Read, T.~Abdessalem, and A.~Bifet, ``River: machine learning for streaming data in python,'' 2020. [Online]. Available: \url{https://arxiv.org/abs/2012.04740}
+J.~Montiel, M.~Halford, S.~M. Mastelini, G.~Bolmier, R.~Sourty, R.~Vaysse,
+  A.~Zouitine, H.~M. Gomes, J.~Read, T.~Abdessalem, and A.~Bifet, ``River:
+  machine learning for streaming data in python,'' 2020. [Online]. Available:
+  \url{https://arxiv.org/abs/2012.04740}
 \BIBentrySTDinterwordspacing
 
 \bibitem{10.1007/s10994-012-5320-9}
 \BIBentryALTinterwordspacing
-J.~Gama, R.~Sebasti{\~a}o, and P.~P. Rodrigues, ``On evaluating stream learning algorithms,'' \emph{Mach. Learn.}, vol.~90, no.~3, p. 317–346, Mar. 2013. [Online]. Available: \url{https://doi.org/10.1007/s10994-012-5320-9}
+J.~Gama, R.~Sebasti{\~a}o, and P.~P. Rodrigues, ``On evaluating stream learning
+  algorithms,'' \emph{Mach. Learn.}, vol.~90, no.~3, p. 317–346, Mar. 2013.
+  [Online]. Available: \url{https://doi.org/10.1007/s10994-012-5320-9}
 \BIBentrySTDinterwordspacing
 
 \bibitem{demsar2006statistical}
-J.~Dem{\v{s}}ar, ``Statistical comparisons of classifiers over multiple data sets,'' \emph{J. Mach. Learn. Res.}, vol.~7, pp. 1--30, 2006.
+J.~Dem{\v{s}}ar, ``Statistical comparisons of classifiers over multiple data
+  sets,'' \emph{J. Mach. Learn. Res.}, vol.~7, pp. 1--30, 2006.
 
 \end{thebibliography}
