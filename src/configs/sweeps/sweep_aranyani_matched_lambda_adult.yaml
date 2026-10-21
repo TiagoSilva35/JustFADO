@@ -25,10 +25,10 @@ parameters:
     value: 1.5
   drift_scenario:
     values:
-      - sim_x_permutations
-      - sim_y_swaps
-      #- sim_y_prior_skip
-      #- sim_x_exceed_skip
+      #- sim_x_permutations
+      #- sim_y_swaps
+      - sim_y_prior_skip
+      - sim_x_exceed_skip
   seeds:
     values: ['66', '77', '88', '99', '101', '111', '122', '133', '144', '155', '166', '177', '188', '199', '202', '213', '224', '235', '246', '257', '268', '279', '291', '303', '314', '325', '336', '347', '358', '369']
   deterministic:
