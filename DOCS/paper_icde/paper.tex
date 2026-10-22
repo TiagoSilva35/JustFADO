@@ -1,5 +1,5 @@
 % =====================================================================
-%  FADO -- ICDE version (IEEEtran conference, double-blind)
+%  FADO -- ICDE version (IEEEtran conference, single-blind review)
 %  Built on DOCS/paper/paper.tex (previous submission): same structure,
 %  related work and research questions, updated for the
 %  dual-ascent fairness controller, the Folktables/Adult evaluation, and the
@@ -41,8 +41,27 @@
 % Template rules: no abbreviations, subtitles, math, or symbols in the title.
 \title{Adaptative Fairness-Aware Online Learning Under\\Concept Drift}
 
-\author{\IEEEauthorblockN{Anonymous Author(s)}
-\IEEEauthorblockA{Affiliation withheld for double-blind review}}
+\author{\IEEEauthorblockN{Tiago Silva}
+\IEEEauthorblockA{\textit{Faculty of Science and Technology} \\
+\textit{University of Coimbra}\\
+Coimbra, Portugal \\
+tds@student.uc.pt}
+\and
+\IEEEauthorblockN{Pedro Abreu}
+\IEEEauthorblockA{\textit{Faculty of Science and Technology} \\
+\textit{University of Coimbra}\\
+Coimbra, Portugal \\
+pha@dei.uc.pt}
+\and
+\IEEEauthorblockN{Bruno Veloso}
+\IEEEauthorblockA{\textit{INESC-TEC} \\
+Porto, Portugal \\
+Bruno.m.veloso@inesctec.pt}
+\and
+\IEEEauthorblockN{Jo\~{a}o Gama}
+\IEEEauthorblockA{\textit{INESC-TEC} \\
+Porto, Portugal \\
+joao.gama@inesctec.pt}}
 
 \maketitle
 
@@ -613,51 +632,91 @@ standard deviations, and Holm-corrected $p$-values are computed from.
 
 \begin{table*}[t]
 \centering
-\caption{Prequential Accuracy, Demographic Parity, and Equalized Odds Over 30 Seeds$^{\mathrm{a}}$}
+\caption{F1, Demographic Parity, and Equalized Odds Over 30 Seeds, Whole Stream and After the Drift Onset$^{\mathrm{a}}$}
 \label{tab:results}
 \setlength{\tabcolsep}{4pt}
 \footnotesize
-\begin{tabular}{@{}l ccccc@{}}
+\begin{tabular}{@{}l ccc ccc@{}}
 \toprule
-Method & Acc.\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & F1$^{\mathrm{c}}$\,$\uparrow$ & \fado{} $\bar{\lambda}_t$$^{\mathrm{b}}$ \\
+& \multicolumn{3}{c}{Whole stream} & \multicolumn{3}{c}{After onset$^{\mathrm{c}}$} \\
+\cmidrule(lr){2-4} \cmidrule(l){5-7}
+Method & F1$^{\mathrm{b}}$\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & F1$^{\mathrm{b}}$\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ \\
 \midrule
-\multicolumn{6}{@{}l}{{\folk{}, natural cross-year shift}} \\
-\fado{} & $0.805\pm 0.003$ & $\mathbf{0.042\pm 0.003}\sig{***}$ & $\mathbf{0.025\pm 0.003}\sig{***}$ & $0.758\pm 0.005$ & $0.45\pm 0.06$ \\
-\ara{} & $\mathbf{0.808\pm 0.003}$ & $0.057\pm 0.004$ & $0.036\pm 0.003$ & $\mathbf{0.762\pm 0.005}$ &  \\
-\arf{} & $0.731\pm 0.004$ & $0.072\pm 0.012$ & $0.077\pm 0.016$ & $0.640\pm 0.009$ &  \\
-\rfr{} & $0.779\pm 0.003$ & $0.075\pm 0.006$ & $0.059\pm 0.006$ & $0.729\pm 0.005$ &  \\
+\multicolumn{7}{@{}l}{{\folk{}, natural cross-year shift}} \\
+\fado{} & $0.758\pm 0.005$ & $\mathbf{0.042\pm 0.003}\sig{***}$ & $\mathbf{0.025\pm 0.003}\sig{***}$ & n/a & n/a & n/a \\
+\ara{} & $\mathbf{0.762\pm 0.005}$ & $0.057\pm 0.004$ & $0.036\pm 0.003$ & n/a & n/a & n/a \\
+\arf{} & $0.640\pm 0.009$ & $0.072\pm 0.012$ & $0.077\pm 0.016$ & n/a & n/a & n/a \\
+\rfr{} & $0.729\pm 0.005$ & $0.075\pm 0.006$ & $0.059\pm 0.006$ & n/a & n/a & n/a \\
 \midrule
-\multicolumn{6}{@{}l}{{\adult{}, x\_permutations}} \\
-\fado{} & $\mathbf{0.838\pm 0.003}$ & $\mathbf{0.060\pm 0.004}\sig{***}$ & $\mathbf{0.053\pm 0.009}\sig{***}$ & $0.612\pm 0.010$ & $1.47\pm 0.47$ \\
-\ara{} & $0.836\pm 0.004$ & $0.083\pm 0.007$ & $0.073\pm 0.010$ & $0.609\pm 0.019$ &  \\
-\arf{} & $0.826\pm 0.004$ & $0.090\pm 0.003$ & $0.110\pm 0.013$ & $0.571\pm 0.011$ &  \\
-\rfr{} & $0.837\pm 0.002$ & $0.100\pm 0.004$ & $0.091\pm 0.010$ & $\mathbf{0.626\pm 0.006}$ &  \\
+\multicolumn{7}{@{}l}{{\adult{}, x\_permutations}} \\
+\fado{} & $0.612\pm 0.010$ & $\mathbf{0.060\pm 0.004}\sig{***}$ & $\mathbf{0.053\pm 0.009}\sig{***}$ &  & $\mathbf{0.062\pm 0.010}\sig{***}$ & $\mathbf{0.064\pm 0.022}\sig{***}$ \\
+\ara{} & $0.609\pm 0.019$ & $0.083\pm 0.007$ & $0.073\pm 0.010$ &  & $0.085\pm 0.014$ & $0.115\pm 0.025$ \\
+\arf{} & $0.571\pm 0.011$ & $0.090\pm 0.003$ & $0.110\pm 0.013$ &  & $0.086\pm 0.006$ & $0.119\pm 0.026$ \\
+\rfr{} & $\mathbf{0.626\pm 0.006}$ & $0.100\pm 0.004$ & $0.091\pm 0.010$ &  & $0.102\pm 0.007$ & $0.104\pm 0.019$ \\
 \midrule
-\multicolumn{6}{@{}l}{{\adult{}, y\_swaps}} \\
-\fado{} & $0.803\pm 0.051$ & $\mathbf{0.048\pm 0.004}\sig{***}$ & $\mathbf{0.048\pm 0.006}\sig{**}$ & $0.645\pm 0.058$ & $0.94\pm 0.34$ \\
-\ara{} & $\mathbf{0.805\pm 0.050}$ & $0.071\pm 0.010$ & $0.056\pm 0.010$ & $\mathbf{0.647\pm 0.047}$ &  \\
-\arf{} & $0.786\pm 0.048$ & $0.084\pm 0.005$ & $0.096\pm 0.011$ & $0.616\pm 0.063$ &  \\
-\rfr{} & $0.798\pm 0.049$ & $0.089\pm 0.015$ & $0.084\pm 0.015$ & $0.635\pm 0.063$ &  \\
+\multicolumn{7}{@{}l}{{\adult{}, y\_swaps}} \\
+\fado{} & $0.645\pm 0.058$ & $\mathbf{0.048\pm 0.004}\sig{***}$ & $\mathbf{0.048\pm 0.006}\sig{**}$ &  & $\mathbf{0.027\pm 0.011}\sig{***}$ & $\mathbf{0.052\pm 0.013}\sig{*}$ \\
+\ara{} & $\mathbf{0.647\pm 0.047}$ & $0.071\pm 0.010$ & $0.056\pm 0.010$ &  & $0.054\pm 0.028$ & $0.069\pm 0.024$ \\
+\arf{} & $0.615\pm 0.063$ & $0.084\pm 0.005$ & $0.096\pm 0.011$ &  & $0.072\pm 0.014$ & $0.083\pm 0.017$ \\
+\rfr{} & $0.635\pm 0.063$ & $0.089\pm 0.015$ & $0.084\pm 0.015$ &  & $0.072\pm 0.039$ & $0.083\pm 0.037$ \\
 \midrule
-\multicolumn{6}{@{}l}{{\adult{}, y\_prior\_skip}} \\
-\fado{} & $0.855\pm 0.017$ & $\mathbf{0.059\pm 0.011}\sig{***}$ & $\mathbf{0.049\pm 0.008}\sig{**}$ & $0.676\pm 0.051$ & $1.41\pm 0.60$ \\
-\ara{} & $\mathbf{0.860\pm 0.015}$ & $0.083\pm 0.017$ & $0.054\pm 0.006$ & $\mathbf{0.695\pm 0.049}$ &  \\
-\arf{} & $0.838\pm 0.020$ & $0.091\pm 0.022$ & $0.093\pm 0.019$ & $0.631\pm 0.059$ &  \\
-\rfr{} & $0.849\pm 0.016$ & $0.099\pm 0.021$ & $0.084\pm 0.012$ & $0.671\pm 0.058$ &  \\
+\multicolumn{7}{@{}l}{{\adult{}, y\_prior\_skip}} \\
+\fado{} & $0.676\pm 0.051$ & $\mathbf{0.059\pm 0.011}\sig{***}$ & $\mathbf{0.049\pm 0.008}\sig{**}$ & $0.621\pm 0.229$ & $\mathbf{0.063\pm 0.042}\sig{***}$ & $\mathbf{0.054\pm 0.023}\sig{**}$ \\
+\ara{} & $\mathbf{0.695\pm 0.049}$ & $0.083\pm 0.017$ & $0.054\pm 0.006$ & $\mathbf{0.667\pm 0.201}$ & $0.097\pm 0.066$ & $0.076\pm 0.018$ \\
+\arf{} & $0.631\pm 0.059$ & $0.091\pm 0.022$ & $0.093\pm 0.019$ & $0.522\pm 0.305$ & $0.106\pm 0.078$ & $0.089\pm 0.044$ \\
+\rfr{} & $0.671\pm 0.058$ & $0.099\pm 0.021$ & $0.084\pm 0.012$ & $0.629\pm 0.240$ & $0.112\pm 0.076$ & $0.092\pm 0.031$ \\
 \midrule
-\multicolumn{6}{@{}l}{{\adult{}, x\_exceed\_skip}} \\
-\fado{} & $0.854\pm 0.004$ & $\mathbf{0.057\pm 0.005}\sig{***}$ & $0.048\pm 0.007$ & $0.633\pm 0.016$ & $1.08\pm 0.43$ \\
-\ara{} & $\mathbf{0.857\pm 0.004}$ & $0.076\pm 0.007$ & $\mathbf{0.047\pm 0.006}$ & $\mathbf{0.647\pm 0.016}$ &  \\
-\arf{} & $0.840\pm 0.005$ & $0.083\pm 0.006$ & $0.090\pm 0.013$ & $0.586\pm 0.022$ &  \\
-\rfr{} & $0.846\pm 0.005$ & $0.093\pm 0.005$ & $0.081\pm 0.010$ & $0.620\pm 0.016$ &  \\
+\multicolumn{7}{@{}l}{{\adult{}, x\_exceed\_skip}} \\
+\fado{} & $0.633\pm 0.016$ & $\mathbf{0.057\pm 0.005}\sig{***}$ & $0.048\pm 0.007$ & $0.576\pm 0.080$ & $\mathbf{0.049\pm 0.013}\sig{***}$ & $0.051\pm 0.018$ \\
+\ara{} & $\mathbf{0.647\pm 0.016}$ & $0.076\pm 0.007$ & $\mathbf{0.047\pm 0.006}$ & $\mathbf{0.594\pm 0.077}$ & $0.061\pm 0.017$ & $\mathbf{0.047\pm 0.015}$ \\
+\arf{} & $0.586\pm 0.022$ & $0.083\pm 0.006$ & $0.090\pm 0.013$ & $0.502\pm 0.122$ & $0.065\pm 0.020$ & $0.076\pm 0.016$ \\
+\rfr{} & $0.620\pm 0.016$ & $0.093\pm 0.005$ & $0.081\pm 0.010$ & $0.560\pm 0.088$ & $0.076\pm 0.020$ & $0.074\pm 0.020$ \\
 \bottomrule
 \end{tabular}
-\tnote{$^{\mathrm{a}}$Mean $\pm$ standard deviation over 30 seeds, over the whole stream. Bold marks the best mean per
+\tnote{$^{\mathrm{a}}$Mean $\pm$ standard deviation over 30 seeds. Bold marks the best mean per
 metric within each block. Superscripts on \fado{} mark a paired Wilcoxon test, Holm-corrected, significant against \emph{every} baseline in \fado{}'s favor
 ($^{*}p<0.05$, $^{**}p<0.01$, $^{***}p<0.001$); columns with no marker have mixed per-baseline directions and are dissected in the text.
-$^{\mathrm{b}}$\fado{}'s fairness weight $\lambda_t$ averaged over the whole stream, mean $\pm$ standard deviation over seeds; $\lambda_t$ starts at, and never falls below, $\lambda_{\mathrm{base}}=0.1$.
-$^{\mathrm{c}}$F1 of the positive class (income $>$ \$50k), computed from the per-sample predictions over the whole stream (one confusion matrix per run). Bold and superscripts as in~a.}
+$^{\mathrm{b}}$F1 of the positive class (income $>$ \$50k), computed from the per-sample predictions (one confusion matrix per run and part of the stream). Empty cells: not yet computed.
+$^{\mathrm{c}}$From the injected drift onset to the end of the test stream (the drifted part of the stream); DP and EO are the rolling-window values averaged over that part. \folk{} has no injected onset (n/a).}
 \end{table*}
+
+\begin{figure*}[t]
+\centering
+\includegraphics[width=\textwidth]{figures/adult_onset_grid}
+\caption{Onset-aligned prequential curves on \adult{}, mean over $30$ seeds: rolling demographic parity (dotted line: $\varepsilon$), rolling accuracy, and
+\fado{}'s $\lambda_t$ (band: interquartile range over seeds; dashed line: the fixed $\lambda=0.1$ of \ara{}). Each column is one injected drift and the vertical line marks
+its onset; each column spans the samples that every seed has before and after the onset. \emph{x\_permutations} and \emph{y\_swaps}: \tbd{}.}
+\label{fig:onset}
+\end{figure*}
+
+\begin{table*}[t]
+\centering
+\caption{Detection of the Injected Drift by \fado{} on \adult{}, 30 Seeds per Scenario$^{\mathrm{a}}$}
+\label{tab:detection}
+\setlength{\tabcolsep}{5pt}
+\footnotesize
+\begin{tabular}{@{}l cc cc cc cc@{}}
+\toprule
+& \multicolumn{2}{c}{Either detector} & \multicolumn{2}{c}{Accuracy detector} & \multicolumn{2}{c}{Fairness monitor} & \multicolumn{2}{c}{False alarms per run$^{\mathrm{c}}$} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(l){8-9}
+Scenario & Detected & Delay$^{\mathrm{b}}$ & Detected & Delay$^{\mathrm{b}}$ & Detected & Delay$^{\mathrm{b}}$ & Accuracy & Fairness \\
+\midrule
+x\_permutations & 13/30 (43\%) & $505$ & 11/30 (37\%) & $426$ & 2/30 (7\%) & $943$ & $0.17$ & $0.83$ \\
+y\_swaps & 16/30 (53\%) & $116$ & 16/30 (53\%) & $116$ & 3/30 (10\%) & $675$ & $0.13$ & $1.83$ \\
+y\_prior\_skip & 27/30 (90\%) & $535$ & 10/30 (33\%) & $781$ & 17/30 (57\%) & $390$ & $0.47$ & $1.43$ \\
+x\_exceed\_skip & 2/30 (7\%) & $866$ & 0/30 (0\%) & -- & 2/30 (7\%) & $866$ & $0.17$ & $0.40$ \\
+\midrule
+All & 58/120 (48\%) & $424$ & 37/120 (31\%) & $388$ & 24/120 (20\%) & $511$ & $0.23$ & $1.12$ \\
+\bottomrule
+\end{tabular}
+\tnote{$^{\mathrm{a}}$An onset counts as detected when the detector raises an alarm within $1{,}000$ samples after it, the length of one rolling window: a window-based detector cannot register a change before its window has refilled, so a later alarm is no longer attributed to the injected drift. \emph{Either detector} counts a run once if the accuracy detector or the fairness monitor detects the onset; \folk{} has no injected onset and is not scored.
+$^{\mathrm{b}}$Mean number of samples from the onset to the first alarm within that window, over the detected runs only; by construction it is at most $1{,}000$, so it must be read together with the detection rate.
+$^{\mathrm{c}}$Alarms not matched to the onset, averaged over the 30 runs; every alarm of the fairness monitor, matched or not, resets the penalty's running statistics.}
+\end{table*}
+% The split of Table~\ref{tab:detection} by detected / undetected runs (FADO minus
+% Aranyani after the onset) is in supplementary/detection_split.md, to be published
+% with the repository; ICDE allows no appendix. Cite it from the Results text.
+
 We report the prequential results on the natural cross-year shift of \folk{} and on the 
 four injected drifts of \adult{} (Table~\ref{tab:results}), as mean
 $\pm$ standard deviation over $30$ seeds, with the demographic-parity regularizer as the 

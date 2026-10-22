@@ -1,0 +1,162 @@
+\relax 
+\citation{chowdhury2024enhancing}
+\citation{8474918}
+\citation{10467221}
+\citation{10.1145/3351095.3372828}
+\citation{10.1145/3457607}
+\citation{10.1145/2090236.2090255}
+\citation{10.1145/2090236.2090255,NIPS2016_6a9659fe}
+\citation{DBLP:journals/corr/WebbHCNP15}
+\citation{10.1007/s10994-017-5642-8,KLAIBER20231261}
+\citation{deho2024faircomparativeevaluationfairness}
+\citation{chowdhury2024enhancing}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
+\newlabel{sec:intro}{{I}{1}{}{section.1}{}}
+\citation{10.1145/3770855.3819070}
+\citation{10.1007/s10994-017-5642-8}
+\citation{jiang2023chasingfairnessdistributionshift}
+\citation{Salazar_2026}
+\citation{Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024}
+\citation{zeng2024fairrrpreprocessinggroupfairness}
+\citation{chowdhury2024enhancing}
+\citation{10.1007/s10994-017-5642-8}
+\citation{jiang2023chasingfairnessdistributionshift}
+\citation{zafar2017fairnessconstraintsmechanismsfair}
+\citation{agarwal2018reductionsapproachfairclassification}
+\citation{cotter2018optimizationnondifferentiableconstraintsapplications}
+\citation{mahdavi2012trading}
+\@writefile{toc}{\contentsline {section}{\numberline {II}Related Work}{2}{}\protected@file@percent }
+\newlabel{sec:related}{{II}{2}{}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Pre-Processing Methods}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}In-Processing Methods}{2}{}\protected@file@percent }
+\citation{NIPS2016_6a9659fe}
+\citation{Mishler_2021}
+\citation{Small_2024}
+\citation{10.1007/s10994-017-5642-8}
+\citation{chowdhury2024enhancing}
+\citation{jiang2023chasingfairnessdistributionshift}
+\citation{zafar2017fairnessconstraintsmechanismsfair,cotter2018optimizationnondifferentiableconstraintsapplications,agarwal2018reductionsapproachfairclassification}
+\citation{chowdhury2024enhancing,zhang2019fahtadaptivefairnessawaredecision}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Post-Processing Methods}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-D}}Main Limitations of Prior Work}{3}{}\protected@file@percent }
+\newlabel{sec:related:limitations}{{\mbox  {II-D}}{3}{}{subsection.2.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {III}Problem Statement}{3}{}\protected@file@percent }
+\newlabel{sec:problem}{{III}{3}{}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}Online Learning Setting}{3}{}\protected@file@percent }
+\newlabel{sec:problem:online}{{\mbox  {III-A}}{3}{}{subsection.3.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Group Fairness Metrics}{3}{}\protected@file@percent }
+\newlabel{sec:problem:metrics}{{\mbox  {III-B}}{3}{}{subsection.3.2}{}}
+\newlabel{eq:dp}{{2}{3}{}{equation.2}{}}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\citation{boyd2004convex}
+\citation{mahdavi2012trading}
+\citation{chowdhury2024enhancing}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}From a Fixed Penalty to a Fairness Constraint}{4}{}\protected@file@percent }
+\newlabel{sec:problem:constraint}{{\mbox  {III-C}}{4}{}{subsection.3.3}{}}
+\newlabel{eq:cons}{{4}{4}{}{equation.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Methodology and Experimental Design}{4}{}\protected@file@percent }
+\newlabel{sec:method}{{IV}{4}{}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Base Learner}{4}{}\protected@file@percent }
+\newlabel{sec:method:model}{{\mbox  {IV-A}}{4}{}{subsection.4.1}{}}
+\newlabel{eq:reg}{{5}{4}{}{equation.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Adaptive Fairness Constraint}{4}{}\protected@file@percent }
+\newlabel{sec:method:lambda}{{\mbox  {IV-B}}{4}{}{subsection.4.2}{}}
+\newlabel{eq:onesided}{{6}{4}{}{equation.6}{}}
+\newlabel{eq:dual}{{8}{4}{}{equation.8}{}}
+\newlabel{eq:lambda}{{9}{4}{}{equation.9}{}}
+\citation{bbbe4e97-7833-3faa-820c-4c61f82fe965}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of \textsc  {FADO}{}. Gray: the \textsc  {Aranyani}{} base learner~\cite  {chowdhury2024enhancing}, which predicts and then trains on each sample. Blue: the adaptive fairness constraint, which turns each prediction into a disparity signal and sets the fairness price $\lambda _t$. Orange: drift detection and response, which resets the fairness statistics $S$ on drift and adjusts the learning rate $\eta _t$ and routing temperature $\tau _t$. Colored symbols in gray boxes are set by \textsc  {FADO}{}.}}{5}{}\protected@file@percent }
+\newlabel{fig:drift-pipeline}{{1}{5}{}{figure.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces The \textsc  {FADO}{} prequential test-then-train loop.}}{5}{}\protected@file@percent }
+\newlabel{fig:alg}{{2}{5}{}{figure.2}{}}
+\newlabel{eq:ht}{{10}{5}{}{equation.10}{}}
+\newlabel{prop:ht}{{1}{5}{}{equation.10}{}}
+\newlabel{rem:dyn}{{1}{5}{}{equation.10}{}}
+\citation{doi:10.1137/1.9781611972771.42}
+\citation{ding2022retiringadultnewdatasets}
+\citation{adult_2}
+\citation{10.1145/3770855.3819070}
+\citation{10.1007/s10994-017-5642-8}
+\citation{montiel2020rivermachinelearningstreaming}
+\citation{jiang2023chasingfairnessdistributionshift}
+\citation{chowdhury2024enhancing}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Drift Detection and Reaction Controller}{6}{}\protected@file@percent }
+\newlabel{sec:method:drift}{{\mbox  {IV-C}}{6}{}{subsection.4.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Datasets and Preprocessing}{6}{}\protected@file@percent }
+\newlabel{sec:method:data}{{\mbox  {IV-D}}{6}{}{subsection.4.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Datasets}}{6}{}\protected@file@percent }
+\newlabel{tab:datasets}{{I}{6}{}{table.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Concept-Drift Scenarios}{6}{}\protected@file@percent }
+\newlabel{sec:method:scenarios}{{\mbox  {IV-E}}{6}{}{subsection.4.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-F}}Baselines}{6}{}\protected@file@percent }
+\newlabel{sec:method:baselines}{{\mbox  {IV-F}}{6}{}{subsection.4.6}{}}
+\citation{chowdhury2024enhancing}
+\citation{chowdhury2024enhancing}
+\citation{10.1007/s10994-012-5320-9}
+\citation{demsar2006statistical}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-G}}Hyperparameter Selection}{7}{}\protected@file@percent }
+\newlabel{sec:method:hpo}{{\mbox  {IV-G}}{7}{}{subsection.4.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-H}}Evaluation Protocol}{7}{}\protected@file@percent }
+\newlabel{sec:method:protocol}{{\mbox  {IV-H}}{7}{}{subsection.4.8}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces \textsc  {FADO}{} Hyperparameters}}{7}{}\protected@file@percent }
+\newlabel{tab:hparams}{{II}{7}{}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-I}}Reproducibility}{7}{}\protected@file@percent }
+\newlabel{sec:method:reproducibility}{{\mbox  {IV-I}}{7}{}{subsection.4.9}{}}
+\bibstyle{IEEEtran}
+\bibdata{IEEEabrv,references}
+\bibcite{chowdhury2024enhancing}{1}
+\bibcite{8474918}{2}
+\bibcite{10467221}{3}
+\bibcite{10.1145/3351095.3372828}{4}
+\bibcite{10.1145/3457607}{5}
+\bibcite{10.1145/2090236.2090255}{6}
+\bibcite{NIPS2016_6a9659fe}{7}
+\bibcite{DBLP:journals/corr/WebbHCNP15}{8}
+\bibcite{10.1007/s10994-017-5642-8}{9}
+\bibcite{KLAIBER20231261}{10}
+\bibcite{deho2024faircomparativeevaluationfairness}{11}
+\bibcite{10.1145/3770855.3819070}{12}
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces F1, Demographic Parity, and Equalized Odds Over 30 Seeds, Whole Stream and After the Drift Onset$^{\mathrm  {a}}$}}{8}{}\protected@file@percent }
+\newlabel{tab:results}{{III}{8}{}{table.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Results and Discussion}{8}{}\protected@file@percent }
+\newlabel{sec:results}{{V}{8}{}{section.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}To What Extent Does Concept Drift Affect Group Fairness?}{8}{}\protected@file@percent }
+\newlabel{sec:results:rq1}{{\mbox  {V-A}}{8}{}{subsection.5.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Can Adaptive Mechanisms Preserve Fairness While Maintaining Utility?}{8}{}\protected@file@percent }
+\newlabel{sec:results:rq2}{{\mbox  {V-B}}{8}{}{subsection.5.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Ablation of the Controller Components}{8}{}\protected@file@percent }
+\newlabel{sec:results:ablation}{{\mbox  {V-C}}{8}{}{subsection.5.3}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion and Future Work}{8}{}\protected@file@percent }
+\newlabel{sec:conclusion}{{VI}{8}{}{section.6}{}}
+\@writefile{toc}{\contentsline {section}{References}{8}{}\protected@file@percent }
+\bibcite{jiang2023chasingfairnessdistributionshift}{13}
+\bibcite{Salazar_2026}{14}
+\bibcite{Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024}{15}
+\bibcite{zeng2024fairrrpreprocessinggroupfairness}{16}
+\bibcite{zafar2017fairnessconstraintsmechanismsfair}{17}
+\bibcite{agarwal2018reductionsapproachfairclassification}{18}
+\bibcite{cotter2018optimizationnondifferentiableconstraintsapplications}{19}
+\bibcite{mahdavi2012trading}{20}
+\bibcite{Mishler_2021}{21}
+\bibcite{Small_2024}{22}
+\bibcite{zhang2019fahtadaptivefairnessawaredecision}{23}
+\bibcite{boyd2004convex}{24}
+\bibcite{bbbe4e97-7833-3faa-820c-4c61f82fe965}{25}
+\bibcite{doi:10.1137/1.9781611972771.42}{26}
+\bibcite{ding2022retiringadultnewdatasets}{27}
+\bibcite{adult_2}{28}
+\bibcite{montiel2020rivermachinelearningstreaming}{29}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Onset-aligned prequential curves on \textsc  {Adult}{}, mean over $30$ seeds: rolling demographic parity (dotted line: $\varepsilon $), rolling accuracy, and \textsc  {FADO}{}'s $\lambda _t$ (band: interquartile range over seeds; dashed line: the fixed $\lambda =0.1$ of \textsc  {Aranyani}{}). Each column is one injected drift and the vertical line marks its onset; each column spans the samples that every seed has before and after the onset. \emph  {x\_permutations} and \emph  {y\_swaps}: \textcolor {red}{\textbf  {TBD}}{}.}}{9}{}\protected@file@percent }
+\newlabel{fig:onset}{{3}{9}{}{figure.3}{}}
+\bibcite{10.1007/s10994-012-5320-9}{30}
+\bibcite{demsar2006statistical}{31}
+\@writefile{lot}{\contentsline {table}{\numberline {IV}{\ignorespaces Detection of the Injected Drift by \textsc  {FADO}{} on \textsc  {Adult}{}, 30 Seeds per Scenario$^{\mathrm  {a}}$}}{10}{}\protected@file@percent }
+\newlabel{tab:detection}{{IV}{10}{}{table.4}{}}
+\gdef \@abspage@last{10}

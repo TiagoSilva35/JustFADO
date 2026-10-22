@@ -71,6 +71,14 @@ flags.DEFINE_string(
     '"fado" is the full framework (Aranyani + drift controller + dual-ascent lambda); "aranyani" is the plain Aranyani forest '
     '(fixed lambda, no drift adaptation). The old names "fado_full" and "aranyani_base" are accepted as aliases.',
 )
+flags.DEFINE_float(
+    'pretrain_lambda_const',
+    None,
+    'Lambda used only while pre-training the Aranyani-family forest. Unset '
+    '(default): the same lambda as streaming (--lambda_const or the dataset '
+    'default). Set it to give a fixed-lambda Aranyani the same pre-training as '
+    'FADO (lambda_base) while it streams with a different --lambda_const.',
+)
 flags.DEFINE_string(
     'pipeline_dataset',
     '',
@@ -147,6 +155,13 @@ def _effective_fairness_window():
 
 def _effective_lambda():
     return float(_build_aranyani_static_params()['lambda_const'])
+
+
+def _pretrain_lambda():
+    """Lambda for pre-training: --pretrain_lambda_const if set, else the streaming one."""
+    if FLAGS.pretrain_lambda_const is not None:
+        return float(FLAGS.pretrain_lambda_const)
+    return _effective_lambda()
 
 
 def _effective_accuracy_window():
@@ -853,7 +868,7 @@ def _pretrain_cache_key(x_train, y_train, a_train, seed):
         digest.update(np.ascontiguousarray(array).tobytes())
     return (
         digest.hexdigest(), int(seed if seed is not None else -1),
-        int(FLAGS.depth), int(FLAGS.num_trees), _effective_lambda(),
+        int(FLAGS.depth), int(FLAGS.num_trees), _pretrain_lambda(),
         int(FLAGS.batch_size), str(FLAGS.constraint_type),
         str(FLAGS.gradient_type), bool(FLAGS.compute_fairness),
         _effective_fairness_window(),
@@ -893,7 +908,7 @@ def _pretrain_aranyani(x_train, y_train, a_train, data_dim, seed):
         batch_size=max(1, int(FLAGS.batch_size)),
         tree_depth=int(FLAGS.depth),
         compute_fairness=bool(FLAGS.compute_fairness),
-        lambda_const=_effective_lambda(),
+        lambda_const=_pretrain_lambda(),
         num_trees=int(FLAGS.num_trees),
         constraint_type=FLAGS.constraint_type,
         gradient_type=FLAGS.gradient_type,
@@ -1570,6 +1585,7 @@ def main(_):
         # Effective value: the flag default is 0.1, but COMPAS overrides it
         # to 1.0 unless --lambda_const is passed.
         'lambda_const': _effective_lambda(),
+        'pretrain_lambda_const': _pretrain_lambda(),
         'drift_scenario': FLAGS.drift_scenario,
         'drift_adwin_delta_warn': float(FLAGS.drift_adwin_delta_warn),
         'drift_adwin_delta_confirm': float(FLAGS.drift_adwin_delta_confirm),

@@ -1,0 +1,40 @@
+# FADO minus Aranyani after the drift onset, by whether FADO detected the drift
+
+Supplementary result for the ICDE submission (Adult, 4 injected drifts, 30 seeds per
+scenario, the runs of Table III). Moved here from the paper because ICDE does not allow
+appendices.
+
+The first group of columns covers runs where the onset was detected; the second, runs
+where it was not.
+
+| Scenario | Runs | ΔDP | ΔEO | ΔAcc. | Runs | ΔDP | ΔEO | ΔAcc. | Groups differ, p (ΔDP) |
+|---|---|---|---|---|---|---|---|---|---|
+| x_permutations | 13 | -0.029\*\*\* | -0.065\*\*\* | +0.009\* | 17 | -0.019\*\*\* | -0.041\*\*\* | +0.009\*\*\* | 0.14 |
+| y_swaps | 16 | -0.041\*\*\* | -0.042\*\*\* | -0.003 | 14 | -0.010\*\*\* | +0.011\*\* | +0.000 | < 0.01 |
+| y_prior_skip | 27 | -0.037\*\*\* | -0.023\*\*\* | -0.013\*\*\* | 3 | -0.005 | -0.008 | -0.005 | 0.10 |
+| x_exceed_skip | 2 | -0.007 | +0.036 | -0.007 | 28 | -0.012\*\*\* | +0.003 | -0.003\*\*\* | – |
+| **All** | 58 | -0.035\*\*\* | -0.036\*\*\* | -0.005\*\* | 62 | -0.013\*\*\* | -0.008 | +0.001 | < 0.01 |
+
+**How to read it**
+
+- **Δ** is FADO minus Aranyani (λ = 0.1) over the part of the stream after the injected
+  onset, paired by seed and averaged over the runs of each group. Negative ΔDP and ΔEO,
+  and positive ΔAcc., favour FADO.
+- **Detected** means either FADO detector (the accuracy detector or the fairness monitor)
+  raised an alarm within 1,000 samples after the onset, as in Table IV of the paper.
+- **Stars** come from a two-sided Wilcoxon signed-rank test of Δ against zero
+  (\* p < 0.05, \*\* p < 0.01, \*\*\* p < 0.001). They are not corrected for multiple
+  comparisons. Groups with fewer than six runs are not tested.
+- **Last column:** a two-sided Mann–Whitney test of ΔDP between detected and undetected
+  runs. It is not computed when a group has fewer than three runs.
+- **Caveat:** runs are not assigned to the groups at random. A drift that is easier to
+  detect may also be stronger, so this shows an association, not the effect of detection.
+
+**Summary.** FADO's demographic-parity advantage after the onset holds in 61 of the 62
+undetected runs, and it is larger when the drift is detected (−0.035 against −0.013). Its
+equalized-odds advantage largely needs a detection (−0.036 detected, −0.008 undetected,
+not significant).
+
+**Data.** Per-run values are in `adult_detected_vs_undetected.csv`, next to this file,
+built from the W&B per-arm metrics of sweeps `uwhcwsdg`, `bi6frxi3` and `l8c4i60o` and from
+each run's detection results.
