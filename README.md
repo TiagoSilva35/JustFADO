@@ -150,7 +150,8 @@ over the scenarios first).
 ### 3. Paper tables and significance tests
 
 ```bash
-python DOCS/paper_icde/scripts/make_tables.py --refresh
+python DOCS/paper_icde/scripts/make_tables.py crawl            # each machine: F1 from its own run folders
+python DOCS/paper_icde/scripts/make_tables.py build --refresh  # any machine: the tables
 ```
 
 The script downloads the per-seed metrics of every sweep listed in its `SWEEPS`
@@ -167,9 +168,10 @@ per-sample predictions, and writes:
 * `DOCS/paper_icde/supplementary/detection_split.md`: FADO minus Aranyani after
   the drift onset, split by whether FADO detected the drift.
 
-F1 needs the per-sample predictions, which are in the result folders of the
-machine that ran each sweep; copy them to `files/experiments/wandb/` first (see
-`DOCS/RUNBOOK.md`).
+F1 needs the per-sample predictions, which are only in the result folders of the
+machine that ran each sweep. `crawl` computes it there and adds it to the tracked
+store `DOCS/paper_icde/data/f1_store.csv`, so each machine contributes its own rows
+(sync the store with git); see `DOCS/RUNBOOK.md`.
 
 ---
 

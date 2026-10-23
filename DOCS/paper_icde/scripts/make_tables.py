@@ -1,7 +1,19 @@
 """Build the paper's result tables from W&B and the local run folders.
 
-    python DOCS/paper_icde/scripts/make_tables.py            # cached W&B data where present
-    python DOCS/paper_icde/scripts/make_tables.py --refresh  # download everything again
+Two steps, so every machine can contribute what only it has:
+
+    python DOCS/paper_icde/scripts/make_tables.py crawl   # any machine, no W&B needed
+    python DOCS/paper_icde/scripts/make_tables.py build   # any machine (default command)
+    python DOCS/paper_icde/scripts/make_tables.py all     # crawl, then build
+    ... build --refresh                                    # download W&B data again
+
+crawl   scans this machine's run folders (files/experiments/wandb/<run id>/), keeps the runs of
+        the sweeps in SWEEPS, computes F1 (whole stream and after the onset) from the
+        per-sample predictions, and upserts one row per (sweep, run, model, seed) into the
+        tracked store DOCS/paper_icde/data/f1_store.csv. Rows from other machines are kept.
+        Commit and push the store; on another machine, pull and build.
+build   merges the W&B metrics with the F1 store and regenerates every output below. The
+        result depends only on the store and W&B, so it is the same on every machine.
 
 Writes (paper.tex \\input's the two .tex files, so the text is never touched):
     DOCS/paper_icde/tables/results.tex          Table III: F1 / DP / EO, whole stream and after onset
@@ -17,24 +29,25 @@ Sources:
     * W&B per-arm tables (`arm_metrics`) and run summaries of the sweeps in SWEEPS,
       cached in files/experiments/wandb_arm_metrics/<sweeps>/ (raw.csv, detection.csv).
       Only finished runs are used; re-run with --refresh while sweeps are still running.
-    * F1 needs the per-sample predictions, which only exist in the result folders of the
-      machine that ran each sweep (files/experiments/wandb/<run id>/). Copy them with rsync.
-      For runs whose folder is missing, the whole-stream F1 falls back to
-      files/experiments/extra_metrics/per_seed.csv (written by stream_f1.py).
+    * F1 comes from DOCS/paper_icde/data/f1_store.csv, filled by `crawl` on each machine.
+      For main runs not in the store yet, the whole-stream F1 falls back to
+      files/experiments/extra_metrics/per_seed.csv (written earlier by stream_f1.py).
 
 Rules (same as the tables already in the paper):
     * a cell is filled only when every seed (30) of that method has the value; otherwise
       it is left empty;
     * bold = best mean in the block; FADO's superscripts = paired Wilcoxon, Holm-corrected
       across Aranyani, ARF and RFR, significant in FADO's favour against all three;
-    * the tuned-lambda Aranyani gets a dagger when it differs from FADO (paired Wilcoxon,
+    * the leaked-lambda Aranyani gets a dagger when it differs from FADO (paired Wilcoxon,
       p < 0.05).
 """
 import argparse
 import glob
 import json
 import os
+import socket
 import sys
+from datetime import datetime, timezone
 
 import numpy as np
 import pandas as pd
@@ -44,6 +57,8 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', '..')
 PAPER = os.path.join(REPO, 'DOCS', 'paper_icde')
 CACHE = os.path.join(REPO, 'files', 'experiments', 'wandb_arm_metrics')
 F1_FALLBACK = os.path.join(REPO, 'files', 'experiments', 'extra_metrics', 'per_seed.csv')
+F1_STORE = os.path.join(PAPER, 'data', 'f1_store.csv')
+STORE_COLS = ['dataset', 'scenario', 'model', 'seed', 'sweep', 'run_id', 'f1', 'f1_post', 'host', 'updated']
 ENTITY, PROJECT = 'tjcsilva04-universidade-de-coimbra', 'fado-ablations'
 N_SEEDS = 30
 
@@ -62,7 +77,7 @@ BLOCKS = [  # (scenario key, block title in the table)
     ('sim_x_exceed_skip', r'\adult{}, x\_exceed\_skip'),
 ]
 ADULT = [sc for sc, _ in BLOCKS if sc != 'folktables']
-ROWS = [('fado', r'\fado{}'), ('aranyani', r'\ara{}'), ('tuned', r'\ara{}, tuned $\lambda^{\mathrm{d}}$'),
+ROWS = [('fado', r'\fado{}'), ('aranyani', r'\ara{}'), ('tuned', r'\ara{}, leaked $\lambda^{\mathrm{d}}$'),
         ('arf', r'\arf{}'), ('rfr', r'\rfr{}')]
 BASELINES = ['aranyani', 'arf', 'rfr']
 # (column, higher is better)
@@ -125,47 +140,99 @@ def _f1(y, p):
     return 2 * tp / (2 * tp + fp + fn) if tp + fp + fn else np.nan
 
 
-def local_f1(raw, dataset, model_name=None):
-    """Whole-stream and after-onset F1 from the local result folders of the runs in `raw`."""
-    ids = set(raw.run_id)
+def _sweep_roles():
+    """{sweep id: (dataset, role)}; role 'main' keeps the model names, 'tuned' maps aranyani."""
+    roles = {}
+    for key, sweeps in SWEEPS.items():
+        role, dataset = key.split('_', 1)
+        for sid in sweeps:
+            roles[sid] = (dataset, role)
+    return roles
+
+
+def crawl():
+    """Compute F1 from this machine's run folders and upsert it into the shared store."""
+    roles, host = _sweep_roles(), socket.gethostname()
+    now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M')
     rows = []
-    for path in glob.glob(f'{REPO}/files/experiments/wandb/*/dataset_{dataset}/seed_pipeline_results.json'):
-        if path.split(os.sep)[-3] not in ids:
+    for path in glob.glob(os.path.join(REPO, 'files', 'experiments', 'wandb', '*', 'dataset_*',
+                                       'seed_pipeline_results.json')):
+        data = json.load(open(path))
+        cfg = data.get('config', {})
+        sweep = cfg.get('wandb_sweep_id')
+        if sweep not in roles:
             continue
-        for run in json.load(open(path))['seed_runs']:
+        dataset, role = roles[sweep]
+        run_id = cfg.get('wandb_run_id') or path.split(os.sep)[-3]
+        for run in data['seed_runs']:
+            model = run['model']
+            if role == 'tuned':
+                if model != 'aranyani':
+                    continue
+                model = 'tuned'
+            elif model not in ['fado'] + BASELINES:
+                continue
             ts = run['results'][0]['timestep_results']
             y = np.asarray(ts['y_true_all'], dtype=int)
             p = np.asarray(ts['y_preds_all'], dtype=int)
             info = ts.get('drift_info')
             onset = info['onset'] if info else None
-            rows.append(dict(scenario=run['results'][0]['scenario'], model=model_name or run['model'],
-                             seed=int(run['seed']), f1=_f1(y, p),
-                             f1_post=_f1(y[onset:], p[onset:]) if onset is not None else np.nan))
-    return pd.DataFrame(rows, columns=['scenario', 'model', 'seed', 'f1', 'f1_post'])
+            rows.append(dict(dataset=dataset, scenario=run['results'][0]['scenario'], model=model,
+                             seed=int(run['seed']), sweep=sweep, run_id=run_id, f1=_f1(y, p),
+                             f1_post=_f1(y[onset:], p[onset:]) if onset is not None else np.nan,
+                             host=host, updated=now))
+    found = pd.DataFrame(rows, columns=STORE_COLS)
+    key = ['sweep', 'run_id', 'model', 'seed']
+    store = pd.read_csv(F1_STORE) if os.path.isfile(F1_STORE) else pd.DataFrame(columns=STORE_COLS)
+    merged = found.merge(store[key + ['f1', 'f1_post']], on=key, how='left', suffixes=('', '_old'))
+    merged['f1_old'] = pd.to_numeric(merged.f1_old, errors='coerce')
+    new = merged.f1_old.isna().sum()
+    changed = ((merged.f1_old.notna()) & ~np.isclose(merged.f1, merged.f1_old, equal_nan=True)).sum()
+    kept = store.merge(found[key], on=key, how='left', indicator=True)
+    kept = kept[kept._merge == 'left_only'].drop(columns='_merge')
+    out = pd.concat([kept, found], ignore_index=True)[STORE_COLS]
+    out = out.sort_values(['dataset', 'scenario', 'model', 'seed', 'sweep', 'run_id']).reset_index(drop=True)
+    os.makedirs(os.path.dirname(F1_STORE), exist_ok=True)
+    out.to_csv(F1_STORE, index=False)
+    print(f'[crawl] {host}: {len(found)} rows from local folders ({new} new, {changed} changed); '
+          f'store now {len(out)} rows -> {os.path.relpath(F1_STORE, REPO)}')
+    cover = out.groupby(['scenario', 'model']).seed.nunique().unstack(fill_value=0)
+    print(cover.to_string())
+
+
+def store_f1():
+    """F1 rows (scenario, model, seed, f1, f1_post) from the shared store."""
+    if not os.path.isfile(F1_STORE):
+        return pd.DataFrame(columns=['scenario', 'model', 'seed', 'f1', 'f1_post'])
+    store = pd.read_csv(F1_STORE)
+    dup = store.duplicated(['scenario', 'model', 'seed'], keep=False)
+    if dup.any():
+        print(f'[warn] {dup.sum()} store rows share (scenario, model, seed) across runs; using the latest')
+        store = store.sort_values('updated').drop_duplicates(['scenario', 'model', 'seed'], keep='last')
+    return store[['scenario', 'model', 'seed', 'f1', 'f1_post']]
 
 
 def load(refresh):
     keep = ['scenario', 'model', 'seed', 'accuracy', 'dp', 'eo',
             'post_drift_accuracy', 'post_drift_dp', 'post_drift_eo']
-    parts, f1s = [], []
-    for key, dataset in (('main_folktables', 'folktables'), ('main_adult', 'adult')):
+    parts = []
+    for key in ('main_folktables', 'main_adult'):
         raw = arm_metrics(SWEEPS[key], refresh)
-        raw = raw[raw.model.isin(['fado'] + BASELINES)]
-        parts.append(raw[keep])
-        f1s.append(local_f1(raw, dataset))
-    for key, dataset in (('tuned_folktables', 'folktables'), ('tuned_adult', 'adult')):
+        parts.append(raw[raw.model.isin(['fado'] + BASELINES)][keep])
+    for key in ('tuned_folktables', 'tuned_adult'):
         raw = arm_metrics(SWEEPS[key], refresh)
-        raw = raw[raw.model == 'aranyani'].assign(model='tuned')
-        parts.append(raw[keep])
-        f1s.append(local_f1(raw, dataset, model_name='tuned'))
+        parts.append(raw[raw.model == 'aranyani'].assign(model='tuned')[keep])
     data = pd.concat(parts, ignore_index=True)
-    f1 = pd.concat(f1s, ignore_index=True).drop_duplicates(['scenario', 'model', 'seed'])
-    # whole-stream F1 of the main runs whose folders are on another machine
+    f1 = store_f1()
+    # whole-stream F1 of the main runs not crawled yet (computed earlier by stream_f1.py)
     if os.path.isfile(F1_FALLBACK):
         fb = pd.read_csv(F1_FALLBACK)[['scenario', 'model', 'seed', 'f1']]
         fb = fb[fb.model.isin(['fado'] + BASELINES)]
         missing = fb.merge(f1[['scenario', 'model', 'seed']], how='left', indicator=True)
         missing = missing[missing._merge == 'left_only'].drop(columns='_merge')
+        if len(missing):
+            print(f'[f1] {len(missing)} whole-stream F1 values from the legacy per_seed.csv '
+                  f'(crawl their sweeps to replace them)')
         f1 = pd.concat([f1, missing.assign(f1_post=np.nan)], ignore_index=True)
     data = data.merge(f1, on=['scenario', 'model', 'seed'], how='left')
     data.loc[data.scenario == 'folktables', list(POST) + ['post_drift_accuracy']] = np.nan
@@ -362,13 +429,13 @@ SIG_METRICS = [('accuracy', 'Accuracy', True), ('f1', 'F1', True), ('dp', 'DP', 
 def significance_report(data):
     """FADO against each baseline, per block and metric: paired Wilcoxon and Welch t-test,
     each Holm-corrected across the baselines of that comparison set."""
-    sets = [('Against the published baselines', BASELINES), ('Against the tuned-lambda Aranyani', ['tuned'])]
+    sets = [('Against the published baselines', BASELINES), ('Against the leaked-lambda Aranyani', ['tuned'])]
     out = ['# Significance of FADO against each baseline', '',
            'Generated by `DOCS/paper_icde/scripts/make_tables.py`. For every block of Table III and every',
            'metric: the mean difference FADO minus baseline over the paired seeds, the number of seeds on',
            'which FADO is better, and the p-values of the two-sided paired Wilcoxon signed-rank test and the',
            "two-sided Welch t-test. Both are Holm-corrected across the baselines of the same set; the",
-           'tuned-lambda Aranyani is tested on its own. Only metrics with all 30 seeds for both methods are',
+           'leaked-lambda Aranyani is tested on its own. Only metrics with all 30 seeds for both methods are',
            'tested.', '']
     for title, baselines in sets:
         out += [f'## {title}', '']
@@ -402,14 +469,33 @@ def significance_report(data):
 
 
 # ----------------------------------------------------------------------------- main
-def main():
-    parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
-    parser.add_argument('--refresh', action='store_true', help='download everything from W&B again')
-    args = parser.parse_args()
+def missing_report(data):
+    """Which table cells are still empty, and which sweeps would fill them."""
+    roles = _sweep_roles()
+    need = []
+    for sc, _ in BLOCKS:
+        for m, _ in ROWS:
+            d = data[(data.scenario == sc) & (data.model == m)]
+            for col, _ in COLS:
+                if sc == 'folktables' and col in POST:
+                    continue
+                n = int(d[col].notna().sum()) if len(d) else 0
+                if n < N_SEEDS:
+                    need.append((sc, m, col, n))
+    if not need:
+        print('[status] every cell has 30 seeds')
+        return
+    print('[status] cells with fewer than 30 seeds (F1 columns need a crawl on the machine with '
+          'those run folders; the others need the sweep to finish, then build --refresh):')
+    for sc, m, col, n in need:
+        group = ('tuned_' if m == 'tuned' else 'main_') + ('folktables' if sc == 'folktables' else 'adult')
+        print(f'    {sc:20s} {m:9s} {col:14s} {n:2d}/30   sweeps: {", ".join(SWEEPS[group])}')
 
-    data = load(args.refresh)
+
+def build(refresh):
+    data = load(refresh)
     main_adult = arm_metrics(SWEEPS['main_adult'], False)
-    det = detection(SWEEPS['main_adult'], args.refresh)
+    det = detection(SWEEPS['main_adult'], refresh)
 
     os.makedirs(os.path.join(PAPER, 'tables'), exist_ok=True)
     os.makedirs(os.path.join(PAPER, 'supplementary'), exist_ok=True)
@@ -424,8 +510,20 @@ def main():
     print('Table III filled cells per row (of 3 for Folktables, 6 for Adult):')
     for sc, _ in BLOCKS:
         print(f'  {sc:20s} ' + '  '.join(f'{m}={filled.get((sc, m), 0)}' for m, _ in ROWS))
+    missing_report(data)
     print(f'written: {os.path.relpath(os.path.join(PAPER, "tables"), REPO)}/results.tex, detection.tex; '
-          f'{os.path.relpath(os.path.join(PAPER, "supplementary"), REPO)}/detection_split.md')
+          f'{os.path.relpath(os.path.join(PAPER, "supplementary"), REPO)}/')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__.split('\n\n')[0])
+    parser.add_argument('command', nargs='?', default='build', choices=['crawl', 'build', 'all'])
+    parser.add_argument('--refresh', action='store_true', help='download W&B data again (build)')
+    args = parser.parse_args()
+    if args.command in ('crawl', 'all'):
+        crawl()
+    if args.command in ('build', 'all'):
+        build(args.refresh)
 
 
 if __name__ == '__main__':

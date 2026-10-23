@@ -156,11 +156,36 @@ folder, or `scp -r`). Run ids are unique, so nothing is overwritten.
 
 | what | command | output |
 |---|---|---|
-| **Paper tables (III, IV), significance report (Wilcoxon and Welch), detection split** | `python DOCS/paper_icde/scripts/make_tables.py` (add `--refresh` to download from W&B again) | `DOCS/paper_icde/tables/*.tex`, `DOCS/paper_icde/supplementary/` |
+| **F1 from this machine's run folders** (any machine, no W&B) | `python DOCS/paper_icde/scripts/make_tables.py crawl` | upserts into `DOCS/paper_icde/data/f1_store.csv` |
+| **Paper tables (III, IV), significance report (Wilcoxon and Welch), detection split** | `python DOCS/paper_icde/scripts/make_tables.py build` (add `--refresh` to download from W&B again; `all` = crawl + build) | `DOCS/paper_icde/tables/*.tex`, `DOCS/paper_icde/supplementary/` |
 | Per-seed metrics of one or more sweeps | `python -m src.fetch_wandb_arm_metrics --sweep <id>[,<id>...]` | `files/experiments/wandb_arm_metrics/<ids>/raw.csv`, `summary.csv` |
 | Curves over time, mean over seeds | `python -m src.fetch_wandb_trajectories --sweep <id> --plot` | `files/experiments/wandb_trajectories/<id>/` |
 | Whole-stream F1 from local predictions (machine with the folders) | `python DOCS/paper_icde/scripts/stream_f1.py adult sim_x_permutations:uwhcwsdg sim_y_swaps:bi6frxi3` | appends to `files/experiments/extra_metrics/per_seed.csv` |
 | Onset-aligned figure (Fig. 3) | `cd DOCS/paper_icde/figures && python ../scripts/fig_adult_onset_grid.py adult_onset_grid.pdf` | `adult_onset_grid.pdf/.png` |
+
+**Tables from several machines.** F1 needs the per-sample predictions, which only the
+machine that ran a sweep has. So each machine runs `crawl`, which adds its F1 rows to the
+tracked store `DOCS/paper_icde/data/f1_store.csv` and keeps the other machines' rows. Then
+`build` on any machine produces the same tables.
+
+```bash
+git pull
+```
+```bash
+python DOCS/paper_icde/scripts/make_tables.py crawl
+```
+```bash
+git add DOCS/paper_icde/data/f1_store.csv && git commit -m "F1 store: <machine>" && git push
+```
+
+Then, on the machine that builds the paper:
+
+```bash
+git pull && python DOCS/paper_icde/scripts/make_tables.py build --refresh
+```
+
+`build` ends with a status list of every cell that still has fewer than 30 seeds, and the
+sweeps that would fill it.
 
 The sweeps that feed the paper tables are listed in `SWEEPS` at the top of
 `make_tables.py`. Edit that dictionary when a sweep is re-run. A table cell is filled only
@@ -183,10 +208,10 @@ If `latexmk` reports a stale-file error, delete `paper.aux` and build again.
 | `uwhcwsdg` | Adult x_permutations: FADO, Aranyani, ARF, RFR | Windows |
 | `bi6frxi3` | Adult y_swaps: same arms | Windows |
 | `l8c4i60o` | Adult y_prior_skip and x_exceed_skip: same arms | `tesla` |
-| `9ulal3qn` | Folktables, Aranyani tuned λ = 0.5, pre-train 0.1 | Mac |
-| `rm2glvmh` | Adult x_permutations, Aranyani tuned λ = 1.5, pre-train 0.1 | Mac |
-| `wqab0alm` | Adult y_swaps, Aranyani tuned λ = 1.5, pre-train 0.1 | Windows |
-| `pzbwmd4e` | Adult y_prior_skip and x_exceed_skip, Aranyani tuned λ = 1.5, pre-train 0.1 | `tesla` |
+| `9ulal3qn` | Folktables, Aranyani leaked λ = 0.5, pre-train 0.1 | Mac |
+| `rm2glvmh` | Adult x_permutations, Aranyani leaked λ = 1.5, pre-train 0.1 | Mac |
+| `wqab0alm` | Adult y_swaps, Aranyani leaked λ = 1.5, pre-train 0.1 | Windows |
+| `pzbwmd4e` | Adult y_prior_skip and x_exceed_skip, Aranyani leaked λ = 1.5, pre-train 0.1 | `tesla` |
 | `6mauborl` | Folktables, Aranyani λ = 0.5 pre-trained at 0.5 (not in the paper) | `tesla` |
 
 Unused duplicates in W&B that can be deleted: `vssf48sf` and `idng43fh` (registered, never
