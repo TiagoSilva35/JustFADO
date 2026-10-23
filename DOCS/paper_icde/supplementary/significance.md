@@ -45,6 +45,9 @@ tested.
 | Accuracy after onset | aranyani | +0.0088 | 25/30 | 7.8e-05 | 7.9e-04 |
 | Accuracy after onset | arf | +0.0069 | 24/30 | 9.9e-05 | 4.7e-04 |
 | Accuracy after onset | rfr | -0.0126 | 1/30 | 1.7e-08 | 3.0e-09 |
+| F1 after onset | aranyani | +0.0369 | 23/30 | 4.6e-04 | 2.4e-03 |
+| F1 after onset | arf | +0.0313 | 26/30 | 2.8e-05 | 9.1e-05 |
+| F1 after onset | rfr | -0.0627 | 0/30 | 5.6e-09 | 9.7e-13 |
 | DP after onset | aranyani | -0.0232 | 29/30 | 5.6e-09 | 1.4e-09 |
 | DP after onset | arf | -0.0241 | 30/30 | 5.6e-09 | 1.4e-15 |
 | DP after onset | rfr | -0.0401 | 30/30 | 5.6e-09 | 1.8e-24 |
@@ -71,6 +74,9 @@ tested.
 | Accuracy after onset | aranyani | -0.0014 | 11/30 | 2.5e-01 | 1.0e+00 |
 | Accuracy after onset | arf | +0.0197 | 28/30 | 3.9e-08 | 1.0e+00 |
 | Accuracy after onset | rfr | -0.0012 | 13/30 | 2.7e-01 | 1.0e+00 |
+| F1 after onset | aranyani | +0.0027 | 16/30 | 2.7e-01 | 1.0e+00 |
+| F1 after onset | arf | -0.0347 | 16/30 | 2.0e-01 | 1.0e+00 |
+| F1 after onset | rfr | +0.0221 | 21/30 | 7.7e-04 | 1.0e+00 |
 | DP after onset | aranyani | -0.0265 | 29/30 | 1.9e-08 | 1.9e-05 |
 | DP after onset | arf | -0.0450 | 30/30 | 5.6e-09 | 1.9e-19 |
 | DP after onset | rfr | -0.0442 | 30/30 | 5.6e-09 | 1.7e-06 |
@@ -156,6 +162,7 @@ tested.
 | DP | tuned | -0.0020 | 17/30 | 2.6e-01 | 2.6e-01 |
 | EO | tuned | -0.0173 | 27/30 | 3.9e-07 | 1.6e-07 |
 | Accuracy after onset | tuned | +0.0126 | 28/30 | 3.5e-08 | 1.1e-05 |
+| F1 after onset | tuned | +0.0572 | 26/30 | 2.3e-06 | 4.9e-05 |
 | DP after onset | tuned | -0.0145 | 25/30 | 3.0e-05 | 3.3e-04 |
 | EO after onset | tuned | -0.0368 | 26/30 | 8.3e-07 | 6.6e-07 |
 
