@@ -147,28 +147,29 @@ per seed, model, and scenario) and `summary.csv` (mean, std, and number of
 seeds per scenario and model, plus an `average` scenario: each seed averaged
 over the scenarios first).
 
-### 3. Significance tests and the table rows
+### 3. Paper tables and significance tests
 
 ```bash
-# Folktables block
-python DOCS/paper_icde/scripts/paper_stats.py \
-    files/experiments/wandb_arm_metrics/<folktables-sweep-id>/raw.csv
-
-# Adult blocks: pass the raw.csv of every Adult sweep; prints one block per
-# drift and the "mean of 4" block
-python DOCS/paper_icde/scripts/paper_stats.py \
-    files/experiments/wandb_arm_metrics/<adult-sweep-id-1>/raw.csv \
-    files/experiments/wandb_arm_metrics/<adult-sweep-id-2>/raw.csv
+python DOCS/paper_icde/scripts/make_tables.py --refresh
 ```
 
-For each block the script prints the whole-stream mean ± std of accuracy,
-DP, and EO per model, and FADO against each baseline under the paired
-Wilcoxon signed-rank test and the Welch t-test, each Holm-corrected within
-the metric across the three baselines, with the number of seeds on which
-FADO is better. Pass one dataset per call: with several scenarios the script
-adds a "mean of N" block that averages each seed over them. Running
-`paper_stats.py adult` instead reads the local Adult run folders under
-`files/experiments/wandb/` directly, without downloading from W&B.
+The script downloads the per-seed metrics of every sweep listed in its `SWEEPS`
+dictionary (finished runs only; cached under `files/experiments/wandb_arm_metrics/`,
+so later calls without `--refresh` are offline), computes F1 from the local
+per-sample predictions, and writes:
+
+* `DOCS/paper_icde/tables/results.tex` (Table III) and `tables/detection.tex`
+  (Table IV), which `paper.tex` includes with `\input`;
+* `DOCS/paper_icde/supplementary/significance.md`: FADO against each baseline,
+  per block and metric, under the paired Wilcoxon signed-rank test and the
+  Welch t-test, each Holm-corrected across the baselines, with the number of
+  seeds on which FADO is better;
+* `DOCS/paper_icde/supplementary/detection_split.md`: FADO minus Aranyani after
+  the drift onset, split by whether FADO detected the drift.
+
+F1 needs the per-sample predictions, which are in the result folders of the
+machine that ran each sweep; copy them to `files/experiments/wandb/` first (see
+`DOCS/RUNBOOK.md`).
 
 ---
 
@@ -188,9 +189,11 @@ adds a "mean of N" block that averages each seed over them. Running
   std over seeds (CSV).
 * `src/fetch_wandb_trajectories.py` — accuracy / DP / EO over time of a W&B
   sweep, averaged over seeds (CSV, plots).
-* `DOCS/paper_icde/scripts/paper_stats.py` — Table III means, standard
-  deviations, and Holm-corrected Wilcoxon and Welch p-values.
-* `files/experiments/` — per-seed result outputs.
+* `DOCS/paper_icde/scripts/make_tables.py` — the paper's Tables III and IV and
+  the supplementary significance and detection reports.
+* `DOCS/RUNBOOK.md` — everyday commands: machines, sweeps, agents, syncing
+  results, tables, figures.
+* `files/experiments/wandb/<run id>/` — per-seed result outputs of each run.
 
 ---
 

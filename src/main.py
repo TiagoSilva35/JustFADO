@@ -1279,7 +1279,7 @@ def run_scenarios(model_name, dataset_name, output_dir=OUTPUT_DIR, scenario_filt
             row['pretrain_wall_seconds'] = pretrain_timing.get('wall_seconds')
         if marginal:
             row['marginal'] = marginal
-            # Flatten marginal DP/EO into top-level keys so significance_tests
+            # Flatten marginal DP/EO into top-level keys so the analysis scripts
             # (and any consumer that reads scalar columns) can pick them up
             # without inspecting the nested ``marginal`` blob.
             for attr_name, vals in marginal.items():

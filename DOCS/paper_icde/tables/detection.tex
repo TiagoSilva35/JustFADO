@@ -1,0 +1,24 @@
+\begin{table*}[t]
+\centering
+\caption{Detection of the Injected Drift by \fado{} on \adult{}, 30 Seeds per Scenario$^{\mathrm{a}}$}
+\label{tab:detection}
+\setlength{\tabcolsep}{5pt}
+\footnotesize
+\begin{tabular}{@{}l cc cc cc cc@{}}
+\toprule
+& \multicolumn{2}{c}{Either detector} & \multicolumn{2}{c}{Accuracy detector} & \multicolumn{2}{c}{Fairness monitor} & \multicolumn{2}{c}{False alarms per run$^{\mathrm{c}}$} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(l){8-9}
+Scenario & Detected & Delay$^{\mathrm{b}}$ & Detected & Delay$^{\mathrm{b}}$ & Detected & Delay$^{\mathrm{b}}$ & Accuracy & Fairness \\
+\midrule
+x\_permutations & 13/30 (43\%) & $505$ & 11/30 (37\%) & $426$ & 2/30 (7\%) & $943$ & $0.17$ & $0.83$ \\
+y\_swaps & 16/30 (53\%) & $116$ & 16/30 (53\%) & $116$ & 3/30 (10\%) & $675$ & $0.13$ & $1.83$ \\
+y\_prior\_skip & 27/30 (90\%) & $535$ & 10/30 (33\%) & $781$ & 17/30 (57\%) & $390$ & $0.47$ & $1.43$ \\
+x\_exceed\_skip & 2/30 (7\%) & $866$ & 0/30 (0\%) & -- & 2/30 (7\%) & $866$ & $0.17$ & $0.40$ \\
+\midrule
+All & 58/120 (48\%) & $424$ & 37/120 (31\%) & $388$ & 24/120 (20\%) & $511$ & $0.23$ & $1.12$ \\
+\bottomrule
+\end{tabular}
+\tnote{$^{\mathrm{a}}$An onset counts as detected when the detector raises an alarm within $1{,}000$ samples after it, the length of one rolling window: a window-based detector cannot register a change before its window has refilled, so a later alarm is no longer attributed to the injected drift. \emph{Either detector} counts a run once if the accuracy detector or the fairness monitor detects the onset; \folk{} has no injected onset and is not scored.
+$^{\mathrm{b}}$Mean number of samples from the onset to the first alarm within that window, over the detected runs only; by construction it is at most $1{,}000$, so it must be read together with the detection rate.
+$^{\mathrm{c}}$Alarms not matched to the onset, averaged over the 30 runs; every alarm of the fairness monitor, matched or not, resets the penalty's running statistics.}
+\end{table*}

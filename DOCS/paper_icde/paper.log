@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Homebrew) (preloaded format=pdflatex 2026.3.4)  23 OCT 2026 00:50
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Homebrew) (preloaded format=pdflatex 2026.3.4)  23 OCT 2026 09:44
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -444,12 +444,13 @@ Underfull \hbox (badness 1533) in paragraph at lines 601--610
 []\OT1/ptm/m/n/10 All meth-ods are eval-u-ated un-der a strict pre-quen-tial,
  []
 
+(./tables/results.tex)
 <figures/adult_onset_grid.pdf, id=95, 454.58257pt x 301.44118pt>
 File: figures/adult_onset_grid.pdf Graphic file (type pdf)
 <use figures/adult_onset_grid.pdf>
-Package pdftex.def Info: figures/adult_onset_grid.pdf  used on input line 691.
+Package pdftex.def Info: figures/adult_onset_grid.pdf  used on input line 638.
 (pdftex.def)             Requested size: 516.0pt x 342.17921pt.
-[7] (./paper.bbl
+ (./tables/detection.tex) [7] (./paper.bbl
 Underfull \vbox (badness 2662) has occurred while \output is active []
 
  [8]
@@ -478,13 +479,13 @@ L3 programming layer <2026-01-19>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 5058 strings out of 467525
- 81080 string characters out of 5408440
- 532920 words of memory out of 5000000
- 33898 multiletter control sequences out of 15000+600000
+ 5075 strings out of 467525
+ 81457 string characters out of 5408440
+ 534007 words of memory out of 5000000
+ 33908 multiletter control sequences out of 15000+600000
  673208 words of font info for 126 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 57i,11n,65p,665b,330s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 57i,11n,65p,672b,330s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/ne
 wtx/NewTXMI5.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/
 type1/public/newtx/NewTXMI7.pfb></opt/homebrew/Cellar/texlive/20260301/share/te
@@ -525,7 +526,7 @@ urw/times/utmr8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fo
 nts/type1/urw/times/utmri8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/te
 xmf-dist/fonts/type1/public/newtx/ztmb.pfb></opt/homebrew/Cellar/texlive/202603
 01/share/texmf-dist/fonts/type1/public/newtx/ztmr.pfb>
-Output written on paper.pdf (10 pages, 513198 bytes).
+Output written on paper.pdf (10 pages, 513298 bytes).
 PDF statistics:
  245 PDF objects out of 1000 (max. 8388607)
  154 compressed objects within 2 object streams
