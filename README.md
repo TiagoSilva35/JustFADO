@@ -50,33 +50,25 @@ Datasets:
 
 ## Reported results (Table III)
 
-Whole-stream prequential metrics, mean ± std over 30 seeds. Superscripts on
-the FADO row mark a paired Wilcoxon test, Holm-corrected across the three
-baselines, significant against **every** baseline in FADO's favor
-(`*` p<0.05, `**` p<0.01, `***` p<0.001). **Bold** is the best mean per
-metric within each block.
+The paper's result tables are generated from the per-seed results, never typed by hand:
 
-| Data / drift              | Model    | Accuracy ↑        | DP ↓                    | EO ↓                    |
-|---------------------------|----------|-------------------|-------------------------|-------------------------|
-| Folktables, natural       | FADO     | 0.805 ± 0.003     | **0.042 ± 0.003**\*\*\* | **0.025 ± 0.003**\*\*\* |
-|                           | Aranyani | **0.808 ± 0.003** | 0.057 ± 0.004           | 0.036 ± 0.003           |
-|                           | ARF      | 0.731 ± 0.004     | 0.072 ± 0.012           | 0.077 ± 0.016           |
-|                           | RFR      | 0.779 ± 0.003     | 0.075 ± 0.006           | 0.059 ± 0.006           |
-| Adult, x_permutations     | FADO     | **0.838 ± 0.003** | **0.061 ± 0.004**\*\*\* | **0.053 ± 0.009**\*\*\* |
-|                           | Aranyani | 0.837 ± 0.004     | 0.083 ± 0.007           | 0.073 ± 0.010           |
-|                           | ARF      | 0.826 ± 0.004     | 0.090 ± 0.003           | 0.110 ± 0.013           |
-|                           | RFR      | 0.837 ± 0.002     | 0.100 ± 0.004           | 0.091 ± 0.010           |
-| Adult, y_swaps            | all      | *running*         |                         |                         |
-| Adult, y_prior_skip       | all      | *running*         |                         |                         |
-| Adult, x_exceed_skip      | all      | *running*         |                         |                         |
-| Adult, mean of the four   | all      | *pending*         |                         |                         |
+* `DOCS/paper_icde/tables/results.tex` — Table III: F1, demographic parity, and
+  equalized odds over 30 seeds, whole stream and after the drift onset, with
+  FADO's significant wins and losses against each method;
+* `DOCS/paper_icde/tables/detection.tex` — Table IV: how often and how fast FADO
+  detects each injected drift on Adult;
+* `DOCS/paper_icde/supplementary/significance.md` — every test behind Table III;
+* `DOCS/paper_icde/supplementary/paper_numbers.md` — every number quoted in the
+  paper's text that is not in a table, with its computation and source.
 
-`Aranyani` is the controller-free baseline: the same forest, loss,
-initialization, rolling-window statistics, and seed-pinned data ordering as
-FADO, with the fixed weight `λ = λ_base` and the adaptive constraint, the
-detectors, and the reaction controller disabled. The FADO-vs-Aranyani gap is
-therefore attributable to FADO's additions alone. ARF is the Adaptive Random
-Forest; RFR is robust fairness regularization.
+The methods compared are FADO; `Aranyani`, the controller-free baseline (the same
+forest, loss, initialization, rolling-window statistics, and seed-pinned data
+ordering as FADO, with the fixed weight `λ = λ_base = 0.1` of its published
+configuration and the adaptive constraint, the detectors, and the reaction
+controller disabled); `Aranyani, leaked λ`, the same baseline given in hindsight a
+constant weight read off FADO's runs (0.5 on Folktables, 1.5 on Adult) and
+pre-trained with `λ_base` like FADO; ARF, the Adaptive Random Forest; and RFR,
+robust fairness regularization.
 
 ---
 
@@ -161,12 +153,22 @@ per-sample predictions, and writes:
 
 * `DOCS/paper_icde/tables/results.tex` (Table III) and `tables/detection.tex`
   (Table IV), which `paper.tex` includes with `\input`;
-* `DOCS/paper_icde/supplementary/significance.md`: FADO against each baseline,
-  per block and metric, under the paired Wilcoxon signed-rank test and the
-  Welch t-test, each Holm-corrected across the baselines, with the number of
-  seeds on which FADO is better;
+* `DOCS/paper_icde/supplementary/significance.md`: every test behind the
+  win/loss marks of Table III (FADO against each method, per block and metric,
+  paired Wilcoxon signed-rank test, Holm-corrected across the four methods and,
+  as a stricter check, across the whole table), with the Welch t-test and the
+  number of seeds on which FADO is better;
 * `DOCS/paper_icde/supplementary/detection_split.md`: FADO minus Aranyani after
   the drift onset, split by whether FADO detected the drift.
+
+```bash
+PYTHONHASHSEED=0 python DOCS/paper_icde/scripts/paper_numbers.py   # after build
+```
+
+recomputes every number the paper's text quotes outside the tables (ratios,
+before/after comparisons, λ dynamics, the ablation, the machines the runs used)
+and writes `DOCS/paper_icde/supplementary/paper_numbers.md`. Claims that need the
+per-sample curves use the run folders present on the machine; each row says which.
 
 F1 needs the per-sample predictions, which are only in the result folders of the
 machine that ran each sweep. `crawl` computes it there and adds it to the tracked
@@ -193,6 +195,8 @@ store `DOCS/paper_icde/data/f1_store.csv`, so each machine contributes its own r
   sweep, averaged over seeds (CSV, plots).
 * `DOCS/paper_icde/scripts/make_tables.py` — the paper's Tables III and IV and
   the supplementary significance and detection reports.
+* `DOCS/paper_icde/scripts/paper_numbers.py` — derivation of every number quoted
+  in the paper's text (`supplementary/paper_numbers.md`).
 * `DOCS/RUNBOOK.md` — everyday commands: machines, sweeps, agents, syncing
   results, tables, figures.
 * `files/experiments/wandb/<run id>/` — per-seed result outputs of each run.

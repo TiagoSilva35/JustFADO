@@ -21,14 +21,6 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
-\bibitem{chowdhury2024enhancing}
-\BIBentryALTinterwordspacing
-S.~B.~R. Chowdhury \emph{et~al.}, ``Enhancing group fairness in online settings
-  using oblique decision forests,'' in \emph{The Twelfth International
-  Conference on Learning Representations}, 2024. [Online]. Available:
-  \url{https://openreview.net/forum?id=E1NxN5QMOE}
-\BIBentrySTDinterwordspacing
-
 \bibitem{8474918}
 K.~Shailaja, B.~Seetharamulu, and M.~A. Jabbar, ``Machine learning in
   healthcare: A review,'' in \emph{Proc. 2nd Int. Conf. Electron., Commun.
@@ -92,6 +84,14 @@ O.~B. Deho, M.~Bewong, S.~Kwashie, J.~Li, J.~Liu, L.~Liu, and S.~Joksimovic,
   ``Is it still fair? a comparative evaluation of fairness algorithms through
   the lens of covariate drift,'' 2024. [Online]. Available:
   \url{https://arxiv.org/abs/2409.12428}
+\BIBentrySTDinterwordspacing
+
+\bibitem{chowdhury2024enhancing}
+\BIBentryALTinterwordspacing
+S.~B.~R. Chowdhury \emph{et~al.}, ``Enhancing group fairness in online settings
+  using oblique decision forests,'' in \emph{The Twelfth International
+  Conference on Learning Representations}, 2024. [Online]. Available:
+  \url{https://openreview.net/forum?id=E1NxN5QMOE}
 \BIBentrySTDinterwordspacing
 
 \bibitem{10.1145/3770855.3819070}
@@ -199,8 +199,10 @@ D.~G. Horvitz and D.~J. Thompson, ``A generalization of sampling without
 
 \bibitem{doi:10.1137/1.9781611972771.42}
 \BIBentryALTinterwordspacing
-A.~Bifet and R.~Gavaldà, \emph{Learning from Time-Changing Data with Adaptive
-  Windowing}, pp. 443--448. [Online]. Available:
+A.~Bifet and R.~Gavald{\`a}, ``Learning from time-changing data with adaptive
+  windowing,'' in \emph{Proceedings of the 2007 SIAM International Conference
+  on Data Mining (SDM)}.\hskip 1em plus 0.5em minus 0.4em\relax SIAM, 2007, pp.
+  443--448. [Online]. Available:
   \url{https://epubs.siam.org/doi/abs/10.1137/1.9781611972771.42}
 \BIBentrySTDinterwordspacing
 

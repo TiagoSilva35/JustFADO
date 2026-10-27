@@ -158,10 +158,11 @@ folder, or `scp -r`). Run ids are unique, so nothing is overwritten.
 |---|---|---|
 | **F1 from this machine's run folders** (any machine, no W&B) | `python DOCS/paper_icde/scripts/make_tables.py crawl` | upserts into `DOCS/paper_icde/data/f1_store.csv` |
 | **Paper tables (III, IV), significance report (Wilcoxon and Welch), detection split** | `python DOCS/paper_icde/scripts/make_tables.py build` (add `--refresh` to download from W&B again; `all` = crawl + build) | `DOCS/paper_icde/tables/*.tex`, `DOCS/paper_icde/supplementary/` |
+| **Numbers quoted in the paper text** (after `build`) | `PYTHONHASHSEED=0 python DOCS/paper_icde/scripts/paper_numbers.py` | `DOCS/paper_icde/supplementary/paper_numbers.md` |
 | Per-seed metrics of one or more sweeps | `python -m src.fetch_wandb_arm_metrics --sweep <id>[,<id>...]` | `files/experiments/wandb_arm_metrics/<ids>/raw.csv`, `summary.csv` |
 | Curves over time, mean over seeds | `python -m src.fetch_wandb_trajectories --sweep <id> --plot` | `files/experiments/wandb_trajectories/<id>/` |
 | Whole-stream F1 from local predictions (machine with the folders) | `python DOCS/paper_icde/scripts/stream_f1.py adult sim_x_permutations:uwhcwsdg sim_y_swaps:bi6frxi3` | appends to `files/experiments/extra_metrics/per_seed.csv` |
-| Onset-aligned figure (Fig. 3) | `cd DOCS/paper_icde/figures && python ../scripts/fig_adult_onset_grid.py adult_onset_grid.pdf` | `adult_onset_grid.pdf/.png` |
+| Onset-aligned figure (not currently in the paper) | `cd DOCS/paper_icde/figures && python ../scripts/fig_adult_onset_grid.py adult_onset_grid.pdf` | `adult_onset_grid.pdf/.png` |
 
 **Tables from several machines.** F1 needs the per-sample predictions, which only the
 machine that ran a sweep has. So each machine runs `crawl`, which adds its F1 rows to the

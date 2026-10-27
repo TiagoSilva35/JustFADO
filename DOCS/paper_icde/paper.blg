@@ -12,49 +12,46 @@ Database file #2: references.bib
 -- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
 -- http://www.michaelshell.org/tex/ieeetran/bibtex/
 -- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
-Warning--missing publisher in doi:10.1137/1.9781611972771.42
-Warning--empty year in doi:10.1137/1.9781611972771.42
 
 Done.
 You've used 31 entries,
             4087 wiz_defined-function locations,
-            1385 strings with 21706 characters,
-and the built_in function-call counts, 23450 in all, are:
-= -- 1887
+            1387 strings with 21717 characters,
+and the built_in function-call counts, 23614 in all, are:
+= -- 1900
 > -- 618
 < -- 150
 + -- 332
 - -- 125
-* -- 1134
-:= -- 3485
-add.period$ -- 62
+* -- 1142
+:= -- 3511
+add.period$ -- 64
 call.type$ -- 31
-change.case$ -- 30
+change.case$ -- 31
 chr.to.int$ -- 348
-cite$ -- 33
-duplicate$ -- 1686
-empty$ -- 1892
+cite$ -- 31
+duplicate$ -- 1704
+empty$ -- 1914
 format.name$ -- 149
-if$ -- 5460
+if$ -- 5501
 int.to.chr$ -- 0
 int.to.str$ -- 31
-missing$ -- 322
+missing$ -- 327
 newline$ -- 156
 num.names$ -- 31
-pop$ -- 828
+pop$ -- 837
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 2
-skip$ -- 1822
+skip$ -- 1833
 stack$ -- 0
-substring$ -- 939
-swap$ -- 1350
+substring$ -- 940
+swap$ -- 1359
 text.length$ -- 34
 text.prefix$ -- 0
 top$ -- 5
 type$ -- 31
-warning$ -- 2
+warning$ -- 0
 while$ -- 85
 width$ -- 33
-write$ -- 356
-(There were 2 warnings)
+write$ -- 358

@@ -11,7 +11,8 @@ crawl   scans this machine's run folders (files/experiments/wandb/<run id>/), ke
         the sweeps in SWEEPS, computes F1 (whole stream and after the onset) from the
         per-sample predictions, and upserts one row per (sweep, run, model, seed) into the
         tracked store DOCS/paper_icde/data/f1_store.csv. Rows from other machines are kept.
-        Commit and push the store; on another machine, pull and build.
+        Commit and push the store; on another machine, pull and build. build uses only the
+        store rows of runs that W&B lists as finished runs of those sweeps.
 build   merges the W&B metrics with the F1 store and regenerates every output below. The
         result depends only on the store and W&B, so it is the same on every machine.
 
@@ -21,9 +22,9 @@ Writes (paper.tex \\input's the two .tex files, so the text is never touched):
     DOCS/paper_icde/supplementary/detection_split.{md,csv}
                                                 FADO - Aranyani after onset, detected vs undetected
     DOCS/paper_icde/supplementary/significance.md
-                                                FADO vs each baseline: paired Wilcoxon and Welch
-                                                t-test, Holm-corrected (the paper's "Welch results
-                                                in the repository")
+                                                FADO vs each method: every test behind the marks of
+                                                Table III, plus the Welch t-test (the paper's "Welch
+                                                results in the repository")
 
 Sources:
     * W&B per-arm tables (`arm_metrics`) and run summaries of the sweeps in SWEEPS,
@@ -36,10 +37,13 @@ Sources:
 Rules (same as the tables already in the paper):
     * a cell is filled only when every seed (30) of that method has the value; otherwise
       it is left empty;
-    * bold = best mean in the block; FADO's superscripts = paired Wilcoxon, Holm-corrected
-      across Aranyani, ARF and RFR, significant in FADO's favour against all three;
-    * the leaked-lambda Aranyani gets a dagger when it differs from FADO (paired Wilcoxon,
-      p < 0.05).
+    * bold = best mean of the column in the block (only when every method has the column);
+    * FADO is the reference: every other method's cell is marked with a bullet (FADO
+      significantly better) or a circle (FADO significantly worse) by a two-sided paired
+      Wilcoxon test, Holm-corrected across the four methods compared with FADO in that
+      column of that block (alpha 0.05);
+    * the overall block on top counts, per method, FADO's significant wins / no significant
+      differences / significant losses over every cell of the table.
 """
 import argparse
 import glob
@@ -69,21 +73,24 @@ SWEEPS = {
     'tuned_folktables': ['9ulal3qn'],                         # Aranyani, lambda 0.5, pre-train 0.1
     'tuned_adult': ['rm2glvmh', 'wqab0alm', 'pzbwmd4e'],      # Aranyani, lambda 1.5, pre-train 0.1
 }
-BLOCKS = [  # (scenario key, block title in the table)
-    ('folktables', r'\folk{}, natural cross-year shift'),
-    ('sim_x_permutations', r'\adult{}, x\_permutations'),
-    ('sim_y_swaps', r'\adult{}, y\_swaps'),
-    ('sim_y_prior_skip', r'\adult{}, y\_prior\_skip'),
-    ('sim_x_exceed_skip', r'\adult{}, x\_exceed\_skip'),
+BLOCKS = [  # (scenario key, block title in the table); the four drifts are injected into Adult
+    ('folktables', r'\folk{}'),
+    ('sim_x_permutations', r'x\_permutations'),
+    ('sim_y_swaps', r'y\_swaps'),
+    ('sim_y_prior_skip', r'y\_prior\_skip'),
+    ('sim_x_exceed_skip', r'x\_exceed\_skip'),
 ]
 ADULT = [sc for sc, _ in BLOCKS if sc != 'folktables']
-ROWS = [('fado', r'\fado{}'), ('aranyani', r'\ara{}'), ('tuned', r'\ara{}, leaked $\lambda^{\mathrm{d}}$'),
+ROWS = [('fado', r'\fado{}'), ('aranyani', r'\ara{}'), ('tuned', r'\ara{}, leaked $\lambda$'),
         ('arf', r'\arf{}'), ('rfr', r'\rfr{}')]
 BASELINES = ['aranyani', 'arf', 'rfr']
+COMPARATORS = ['aranyani', 'tuned', 'arf', 'rfr']  # every method FADO is tested against
+NAMES = {'aranyani': 'Aranyani', 'tuned': 'Aranyani, leaked λ', 'arf': 'ARF', 'rfr': 'RFR'}
+ALPHA = 0.05
 # (column, higher is better)
 COLS = [('f1', True), ('dp', False), ('eo', False),
         ('f1_post', True), ('post_drift_dp', False), ('post_drift_eo', False)]
-POST = {'f1_post', 'post_drift_dp', 'post_drift_eo'}
+POST = {'f1_post', 'post_drift_dp', 'post_drift_eo', 'post_drift_accuracy'}
 
 
 # ----------------------------------------------------------------------------- data
@@ -200,11 +207,18 @@ def crawl():
     print(cover.to_string())
 
 
-def store_f1():
-    """F1 rows (scenario, model, seed, f1, f1_post) from the shared store."""
+def store_f1(valid_runs):
+    """F1 rows (scenario, model, seed, f1, f1_post) from the shared store, restricted to the
+    runs W&B lists as finished runs of the configured sweeps. Store rows of other runs (for
+    example a run deleted from W&B whose folder survived on a machine) are ignored."""
     if not os.path.isfile(F1_STORE):
         return pd.DataFrame(columns=['scenario', 'model', 'seed', 'f1', 'f1_post'])
     store = pd.read_csv(F1_STORE)
+    ignored = store[~store.run_id.isin(valid_runs)]
+    if len(ignored):
+        print(f'[f1] ignoring {len(ignored)} store rows of {ignored.run_id.nunique()} run(s) that are not '
+              f'finished runs of the configured sweeps in W&B: {", ".join(sorted(ignored.run_id.unique()))}')
+    store = store[store.run_id.isin(valid_runs)]
     dup = store.duplicated(['scenario', 'model', 'seed'], keep=False)
     if dup.any():
         print(f'[warn] {dup.sum()} store rows share (scenario, model, seed) across runs; using the latest')
@@ -214,16 +228,18 @@ def store_f1():
 
 def load(refresh):
     keep = ['scenario', 'model', 'seed', 'accuracy', 'dp', 'eo',
-            'post_drift_accuracy', 'post_drift_dp', 'post_drift_eo']
-    parts = []
+            'post_drift_accuracy', 'post_drift_dp', 'post_drift_eo', 'stream_final_lambda', 'post_drift_lambda']
+    parts, valid_runs = [], set()
     for key in ('main_folktables', 'main_adult'):
         raw = arm_metrics(SWEEPS[key], refresh)
         parts.append(raw[raw.model.isin(['fado'] + BASELINES)][keep])
+        valid_runs |= set(raw.run_id)
     for key in ('tuned_folktables', 'tuned_adult'):
         raw = arm_metrics(SWEEPS[key], refresh)
         parts.append(raw[raw.model == 'aranyani'].assign(model='tuned')[keep])
+        valid_runs |= set(raw.run_id)
     data = pd.concat(parts, ignore_index=True)
-    f1 = store_f1()
+    f1 = store_f1(valid_runs)
     # whole-stream F1 of the main runs not crawled yet (computed earlier by stream_f1.py)
     if os.path.isfile(F1_FALLBACK):
         fb = pd.read_csv(F1_FALLBACK)[['scenario', 'model', 'seed', 'f1']]
@@ -235,7 +251,7 @@ def load(refresh):
                   f'(crawl their sweeps to replace them)')
         f1 = pd.concat([f1, missing.assign(f1_post=np.nan)], ignore_index=True)
     data = data.merge(f1, on=['scenario', 'model', 'seed'], how='left')
-    data.loc[data.scenario == 'folktables', list(POST) + ['post_drift_accuracy']] = np.nan
+    data.loc[data.scenario == 'folktables', list(POST)] = np.nan
     return data
 
 
@@ -253,68 +269,163 @@ def _stars(p):
     return '***' if p < .001 else '**' if p < .01 else '*' if p < .05 else ''
 
 
-def results_table(data):
+def fado_tests(data):
+    """FADO against each comparator, per block and metric: two-sided paired Wilcoxon test.
+
+    `gain` is FADO's mean advantage over the paired seeds, signed so that a positive value
+    favours FADO for every metric (FADO - method for F1 and accuracy, method - FADO for DP
+    and EO). p_col is Holm-corrected across the comparators of one block and metric, the
+    family behind the marks of Table III; p_all across every comparison shown in Table III,
+    the stricter check reported alongside. Only pairs with all 30 seeds are tested."""
+    table_cols = {c for c, _ in COLS}
+    rows = []
+    for sc, _ in BLOCKS:
+        d = data[data.scenario == sc]
+        fado = d[d.model == 'fado'].set_index('seed')
+        for col, _, higher in SIG_METRICS:
+            if fado[col].notna().sum() != N_SEEDS:
+                continue
+            for b in COMPARATORS:
+                other = d[d.model == b].set_index('seed')
+                if other[col].notna().sum() != N_SEEDS:
+                    continue
+                gain = (fado[col] - other[col].reindex(fado.index)).dropna()
+                gain = gain if higher else -gain
+                rows.append(dict(scenario=sc, col=col, model=b, table=col in table_cols,
+                                 gain=gain.mean(), better=int((gain > 0).sum()), n=len(gain),
+                                 p=wilcoxon(gain).pvalue,
+                                 p_welch=ttest_ind(fado[col], other[col], equal_var=False).pvalue))
+    t = pd.DataFrame(rows)
+    by_cell = t.groupby(['scenario', 'col'])
+    t['p_col'] = by_cell.p.transform(lambda s: _holm(s.values))
+    t['p_welch_col'] = by_cell.p_welch.transform(lambda s: _holm(s.values))
+    t.loc[t.table, 'p_all'] = _holm(t.loc[t.table, 'p'].values)
+    t['result'] = np.where(t.p_col >= ALPHA, 'n.s.', np.where(t.gain > 0, 'win', 'loss'))
+    return t
+
+
+ARANYANI_LAMBDA = 0.1  # Aranyani's published fixed weight, lambda_base in Table II
+LEAKED_SWEEPS = {d: os.path.join(REPO, 'src', 'configs', 'sweeps', f'sweep_aranyani_stream_lambda_{d}.yaml')
+                 for d in ('adult', 'folktables')}
+
+
+def leaked_lambdas():
+    """{dataset: constant lambda} of the leaked-lambda Aranyani, read from its sweep configs."""
+    import yaml
+    return {d: float(yaml.safe_load(open(p))['parameters']['lambda_const']['value']) for d, p in LEAKED_SWEEPS.items()}
+
+
+WIN, LOSS = r'^{\bullet}', r'^{\circ}'
+SLOT = r'\phantom{^{\bullet}}'  # unmarked cells keep the marker's width, so the columns stay aligned
+FADO_SHADE = r'\rowcolor{black!6}'  # colortbl
+OVERALL_ROWS = [('aranyani', r'vs.\ \ara{}'), ('tuned', r'vs.\ ' + dict(ROWS)['tuned']),
+                ('arf', r'vs.\ \arf{}'), ('rfr', r'vs.\ \rfr{}')]
+OUTCOMES = [('win', 'Significant wins'), ('n.s.', 'No significant difference'), ('loss', 'Significant losses')]
+
+
+def overall_block(tests):
+    """Top of Table III: FADO's significant wins / no significant difference / losses against
+    each method, summed over every cell of the table (blocks x periods x metrics)."""
+    t = tests[tests.table]
+    per_method = t.groupby('model').size()
+    assert per_method.nunique() == 1, per_method  # same cells for every method, so the counts compare
+
+    widths = (2, 3, 2)  # columns spanned by wins / no significant difference / losses
+
+    def row(cells):
+        return ' & '.join(r'\multicolumn{' + str(w) + '}{c}{' + str(c) + '}' for w, c in zip(widths, cells))
+    lines = [r'\multicolumn{8}{@{}l}{\textbf{Overall:} \fado{} against each method over its '
+             + str(per_method.iloc[0]) + r' cells below} \\',
+             '& ' + row([h for _, h in OUTCOMES]) + r' \\',
+             r'\cmidrule(lr){2-3} \cmidrule(lr){4-6} \cmidrule(l){7-8}']
+    for m, label in OVERALL_ROWS:
+        r = t[t.model == m].result
+        lines.append(label + ' & ' + row([int((r == k).sum()) for k, _ in OUTCOMES]) + r' \\')
+    lines += [r'\addlinespace[2pt]',
+              f'Total ({len(t)} comparisons) & ' + row([int((t.result == k).sum()) for k, _ in OUTCOMES]) + r' \\']
+
+    return lines
+
+
+def text_numbers(tests):
+    """The figures the Results text quotes about the marks of Table III."""
+    t = tests[tests.table]
+    loss = t[t.result == 'loss']
+    rest = loss[~loss.col.isin(['f1', 'f1_post'])]
+    marked = t[t.result != 'n.s.']
+    return (f'{len(t)} comparisons: {int((t.result == "win").sum())} wins, {int((t.result == "n.s.").sum())} n.s., '
+            f'{len(loss)} losses ({len(loss) - len(rest)} on F1; the {len(rest)} on DP/EO all against the leaked '
+            f'variant: {bool((rest.model == "tuned").all())}); {int((marked.p_all < ALPHA).sum())} of {len(marked)} '
+            f'marks survive Holm across the whole table')
+
+
+def results_table(data, tests):
     models = [m for m, _ in ROWS]
-    cells, filled = {}, {}
+    result = tests.set_index(['scenario', 'col', 'model']).result
+    cells, filled, empty = {}, {}, False
     for sc, _ in BLOCKS:
         d = data[data.scenario == sc]
         by = {m: d[d.model == m].set_index('seed') for m in models}
         for col, higher in COLS:
             if sc == 'folktables' and col in POST:
-                for m in models:
-                    cells[(sc, m, col)] = 'n/a'
                 continue
             have = [m for m in models if len(by[m]) and by[m][col].notna().sum() == N_SEEDS]
-            if 'fado' not in have or not set(BASELINES) <= set(have):
-                for m in models:
-                    cells[(sc, m, col)] = ''
-                continue
             means = {m: by[m][col].mean() for m in have}
-            best = (max if higher else min)(means, key=means.get)
-            pvals, favour = [], []
-            for b in BASELINES:
-                diff = (by['fado'][col] - by[b][col].reindex(by['fado'].index)).dropna()
-                pvals.append(wilcoxon(diff).pvalue)
-                favour.append((diff.mean() > 0) == higher)
-            star = _stars(max(_holm(np.array(pvals)))) if all(favour) else ''
+            # bold only when every method has the column, so a missing row never makes another one best
+            best = (max if higher else min)(means, key=means.get) if len(have) == len(models) else None
             for m in models:
                 if m not in have:
-                    cells[(sc, m, col)] = ''
+                    cells[(sc, m, col)], empty = '', True
                     continue
-                v = f"{means[m]:.3f}\\pm {by[m][col].std(ddof=1):.3f}"
+                v = f"{means[m]:.3f}{{\\pm}}{by[m][col].std(ddof=1):.3f}"
                 if m == best:
                     v = f'\\mathbf{{{v}}}'
-                if m == 'fado' and star:
-                    v += f'\\sig{{{star}}}'
-                if m == 'tuned':
-                    diff = (by['fado'][col] - by['tuned'][col].reindex(by['fado'].index)).dropna()
-                    if wilcoxon(diff).pvalue < 0.05:
-                        v += r'^{\dagger}'
+                r = result.get((sc, col, m))
+                v += WIN if r == 'win' else LOSS if r == 'loss' else SLOT
                 cells[(sc, m, col)] = f'${v}$'
                 filled[(sc, m)] = filled.get((sc, m), 0) + 1
+    leaked = leaked_lambdas()
+
+    def lam(sc, m, col):
+        """The fairness weight: FADO's mean lambda_t over the stream, the Aranyani constants, none for ARF/RFR."""
+        if m == 'fado':
+            x = data[(data.scenario == sc) & (data.model == 'fado')][col]
+            return f'${x.mean():.2f}$' if x.notna().sum() == N_SEEDS else ''  # mean only: it describes the run, it is not compared
+        if m == 'aranyani':
+            return f'${ARANYANI_LAMBDA:g}$'
+        if m == 'tuned':
+            return f"${leaked['folktables' if sc == 'folktables' else 'adult']:g}$"
+        return '--'
+    no_onset = r'\multirow{' + str(len(ROWS)) + r'}{*}{\emph{not applicable: no injected onset}}'
     body = []
     for k, (sc, title) in enumerate(BLOCKS):
         if k:
             body.append(r'\midrule')
-        body.append(r'\multicolumn{7}{@{}l}{{' + title + r'}} \\')
-        for m, label in ROWS:
-            body.append(' & '.join([label] + [cells[(sc, m, c)] for c, _ in COLS]) + r' \\')
+        body.append(r'\multicolumn{8}{@{}l}{' + title + r'} \\')
+        for i, (m, label) in enumerate(ROWS):
+            whole = [cells[(sc, m, c)] for c, _ in COLS[:3]] + [lam(sc, m, 'stream_final_lambda')]
+            if sc == 'folktables':
+                after = [r'\multicolumn{3}{c}{' + (no_onset if i == 0 else '') + '}']
+            else:
+                after = [cells[(sc, m, c)] for c, _ in COLS[3:]]
+            body.append((FADO_SHADE if m == 'fado' else '') + ' & '.join([label] + whole + after) + r' \\')
+    overall = overall_block(tests)
+
     tex = '\n'.join([
-        r'\begin{table*}[t]', r'\centering',
-        r'\caption{F1, Demographic Parity, and Equalized Odds Over 30 Seeds, Whole Stream and After the Drift Onset$^{\mathrm{a}}$}',
-        r'\label{tab:results}', r'\setlength{\tabcolsep}{4pt}', r'\footnotesize',
-        r'\begin{tabular}{@{}l ccc ccc@{}}', r'\toprule',
-        r'& \multicolumn{3}{c}{Whole stream} & \multicolumn{3}{c}{After onset$^{\mathrm{c}}$} \\',
-        r'\cmidrule(lr){2-4} \cmidrule(l){5-7}',
-        r'Method & F1$^{\mathrm{b}}$\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & F1$^{\mathrm{b}}$\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ \\',
+        # [!t]: the table is taller than \dbltopfraction allows and would otherwise float to the end
+        r'\begin{table*}[!t]', r'\centering',
+        r'\caption{F1, Demographic Parity, and Equalized Odds Over 30 Seeds}',
+        r'\label{tab:results}', r'\setlength{\tabcolsep}{5pt}', r'\footnotesize',
+        r'\begin{tabular}{@{}l cccc ccc@{}}', r'\toprule'] + overall + [
+        r'\midrule[\heavyrulewidth]',
+        r'& \multicolumn{4}{c}{Whole stream} & \multicolumn{3}{c}{After the onset} \\',
+        r'\cmidrule(lr){2-5} \cmidrule(l){6-8}',
+        r'Method & F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & $\lambda$ & F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ \\',
         r'\midrule'] + body + [
         r'\bottomrule', r'\end{tabular}',
-        r'\tnote{$^{\mathrm{a}}$Mean $\pm$ standard deviation over 30 seeds. Bold marks the best mean per',
-        r"metric within each block. Superscripts on \fado{} mark a paired Wilcoxon test, Holm-corrected, significant in \fado{}'s favor against each of \ara{}, \arf{}, and \rfr{}",
-        r'($^{*}p<0.05$, $^{**}p<0.01$, $^{***}p<0.001$); columns with no marker have mixed per-baseline directions and are dissected in the text.',
-        r'$^{\mathrm{b}}$F1 of the positive class (income $>$ \$50k), computed from the per-sample predictions (one confusion matrix per run and part of the stream). Empty cells: not yet computed.',
-        r'$^{\mathrm{c}}$From the injected drift onset to the end of the test stream (the drifted part of the stream); DP and EO are the rolling-window values averaged over that part. \folk{} has no injected onset (n/a).',
-        r"$^{\mathrm{d}}$\ara{} with a constant $\lambda$ chosen after the fact from \fado{}'s own runs, at least \fado{}'s mean $\lambda_t$ on that dataset ($0.5$ on \folk{}, $1.5$ on \adult{}). This gives the baseline an advantage it would not have in practice, the value of $\lambda$ leaked from \fado{}, so it is the strongest fixed-$\lambda$ \ara{} we can construct. It is pre-trained with $\lambda_{\mathrm{base}}=0.1$, like \fado{}, so both start from the same forest. $^{\dagger}$Significantly different from \fado{} (paired two-sided Wilcoxon test, $p<0.05$); bold shows which is better. Empty rows: runs not finished.}",
+        r'\tnote{Mean $\pm$ standard deviation over 30 seeds. Bold: best mean in the block. $^{\bullet}$/$^{\circ}$: \fado{} significantly better/worse'
+        r' than that method (paired Wilcoxon test, Holm-corrected, $\alpha=0.05$). $\lambda$: fairness weight, the mean of $\lambda_t$ over the'
+        r' stream for \fado{} and a constant for the \ara{} variants.' + (' Empty cell: fewer than 30 seeds.' if empty else '') + '}',
         r'\end{table*}'])
     return tex + '\n', filled
 
@@ -349,17 +460,16 @@ def detection_table(det, main_adult):
     rows += [r'\midrule', row('All', det, fado)]
     tex = '\n'.join([
         r'\begin{table*}[t]', r'\centering',
-        r'\caption{Detection of the Injected Drift by \fado{} on \adult{}, 30 Seeds per Scenario$^{\mathrm{a}}$}',
+        r'\caption{Detection of the Injected Drift by \fado{} on \adult{}, 30 Seeds per Scenario}',
         r'\label{tab:detection}', r'\setlength{\tabcolsep}{5pt}', r'\footnotesize',
         r'\begin{tabular}{@{}l cc cc cc cc@{}}', r'\toprule',
-        r'& \multicolumn{2}{c}{Either detector} & \multicolumn{2}{c}{Accuracy detector} & \multicolumn{2}{c}{Fairness monitor} & \multicolumn{2}{c}{False alarms per run$^{\mathrm{c}}$} \\',
+        r'& \multicolumn{2}{c}{Either detector} & \multicolumn{2}{c}{Accuracy detector} & \multicolumn{2}{c}{Fairness monitor} & \multicolumn{2}{c}{False alarms per run} \\',
         r'\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(l){8-9}',
-        r'Scenario & Detected & Delay$^{\mathrm{b}}$ & Detected & Delay$^{\mathrm{b}}$ & Detected & Delay$^{\mathrm{b}}$ & Accuracy & Fairness \\',
+        r'Scenario & Detected & Delay & Detected & Delay & Detected & Delay & Accuracy & Fairness \\',
         r'\midrule'] + rows + [
         r'\bottomrule', r'\end{tabular}',
-        r'\tnote{$^{\mathrm{a}}$An onset counts as detected when the detector raises an alarm within $1{,}000$ samples after it, the length of one rolling window: a window-based detector cannot register a change before its window has refilled, so a later alarm is no longer attributed to the injected drift. \emph{Either detector} counts a run once if the accuracy detector or the fairness monitor detects the onset; \folk{} has no injected onset and is not scored.',
-        r'$^{\mathrm{b}}$Mean number of samples from the onset to the first alarm within that window, over the detected runs only; by construction it is at most $1{,}000$, so it must be read together with the detection rate.',
-        r"$^{\mathrm{c}}$Alarms not matched to the onset, averaged over the 30 runs; every alarm of the fairness monitor, matched or not, resets the penalty's running statistics.}",
+        r'\tnote{Detected: an alarm within $1{,}000$ samples after the onset. Delay: mean number of samples from the onset to that alarm,'
+        r' over the detected runs.}',
         r'\end{table*}'])
     return tex + '\n'
 
@@ -426,45 +536,42 @@ SIG_METRICS = [('accuracy', 'Accuracy', True), ('f1', 'F1', True), ('dp', 'DP', 
                ('post_drift_dp', 'DP after onset', False), ('post_drift_eo', 'EO after onset', False)]
 
 
-def significance_report(data):
-    """FADO against each baseline, per block and metric: paired Wilcoxon and Welch t-test,
-    each Holm-corrected across the baselines of that comparison set."""
-    sets = [('Against the published baselines', BASELINES), ('Against the leaked-lambda Aranyani', ['tuned'])]
-    out = ['# Significance of FADO against each baseline', '',
-           'Generated by `DOCS/paper_icde/scripts/make_tables.py`. For every block of Table III and every',
-           'metric: the mean difference FADO minus baseline over the paired seeds, the number of seeds on',
-           'which FADO is better, and the p-values of the two-sided paired Wilcoxon signed-rank test and the',
-           "two-sided Welch t-test. Both are Holm-corrected across the baselines of the same set; the",
-           'leaked-lambda Aranyani is tested on its own. Only metrics with all 30 seeds for both methods are',
-           'tested.', '']
-    for title, baselines in sets:
-        out += [f'## {title}', '']
-        for sc, block in BLOCKS:
-            d = data[data.scenario == sc]
-            fado = d[d.model == 'fado'].set_index('seed')
-            lines = []
-            for col, label, higher in SIG_METRICS:
-                tests = []
-                for b in baselines:
-                    other = d[d.model == b].set_index('seed')
-                    if col not in fado or fado[col].notna().sum() != N_SEEDS or \
-                            len(other) == 0 or other[col].notna().sum() != N_SEEDS:
-                        continue
-                    diff = (fado[col] - other[col].reindex(fado.index)).dropna()
-                    better = int(((diff > 0) if higher else (diff < 0)).sum())
-                    tests.append((b, diff.mean(), better, len(diff), wilcoxon(diff).pvalue,
-                                  ttest_ind(fado[col], other[col], equal_var=False).pvalue))
-                if not tests:
-                    continue
-                pw = _holm(np.array([t[4] for t in tests]))
-                pt = _holm(np.array([t[5] for t in tests]))
-                for (b, mean, better, n, _, _), w, t in zip(tests, pw, pt):
-                    lines.append(f'| {label} | {b} | {mean:+.4f} | {better}/{n} | {w:.1e} | {t:.1e} |')
-            if lines:
-                name = block.replace('\\folk{}', 'Folktables').replace('\\adult{}', 'Adult').replace('\\_', '_')
-                out += [f'### {name}', '',
-                        '| Metric | Baseline | FADO − baseline | FADO better | Wilcoxon p (Holm) | Welch p (Holm) |',
-                        '|---|---|---|---|---|---|'] + lines + ['']
+def significance_report(tests):
+    """Every test behind the marks of Table III, per block, plus the Welch t-test."""
+    marks = {'win': '•', 'loss': '◦', 'n.s.': '–'}
+    marked = tests[tests.table & (tests.result != 'n.s.')]
+    out = ['# Significance of FADO against each method', '',
+           'Generated by `DOCS/paper_icde/scripts/make_tables.py`; every mark of Table III can be checked here.',
+           'FADO is the reference. For every block, metric and method (all 30 seeds, paired by seed):', '',
+           '- **FADO advantage**: mean paired difference in metric units (an absolute difference, not a',
+           '  percentage), signed so that a **positive value favours FADO** for every metric: FADO − method for',
+           '  F1 and accuracy, method − FADO for DP and EO.',
+           '- **FADO better**: seeds on which FADO is better than the method.',
+           '- **Wilcoxon p**: two-sided paired Wilcoxon signed-rank test, raw and Holm-corrected across the four',
+           f'  methods compared with FADO in the same block and metric. This is the family of Table III (α = {ALPHA}).',
+           '- **Holm, whole table**: the stricter check, Holm-corrected across all '
+           f'{int(tests.table.sum())} comparisons shown in Table III;',
+           f'  {int((marked.p_all < ALPHA).sum())} of its {len(marked)} marked differences stay below {ALPHA}. '
+           'Accuracy is not in the table, so it has none.',
+           '- **Mark**: • FADO significantly better, ◦ FADO significantly worse, – no significant difference',
+           '  detected (not evidence of equivalence).',
+           '- **Welch p**: two-sided Welch t-test, Holm-corrected like the Wilcoxon test; it ignores the pairing',
+           '  and is reported for reference only.', '']
+    for sc, block in BLOCKS:
+        t = tests[tests.scenario == sc]
+        if not len(t):
+            continue
+        name = block.replace('\\folk{}', 'Folktables').replace('\\adult{}', 'Adult').replace('\\_', '_')
+        out += [f'## {name}', '',
+                '| Metric | Method | FADO advantage | FADO better | Wilcoxon p | Wilcoxon p (Holm) | Holm, whole table | Mark | Welch p (Holm) |',
+                '|---|---|---|---|---|---|---|---|---|']
+        for col, label, _ in SIG_METRICS:
+            for _, r in t[t.col == col].iterrows():
+                whole = f'{r.p_all:.1e}' if r.table else '–'
+                mark = marks[r.result] if r.table else 'not in table'
+                out.append(f'| {label} | {NAMES[r.model]} | {r.gain:+.4f} | {r.better}/{r.n} | {r.p:.1e} | '
+                           f'{r.p_col:.1e} | {whole} | {mark} | {r.p_welch_col:.1e} |')
+        out.append('')
     return '\n'.join(out)
 
 
@@ -499,10 +606,11 @@ def build(refresh):
 
     os.makedirs(os.path.join(PAPER, 'tables'), exist_ok=True)
     os.makedirs(os.path.join(PAPER, 'supplementary'), exist_ok=True)
-    results, filled = results_table(data)
+    tests = fado_tests(data)
+    results, filled = results_table(data, tests)
     open(os.path.join(PAPER, 'tables', 'results.tex'), 'w').write(results)
     open(os.path.join(PAPER, 'tables', 'detection.tex'), 'w').write(detection_table(det, main_adult))
-    open(os.path.join(PAPER, 'supplementary', 'significance.md'), 'w').write(significance_report(data))
+    open(os.path.join(PAPER, 'supplementary', 'significance.md'), 'w').write(significance_report(tests))
     md, split = detection_split(det, main_adult)
     open(os.path.join(PAPER, 'supplementary', 'detection_split.md'), 'w').write(md)
     split.to_csv(os.path.join(PAPER, 'supplementary', 'adult_detected_vs_undetected.csv'), index=False)
@@ -511,6 +619,7 @@ def build(refresh):
     for sc, _ in BLOCKS:
         print(f'  {sc:20s} ' + '  '.join(f'{m}={filled.get((sc, m), 0)}' for m, _ in ROWS))
     missing_report(data)
+    print('[text] numbers quoted in the Results text: ' + text_numbers(tests))
     print(f'written: {os.path.relpath(os.path.join(PAPER, "tables"), REPO)}/results.tex, detection.tex; '
           f'{os.path.relpath(os.path.join(PAPER, "supplementary"), REPO)}/')
 
