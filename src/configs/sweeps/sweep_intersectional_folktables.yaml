@@ -1,0 +1,41 @@
+# Intersectional fairness on Folktables: four groups, sex x race (white / not white).
+#
+# The adaptive constraint and the per-sample estimate are defined for any number of groups
+# (Section III); this runs them with K = 4. DP and EO in the arm table are over the four groups;
+# dp_sex / dp_race report each attribute on its own over the whole prediction stream.
+# RFR is left out: its fairness penalty (src/models/rfr/evaluator.py) is defined for two groups.
+#
+# 30 runs, 3 arms each (FADO and Aranyani ~21 min, ARF ~1 min on tesla).
+program: src/main.py
+project: fado-ablations
+method: grid
+name: intersectional-folktables
+metric:
+  name: fado/stream_final_dp
+  goal: minimize
+parameters:
+  pipeline_model:
+    value: 'fado,aranyani,arf'
+  pipeline_dataset:
+    value: folktables
+  intersectional:
+    value: true
+  folktables_subsample_fraction:
+    value: 0.1
+  seeds:
+    values: ['66', '77', '88', '99', '101', '111', '122', '133', '144', '155', '166', '177', '188', '199', '202', '213', '224', '235', '246', '257', '268', '279', '291', '303', '314', '325', '336', '347', '358', '369']
+  pretrain_cache_dir:
+    value: files/pretrain_cache   # pre-train each seed once per machine (TESTS/check_pretrain_cache.py)
+  deterministic:
+    value: true
+  wandb_log:
+    value: true
+  wandb_project:
+    value: fado-ablations
+command:
+  - ${env}
+  - PYTHONHASHSEED=0
+  - ${interpreter}
+  - -m
+  - src.main
+  - ${args}

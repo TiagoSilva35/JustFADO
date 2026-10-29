@@ -12,8 +12,6 @@ Sources (the same as make_tables.py, plus the per-sample run folders where a cla
     * local run folders files/experiments/wandb/<run>/ for the per-sample curves. Only the
       sweeps present on this machine are used; each row says which runs it covers.
 """
-import glob
-import json
 import os
 import sys
 
@@ -23,6 +21,7 @@ from scipy.stats import wilcoxon
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import make_tables as mt  # noqa: E402
+import runs as run_store  # noqa: E402
 
 OUT = os.path.join(mt.PAPER, 'supplementary', 'paper_numbers.md')
 NAMES = {'sim_x_permutations': 'x_permutations', 'sim_y_swaps': 'y_swaps',
@@ -36,20 +35,9 @@ def claim(where, text, value, how, source):
 
 
 def local_runs(sweeps, scenario=None):
-    """{(model, seed): timestep_results} of the local run folders of `sweeps`."""
-    out = {}
-    for path in glob.glob(os.path.join(mt.REPO, 'files', 'experiments', 'wandb', '*', 'dataset_*',
-                                       'seed_pipeline_results.json')):
-        d = json.load(open(path))
-        cfg = d.get('config', {})
-        if cfg.get('wandb_sweep_id') not in sweeps:
-            continue
-        for run in d['seed_runs']:
-            res = run['results'][0]
-            if scenario and res['scenario'] != scenario:
-                continue
-            out[(run['model'], int(run['seed']))] = res['timestep_results']
-    return out
+    """{(model, seed): per-sample results} of the local run folders of `sweeps` (runs.local_runs).
+    Callers pass one scenario, or a sweep that has only one, so (model, seed) is unique."""
+    return {(r["model"], r["seed"]): r for r in run_store.local_runs(sweeps, scenario)}
 
 
 def fmt(x, nd=3):
@@ -231,30 +219,11 @@ claim('V-C', 'the gain is concentrated in the 2017 half; on the 2018 half the tw
       'local run folders jo5dqqhy')
 
 # ----------------------------------------------------------------------------- machines
-def run_hosts(sweeps):
-    """Machine of every finished run of `sweeps` (W&B run metadata), cached as hosts.csv."""
-    path = os.path.join(mt.CACHE, '+'.join(sweeps), 'hosts.csv')
-    if not os.path.isfile(path):
-        import wandb
-        api = wandb.Api(timeout=120)
-        out = []
-        for sid in sweeps:
-            for run in api.sweep(f'{mt.ENTITY}/{mt.PROJECT}/{sid}').runs:
-                if run.state == 'finished':
-                    md = run.metadata or {}
-                    out.append(dict(run_id=run.id, sweep=sid, scenario=run.config.get('drift_scenario') or 'folktables',
-                                    host=md.get('host'), os=md.get('os'), python=md.get('python'),
-                                    cpu_count=md.get('cpu_count')))
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        pd.DataFrame(out).to_csv(path, index=False)
-    return pd.read_csv(path)
-
-
-hosts = pd.concat([run_hosts(v) for v in mt.SWEEPS.values()], ignore_index=True)
+hosts = pd.concat([mt.run_meta(v) for v in mt.SWEEPS.values() if v], ignore_index=True)
 machines = hosts.groupby(['host', 'os', 'python', 'cpu_count']).sweep.agg(lambda x: ', '.join(sorted(set(x))))
 claim('IV (setup)', 'runs executed on three machines (Linux, Windows, macOS), CPU only, Python 3.11 or 3.12',
       '; '.join(f'{h} ({o}, {py}, {c} CPUs): sweeps {sw}' for (h, o, py, c), sw in machines.items()),
-      'W&B run metadata of every finished run of the paper\'s sweeps', 'W&B (cached in wandb_arm_metrics/*/hosts.csv)')
+      'W&B run metadata of every finished run of the paper\'s sweeps', 'W&B (make_tables.run_meta, cached meta.csv)')
 
 # Before the onset, the four Adult scenarios of a seed are the same stream, so a deterministic method must
 # produce exactly the same metrics on it in every scenario, wherever each scenario ran.

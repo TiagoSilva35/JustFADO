@@ -15,3 +15,7 @@ data/acs-folktables/
 files/experiments/dataset_folktables/seed_pipeline_results.json
 files/experiments/wandb_trajectories/
 /artifacts/run-*/
+
+# persistent pre-training cache (--pretrain_cache_dir), per machine
+files/pretrain_cache/
+files/experiments/stream_groups/

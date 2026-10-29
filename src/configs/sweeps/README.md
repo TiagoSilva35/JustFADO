@@ -1,26 +1,25 @@
 # Sweeps
 
-Fifteen sweeps, each answering one question, plus the rules that keep them
-defensible. All log to the W&B project `fado-ablations`.
+Eight sweeps, each answering one question. All log to the W&B project `fado-ablations`,
+use the 30 reporting seeds, and are listed (with their W&B ids once registered) in
+`SWEEPS` of `DOCS/paper_icde/scripts/make_tables.py`, which turns them into the paper's
+tables and reports.
 
-**Datasets and drift.** Every sweep runs on injected drift or on natural drift,
-never on the hand-built scenarios:
-- **COMPAS**: all 8 injected-drift scenarios (`sim_*`: 4 drift types × abrupt / gradual, `src/drift/dataset_generator.py`).
-- **Adult**: the 4 abrupt injected-drift scenarios. The gradual ones would double sweeps that already take days.
+**Datasets and drift.**
+- **Adult**: the 4 abrupt injected-drift scenarios (`sim_*`, `src/drift/dataset_generator.py`).
 - **Folktables**: its natural drift (train on 2015, stream 2017 then 2018), 10% subsample (~18.7k + 18.7k).
 
-The one exception is `no_drift` in the monitor sweep. It is the control where false
-alarms are counted: the same stream before injection.
+| file | question | runs | arms per run |
+|---|---|---|---|
+| `sweep_all_arms_{adult,folktables}` | the main table (Table III) | 120 / 30 | FADO, Aranyani, ARF, RFR (+ `fado_no_lambda` on Folktables) |
+| `sweep_aranyani_stream_lambda_{adult,folktables}` | Aranyani with the weight FADO finds (leaked λ) | 120 / 30 | Aranyani |
+| `sweep_ablation_{adult,folktables}` | which component makes FADO drift-aware? | 120 / 30 | `fado_dual`, `fado_lambda_only`, `fado_no_reset` |
+| `sweep_dual_step_adult` | is DP above ε because of the dual step? (η = 0.03, 0.1) | 120 | FADO |
+| `sweep_intersectional_folktables` | four groups (sex × race) | 30 | FADO, Aranyani, ARF |
 
-| file | question | runs × seeds |
-|---|---|---|
-| `sweep_all_arms_{compas,adult,folktables}` | every arm (FADO, FADO without λ, Base, ARF, RFR) on every drift: the main table | 8 / 4 / 1 × 5 |
-| `sweep_component_{compas,adult,folktables}` | does each controller component contribute? 9 presets | 72 / 36 / 9 × 5 |
-| `sweep_lambda_budget_{compas,adult,folktables}` | λ trade-off curves, same grid for FADO and Base (log 3.2) | 56 / 28 / 7 × 5 |
-| `sweep_reference_{compas,adult,folktables}` | ARF / RFR points on those curves | 8 / 4 / 1 × 5 |
-| `sweep_sensitivity.yaml` | basin or knife edge? controller parameters; drift type sampled too (COMPAS) | 120 × 5 |
-| `sweep_monitor_ablation.yaml` | which signal and detector should watch fairness? (COMPAS) | 120 × 5 |
-| `sweep_architecture.yaml` | does the gap survive other depths / tree counts? (COMPAS `sim_y_swaps`) | 15 × 5 |
+The review sweeps (ablation, dual step, intersectional) reuse every arm the main sweeps already
+ran on the same seeds and streams, and set `--pretrain_cache_dir`, so each machine pre-trains a
+seed once (TESTS/check_pretrain_cache.py shows a cached forest is bit-identical to a fresh one).
 
 Every run evaluates all its arms on each of its seeds, so its cost is
 seeds × (pre-training + one pass of the stream per arm).

@@ -72,6 +72,12 @@ SWEEPS = {
     'main_adult': ['uwhcwsdg', 'bi6frxi3', 'l8c4i60o'],       # same, 4 injected drifts
     'tuned_folktables': ['9ulal3qn'],                         # Aranyani, lambda 0.5, pre-train 0.1
     'tuned_adult': ['rm2glvmh', 'wqab0alm', 'pzbwmd4e'],      # Aranyani, lambda 1.5, pre-train 0.1
+    # Experiments added after review (src/configs/sweeps/sweep_<name>.yaml). Put each sweep id
+    # here once launch.sh has registered it; until then its report says it is pending.
+    'ablation_adult': [],             # fado_dual, fado_lambda_only, fado_no_reset; 4 drifts
+    'ablation_folktables': [],        # the same three arms
+    'dualstep_adult': [],             # FADO with lambda_dual_lr 0.03 and 0.1
+    'intersectional_folktables': [],  # FADO, Aranyani, ARF on sex x race (4 groups)
 }
 BLOCKS = [  # (scenario key, block title in the table); the four drifts are injected into Adult
     ('folktables', r'\folk{}'),
@@ -177,8 +183,6 @@ def crawl():
                 if model != 'aranyani':
                     continue
                 model = 'tuned'
-            elif model not in ['fado'] + BASELINES:
-                continue
             ts = run['results'][0]['timestep_results']
             y = np.asarray(ts['y_true_all'], dtype=int)
             p = np.asarray(ts['y_preds_all'], dtype=int)
@@ -269,39 +273,49 @@ def _stars(p):
     return '***' if p < .001 else '**' if p < .01 else '*' if p < .05 else ''
 
 
-def fado_tests(data):
-    """FADO against each comparator, per block and metric: two-sided paired Wilcoxon test.
+def paired_tests(data, reference, comparators, metrics=None, blocks=None, table_cols=()):
+    """`reference` against each comparator, per block and metric: two-sided paired Wilcoxon test.
 
-    `gain` is FADO's mean advantage over the paired seeds, signed so that a positive value
-    favours FADO for every metric (FADO - method for F1 and accuracy, method - FADO for DP
-    and EO). p_col is Holm-corrected across the comparators of one block and metric, the
-    family behind the marks of Table III; p_all across every comparison shown in Table III,
-    the stricter check reported alongside. Only pairs with all 30 seeds are tested."""
-    table_cols = {c for c, _ in COLS}
+    `gain` is the reference's mean advantage over the paired seeds, signed so that a positive
+    value favours the reference for every metric (reference - method for F1 and accuracy,
+    method - reference for DP and EO). p_col is Holm-corrected across the comparators of one
+    block and metric, the family behind the marks; p_all across every comparison in
+    `table_cols`, the stricter check reported alongside. Only pairs with all 30 seeds are tested."""
+    metrics = SIG_METRICS if metrics is None else metrics
+    table_cols = set(table_cols)
     rows = []
-    for sc, _ in BLOCKS:
+    for sc, _ in (BLOCKS if blocks is None else blocks):
         d = data[data.scenario == sc]
-        fado = d[d.model == 'fado'].set_index('seed')
-        for col, _, higher in SIG_METRICS:
-            if fado[col].notna().sum() != N_SEEDS:
+        ref = d[d.model == reference].set_index('seed')
+        for col, _, higher in metrics:
+            if col not in d or ref[col].notna().sum() != N_SEEDS:
                 continue
-            for b in COMPARATORS:
+            for b in comparators:
                 other = d[d.model == b].set_index('seed')
                 if other[col].notna().sum() != N_SEEDS:
                     continue
-                gain = (fado[col] - other[col].reindex(fado.index)).dropna()
+                gain = (ref[col] - other[col].reindex(ref.index)).dropna()
                 gain = gain if higher else -gain
                 rows.append(dict(scenario=sc, col=col, model=b, table=col in table_cols,
                                  gain=gain.mean(), better=int((gain > 0).sum()), n=len(gain),
                                  p=wilcoxon(gain).pvalue,
-                                 p_welch=ttest_ind(fado[col], other[col], equal_var=False).pvalue))
-    t = pd.DataFrame(rows)
+                                 p_welch=ttest_ind(ref[col], other[col], equal_var=False).pvalue))
+    t = pd.DataFrame(rows, columns=['scenario', 'col', 'model', 'table', 'gain', 'better', 'n', 'p', 'p_welch'])
+    if not len(t):
+        return t.assign(p_col=[], p_welch_col=[], p_all=[], result=[])
     by_cell = t.groupby(['scenario', 'col'])
     t['p_col'] = by_cell.p.transform(lambda s: _holm(s.values))
     t['p_welch_col'] = by_cell.p_welch.transform(lambda s: _holm(s.values))
-    t.loc[t.table, 'p_all'] = _holm(t.loc[t.table, 'p'].values)
+    t['p_all'] = np.nan
+    if t.table.any():
+        t.loc[t.table, 'p_all'] = _holm(t.loc[t.table, 'p'].values)
     t['result'] = np.where(t.p_col >= ALPHA, 'n.s.', np.where(t.gain > 0, 'win', 'loss'))
     return t
+
+
+def fado_tests(data):
+    """The tests behind the marks of Table III: FADO against each method."""
+    return paired_tests(data, 'fado', COMPARATORS, table_cols=[c for c, _ in COLS])
 
 
 ARANYANI_LAMBDA = 0.1  # Aranyani's published fixed weight, lambda_base in Table II
@@ -359,17 +373,19 @@ def text_numbers(tests):
             f'marks survive Holm across the whole table')
 
 
-def results_table(data, tests):
-    models = [m for m, _ in ROWS]
-    result = tests.set_index(['scenario', 'col', 'model']).result
+def metric_cells(data, tests, models, blocks, cols, sd=True):
+    """LaTeX cells {(block, model, col): '$mean±sd$'}, bold for the best mean of the column in the
+    block and the mark of the model's test against the reference. A cell needs all 30 seeds;
+    otherwise it is left empty. Returns (cells, filled cells per row, whether any is empty)."""
+    result = tests.set_index(['scenario', 'col', 'model']).result if len(tests) else pd.Series(dtype=object)
     cells, filled, empty = {}, {}, False
-    for sc, _ in BLOCKS:
+    for sc, _ in blocks:
         d = data[data.scenario == sc]
         by = {m: d[d.model == m].set_index('seed') for m in models}
-        for col, higher in COLS:
+        for col, higher in cols:
             if sc == 'folktables' and col in POST:
                 continue
-            have = [m for m in models if len(by[m]) and by[m][col].notna().sum() == N_SEEDS]
+            have = [m for m in models if len(by[m]) and col in by[m] and by[m][col].notna().sum() == N_SEEDS]
             means = {m: by[m][col].mean() for m in have}
             # bold only when every method has the column, so a missing row never makes another one best
             best = (max if higher else min)(means, key=means.get) if len(have) == len(models) else None
@@ -377,13 +393,18 @@ def results_table(data, tests):
                 if m not in have:
                     cells[(sc, m, col)], empty = '', True
                     continue
-                v = f"{means[m]:.3f}{{\\pm}}{by[m][col].std(ddof=1):.3f}"
+                v = f"{means[m]:.3f}{{\\pm}}{by[m][col].std(ddof=1):.3f}" if sd else f'{means[m]:.3f}'
                 if m == best:
                     v = f'\\mathbf{{{v}}}'
                 r = result.get((sc, col, m))
                 v += WIN if r == 'win' else LOSS if r == 'loss' else SLOT
                 cells[(sc, m, col)] = f'${v}$'
                 filled[(sc, m)] = filled.get((sc, m), 0) + 1
+    return cells, filled, empty
+
+
+def results_table(data, tests):
+    cells, filled, empty = metric_cells(data, tests, [m for m, _ in ROWS], BLOCKS, COLS)
     leaked = leaked_lambdas()
 
     def lam(sc, m, col):
@@ -575,6 +596,174 @@ def significance_report(tests):
     return '\n'.join(out)
 
 
+# ----------------------------------------------------------------------------- review experiments
+# Experiments added after review (src/configs/sweeps/sweep_{ablation,dual_step,intersectional}_*.yaml).
+# Each report combines its new runs with the arms the main sweeps already ran on the same seeds and
+# streams, so no arm is run twice. While a sweep is not in SWEEPS its rows read "pending".
+COL_NAMES = {'f1': 'F1', 'dp': 'DP', 'eo': 'EO', 'f1_post': 'F1 after onset', 'post_drift_dp': 'DP after onset',
+             'post_drift_eo': 'EO after onset', 'phase_pre_drift_dp': 'DP before onset', 'stream_final_lambda': 'λ',
+             'post_drift_lambda': 'λ after onset', 'dp_sex': 'DP, sex', 'dp_race': 'DP, race', 'eo_sex': 'EO, sex',
+             'eo_race': 'EO, race'}
+LOWER = {'dp', 'eo', 'post_drift_dp', 'post_drift_eo', 'phase_pre_drift_dp', 'dp_sex', 'dp_race', 'eo_sex', 'eo_race'}
+ABLATION_ROWS = [('aranyani', 'none (Aranyani)'), ('fado_no_lambda', 'controller only'), ('fado_dual', 'dual only'),
+                 ('fado_lambda_only', 'dual + reset'), ('fado_no_reset', 'dual + controller'), ('fado', 'all (FADO)')]
+ABLATION_NEW = ['fado_dual', 'fado_lambda_only', 'fado_no_reset']
+
+
+def run_meta(sweeps, refresh=False):
+    """Config and machine of every finished run of `sweeps` (W&B run metadata), cached as meta.csv."""
+    path = os.path.join(_cache_dir(sweeps), 'meta.csv')
+    if refresh or not os.path.isfile(path):
+        import wandb
+        api = wandb.Api(timeout=120)
+        rows = []
+        for sid in sweeps:
+            for run in api.sweep(f'{ENTITY}/{PROJECT}/{sid}').runs:
+                if run.state != 'finished':
+                    continue
+                md, cfg = run.metadata or {}, run.config
+                rows.append(dict(run_id=run.id, sweep=sid,
+                                 scenario=cfg.get('drift_scenario') or cfg.get('pipeline_dataset'),
+                                 lambda_dual_lr=cfg.get('lambda_dual_lr'), intersectional=cfg.get('intersectional'),
+                                 host=md.get('host'), os=md.get('os'), python=md.get('python'),
+                                 cpu_count=md.get('cpu_count')))
+        os.makedirs(_cache_dir(sweeps), exist_ok=True)
+        pd.DataFrame(rows).to_csv(path, index=False)
+    return pd.read_csv(path)
+
+
+def sweep_metrics(key, models=None, refresh=False):
+    """Per-seed metrics of the runs of SWEEPS[key] with their F1 (by run), or None if not registered."""
+    sweeps = SWEEPS.get(key) or []
+    if not sweeps:
+        return None
+    raw = arm_metrics(sweeps, refresh)
+    if models is not None:
+        raw = raw[raw.model.isin(models)]
+    store = pd.read_csv(F1_STORE) if os.path.isfile(F1_STORE) else pd.DataFrame(columns=STORE_COLS)
+    f1 = store[store.run_id.isin(set(raw.run_id))][['run_id', 'model', 'seed', 'f1', 'f1_post']]
+    data = raw.merge(f1, on=['run_id', 'model', 'seed'], how='left')
+    data.loc[data.scenario == 'folktables', [c for c in POST if c in data]] = np.nan
+    return data
+
+
+def arm_report_md(title, intro, data, tests, rows, blocks, cols, expected):
+    """Markdown: mean ± sd per block and arm, with the mark of the arm's test against the reference.
+    `expected` lists, per block, arms whose sweep is not registered yet (shown as pending)."""
+    marks = {'win': ' •', 'loss': ' ◦'}
+    result = tests.set_index(['scenario', 'col', 'model']).result if len(tests) else {}
+    out = [f'# {title}', ''] + intro + ['']
+    for sc, block in blocks:
+        d = data[data.scenario == sc] if data is not None else pd.DataFrame(columns=['model'])
+        cs = [c for c in cols if not (sc == 'folktables' and c in POST)]
+        shown = [(m, label) for m, label in rows if (d.model == m).any() or m in expected.get(sc, ())]
+        if not shown:
+            continue
+        name = block.replace('\\folk{}', 'Folktables').replace('\\_', '_')
+        out += [f'## {name}', '', '| Arm | ' + ' | '.join(COL_NAMES[c] for c in cs) + ' |',
+                '|---' * (len(cs) + 1) + '|']
+        for m, label in shown:
+            x = d[d.model == m]
+            cells = []
+            for c in cs:
+                v = x[c].dropna() if c in x else pd.Series(dtype=float)
+                if len(v) == N_SEEDS:
+                    cells.append(f'{v.mean():.3f} ± {v.std(ddof=1):.3f}' + marks.get(result.get((sc, c, m)), ''))
+                elif not len(x):
+                    cells.append('pending')        # the arm's sweep has not run yet
+                elif not len(v) and 'lambda' in c:
+                    cells.append('–')              # no adaptive weight
+                else:
+                    cells.append(f'{len(v)}/30 seeds')
+            out.append(f'| {label} | ' + ' | '.join(cells) + ' |')
+        out.append('')
+    return '\n'.join(out)
+
+
+def _metrics(cols):
+    return [(c, COL_NAMES[c], c not in LOWER) for c in cols]
+
+
+def ablation_report(refresh):
+    """Component ablation: each arm against full FADO, both datasets, in one report."""
+    parts = [sweep_metrics('main_adult', ['fado', 'aranyani'], refresh),
+             sweep_metrics('main_folktables', ['fado', 'aranyani', 'fado_no_lambda'], refresh),
+             sweep_metrics('ablation_adult', ABLATION_NEW, refresh),
+             sweep_metrics('ablation_folktables', ABLATION_NEW, refresh)]
+    data = pd.concat([p for p in parts if p is not None], ignore_index=True)
+    cols = ['f1', 'dp', 'eo', 'stream_final_lambda', 'f1_post', 'post_drift_dp', 'post_drift_eo']
+    tests = paired_tests(data, 'fado', [m for m, _ in ABLATION_ROWS if m != 'fado'],
+                         metrics=_metrics([c for c in cols if c != 'stream_final_lambda']))
+    expected = {sc: ABLATION_NEW for sc, _ in BLOCKS
+                if not SWEEPS['ablation_folktables' if sc == 'folktables' else 'ablation_adult']}
+    intro = ['Generated by `DOCS/paper_icde/scripts/make_tables.py` from sweeps `ablation_adult` and',
+             '`ablation_folktables` (src/configs/sweeps/sweep_ablation_*.yaml). "none" and "all" are the',
+             'Aranyani and FADO runs of Table III, and "controller only" is the Folktables ablation of the',
+             'paper (`fado_no_lambda`); every arm runs on the same seeds and streams. Components: dual = the',
+             'adaptive constraint (dual ascent on λ_t); reset = drift detectors plus fairness monitor resetting',
+             'the fairness statistics; controller = learning-rate and temperature reaction to confirmed drift.',
+             '', 'Mean ± sd over 30 seeds. • full FADO significantly better than that arm, ◦ significantly worse',
+             '(paired two-sided Wilcoxon, Holm across the arms of the column, α = 0.05).']
+    md = arm_report_md('Component ablation', intro, data, tests, ABLATION_ROWS, BLOCKS, cols, expected)
+    return md, data, tests
+
+
+def dual_step_report(refresh):
+    """FADO with larger dual steps against the paper's eta = 0.01, on the scenarios of the sweep."""
+    title = 'Dual step size and the demographic-parity target'
+    intro = ['Generated by `DOCS/paper_icde/scripts/make_tables.py` from sweep `dualstep_adult`',
+             '(src/configs/sweeps/sweep_dual_step_adult.yaml). η = 0.01 is FADO in Table III. The bound',
+             'average violation ≤ μ_T / (η T) predicts that a larger η brings DP closer to ε = 0.05;',
+             'supplementary/dual_bound.md checks the bound on every run with local per-sample results.',
+             '', 'Mean ± sd over 30 seeds. • η = 0.01 significantly better than that η, ◦ significantly worse',
+             '(paired two-sided Wilcoxon, Holm across the step sizes of the column, α = 0.05).']
+    if not SWEEPS['dualstep_adult']:
+        return '\n'.join([f'# {title}', ''] + intro + ['', '**Pending:** sweep `dualstep_adult` is not registered.', ''])
+    new = sweep_metrics('dualstep_adult', ['fado'], refresh)
+    new = new.merge(run_meta(SWEEPS['dualstep_adult'], refresh)[['run_id', 'lambda_dual_lr']], on='run_id')
+    new['model'] = 'fado_eta' + new.lambda_dual_lr.map(lambda e: f'{e:g}')
+    scenarios = sorted(new.scenario.unique(), key=ADULT.index)
+    base = sweep_metrics('main_adult', ['fado'], refresh)
+    data = pd.concat([base[base.scenario.isin(scenarios)], new], ignore_index=True)
+    arms = sorted(new.model.unique(), key=lambda m: float(m[8:]))
+    rows = [('fado', 'η = 0.01 (paper)')] + [(m, f'η = {m[8:]}') for m in arms]
+    cols = ['phase_pre_drift_dp', 'dp', 'eo', 'f1', 'post_drift_dp', 'post_drift_eo', 'f1_post',
+            'stream_final_lambda', 'post_drift_lambda']
+    tests = paired_tests(data, 'fado', arms, metrics=_metrics([c for c in cols if 'lambda' not in c]),
+                         blocks=[b for b in BLOCKS if b[0] in scenarios])
+    return arm_report_md(title, intro, data, tests, rows, [b for b in BLOCKS if b[0] in scenarios], cols, {})
+
+
+def intersectional_report(refresh):
+    """FADO, Aranyani and ARF with four groups (sex x race) on Folktables."""
+    title = 'Intersectional fairness on Folktables (sex × race, four groups)'
+    intro = ['Generated by `DOCS/paper_icde/scripts/make_tables.py` from sweep `intersectional_folktables`',
+             '(src/configs/sweeps/sweep_intersectional_folktables.yaml). DP and EO are over the four groups',
+             '(rolling window, as in Table III); "DP, sex" and "DP, race" treat each attribute on its own, over',
+             'the whole prediction stream. RFR is not run: its penalty is defined for two groups.',
+             '', 'Mean ± sd over 30 seeds. • FADO significantly better than that method, ◦ significantly worse',
+             '(paired two-sided Wilcoxon, Holm across the methods of the column, α = 0.05).']
+    rows = [('fado', 'FADO'), ('aranyani', 'Aranyani'), ('arf', 'ARF')]
+    cols = ['f1', 'dp', 'eo', 'dp_sex', 'dp_race', 'eo_sex', 'eo_race', 'stream_final_lambda']
+    data = sweep_metrics('intersectional_folktables', [m for m, _ in rows], refresh)
+    tests = (paired_tests(data, 'fado', ['aranyani', 'arf'], metrics=_metrics(cols[:-1]),
+                          blocks=[BLOCKS[0]]) if data is not None else pd.DataFrame())
+    expected = {} if data is not None else {'folktables': [m for m, _ in rows]}
+    return arm_report_md(title, intro, data, tests, rows, [BLOCKS[0]], cols, expected)
+
+
+def review_reports(refresh):
+    out = os.path.join(PAPER, 'supplementary')
+    md, _, _ = ablation_report(refresh)
+    open(os.path.join(out, 'ablation.md'), 'w').write(md)
+    open(os.path.join(out, 'dual_step.md'), 'w').write(dual_step_report(refresh))
+    open(os.path.join(out, 'intersectional.md'), 'w').write(intersectional_report(refresh))
+    pending = [k for k in ('ablation_adult', 'ablation_folktables', 'dualstep_adult', 'intersectional_folktables')
+               if not SWEEPS[k]]
+    print('[review] supplementary/ablation.md, dual_step.md, intersectional.md'
+          + (f'; not registered yet: {", ".join(pending)}' if pending else ''))
+
+
 # ----------------------------------------------------------------------------- main
 def missing_report(data):
     """Which table cells are still empty, and which sweeps would fill them."""
@@ -620,6 +809,7 @@ def build(refresh):
         print(f'  {sc:20s} ' + '  '.join(f'{m}={filled.get((sc, m), 0)}' for m, _ in ROWS))
     missing_report(data)
     print('[text] numbers quoted in the Results text: ' + text_numbers(tests))
+    review_reports(refresh)
     print(f'written: {os.path.relpath(os.path.join(PAPER, "tables"), REPO)}/results.tex, detection.tex; '
           f'{os.path.relpath(os.path.join(PAPER, "supplementary"), REPO)}/')
 

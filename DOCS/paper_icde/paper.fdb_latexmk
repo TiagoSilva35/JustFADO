@@ -1,15 +1,15 @@
 # Fdb version 4
-["bibtex paper"] 1792861535.40823 "paper.aux" "paper.bbl" "paper" 1792861882.27177 0
+["bibtex paper"] 1792861535.40823 "paper.aux" "paper.bbl" "paper" 1793275578.46985 0
   "./IEEEabrv.bib" 1792067617.86494 17394 5f68ac6bd88a4483a55f39046634d899 ""
   "./references.bib" 1792856479.37031 24431 481dbb5155a52a7c07d97070dcaf008d ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/bibtex/bst/ieeetran/IEEEtran.bst" 1772380719 57748 7c8250ecf02814ce6ddc0cdbb63df1dd ""
-  "paper.aux" 1792861882.09039 10342 6cf0f2d91ef8cf9eddec0e986040e2b9 "pdflatex"
+  "paper.aux" 1793275578.25514 10342 6cf0f2d91ef8cf9eddec0e986040e2b9 "pdflatex"
   (generated)
   "paper.bbl"
   "paper.blg"
   (rewritten before read)
-["pdflatex"] 1792861881.73041 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper_icde/paper.tex" "paper.pdf" "paper" 1792861882.27188 0
-  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper_icde/paper.tex" 1792861881.52473 61314 77cfa0cafbca576df92a3ed40149d5d5 ""
+["pdflatex"] 1793275577.92647 "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper_icde/paper.tex" "paper.pdf" "paper" 1793275578.46999 0
+  "/Users/tiagosilva/Documents/Aranyani2.0/DOCS/paper_icde/paper.tex" 1793275577.6782 61314 77cfa0cafbca576df92a3ed40149d5d5 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/base/8r.enc" 1772380719 4850 80dc9bab7f31fb78a000ccfed0e27cab ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/fontname/texfonts.map" 1772380719 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/pdftex/updmap/pdftex.map" 1772380719 5541360 f183aac233c4cd1e5ef882fcbe8e7096 ""
@@ -126,11 +126,11 @@
   "IEEEtran.cls" 1792067617.86535 281957 5b2e4fa15b0f7eabb840ebf67df4c0f7 ""
   "figures/fado_architecture.pdf" 1792067617.86657 131228 5e78bdd942bfb8b06607733659096db9 ""
   "figures/fado_architecture.tex" 1792067617.86667 7139 e89d251b690b55cd5187ce440f4ad4bf ""
-  "paper.aux" 1792861882.09039 10342 6cf0f2d91ef8cf9eddec0e986040e2b9 "pdflatex"
-  "paper.bbl" 1792861560.98588 10619 6e7cff7dc87507a258bdf967b17dbd00 "bibtex paper"
-  "paper.tex" 1792861881.52473 61314 77cfa0cafbca576df92a3ed40149d5d5 ""
-  "tables/detection.tex" 1792861533.08419 1267 f563642b8e4052413b4035ca1e9e2609 ""
-  "tables/results.tex" 1792861533.08206 7470 7c226243739050e4f27edec0c5842569 ""
+  "paper.aux" 1793275578.25514 10342 6cf0f2d91ef8cf9eddec0e986040e2b9 "pdflatex"
+  "paper.bbl" 1792861882.72427 10619 6e7cff7dc87507a258bdf967b17dbd00 "bibtex paper"
+  "paper.tex" 1793275577.6782 61314 77cfa0cafbca576df92a3ed40149d5d5 ""
+  "tables/detection.tex" 1793275489.98505 1267 f563642b8e4052413b4035ca1e9e2609 ""
+  "tables/results.tex" 1793275489.98339 7315 fc7a84c28b6786f870616bb365f38812 ""
   (generated)
   "paper.aux"
   "paper.log"
