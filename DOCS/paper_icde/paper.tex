@@ -384,10 +384,10 @@ autocorrelated. In practice $\pi_a$ is replaced by the running share $\hat\pi_a$
 Under a sustained violation $\Delta_{\mathrm{DP}}=\mathrm{DP}-\varepsilon>0$, the active multipliers grow by about $\eta_\lambda\Delta_{\mathrm{DP}}$ per sample;
 once $\mathrm{DP}<\varepsilon$ they drain by at most $\eta_\lambda\varepsilon$ per sample, so draining is slow by design. With two groups, $D_0=-D_1$, so the
 constraints in~\eqref{eq:onesided} coincide in pairs; our implementation keeps all four multipliers, which leaves the duality intact but makes the effective dual
-step $2\eta_\lambda$. \rev{Telescoping~\eqref{eq:dual} also bounds the violation over a finite stream: for each constraint,
-$\frac{1}{T}\sum_{t\le T}(\pm v_t[a]-\varepsilon)\le\mu_{a,\pm,T}/(\eta_\lambda T)$ while no multiplier reaches $\lambda_{\max}$, with equality while none is
-projected at zero. On a finite stream the constraint therefore holds on average only up to the final price over $\eta_\lambda T$; a larger step approaches
-$\varepsilon$ sooner, at the cost of a noisier $\lambda_t$.}
+step $2\eta_\lambda$. \rev{Summing~\eqref{eq:dual} over the first $T$ samples gives a finite-stream guarantee: as long as no multiplier reaches
+$\lambda_{\max}$, the average violation of each constraint is at most $\mu_T/(\eta_\lambda T)$, where $\mu_T$ is its final multiplier. On a finite
+stream the disparity can therefore exceed $\varepsilon$ on average by up to this amount; a larger step $\eta_\lambda$ shrinks the excess, at the cost of a
+noisier $\lambda_t$.}
 \end{remark}
 
 \subsection{Drift Detection and Reaction Controller}
@@ -748,12 +748,15 @@ constraint therefore improves fairness and utility together on this dataset. The
 two variants reach a similar demographic parity.
 
 \rev{To isolate the drift components, Table~\ref{tab:ablation} adds them one at a time to the adaptive constraint on \adult{}, on the same $30$ seeds. Over the
-whole stream, the constraint alone already attains a demographic parity within $0.004$ of \fado{}'s in every block; the drift components matter where a drift
-is detected. Under \emph{x\_permutations}, full \fado{} beats the constraint alone on every metric after the onset, on $25$ to $26$ of the $30$ seeds, and the
+whole stream, the constraint alone already attains a demographic parity within $0.004$ of \fado{}'s in every block, so the adaptive constraint is the source of
+the fairness gain, and the drift components add to it where the drift is abrupt and detected. Under \emph{x\_permutations}, full \fado{} beats the constraint alone on every metric after the onset, on $25$ to $26$ of the $30$ seeds, and the
 two components are complementary: the reset recovers fairness at a loss of F1, the controller recovers F1 but not demographic parity, and only together do they keep F1
-and improve fairness. Under \emph{y\_swaps}, the two together lower equalized odds after the onset ($0.052$ against $0.060$). Under \emph{y\_prior\_skip}, in
+and improve fairness. Under \emph{y\_swaps}, the controller raises the whole-stream F1 ($0.645$ against $0.638$) and the two together lower equalized odds
+after the onset ($0.052$ against $0.060$). Under \emph{y\_prior\_skip}, in
 contrast, the reaction costs utility: the constraint alone attains a higher F1 after the onset ($0.649$ against $0.621$) and a slightly lower demographic parity
-($0.060$ against $0.063$). Under \emph{x\_exceed\_skip}, which is rarely detected, the components change F1 by less than $0.006$, and on \folk{} the constraint
+($0.060$ against $0.063$). A class-prior shift drops rows of one class at random, which leaves the class-conditional distribution of the features unchanged, so
+the decision boundary wouldn't need to move; the controller's reaction, which assumes it must, is the likely source of this cost (F1 after the onset $0.616$ with the
+controller and $0.649$ without). Under \emph{x\_exceed\_skip}, which is rarely detected, the components change F1 by less than $0.006$, and on \folk{} the constraint
 alone matches \fado{}'s fairness with a marginally higher F1 ($0.759$ against $0.758$). Drift awareness thus pays off under abrupt concept drift that the
 detectors register, at a utility cost under a class-prior shift.}
 
@@ -771,8 +774,9 @@ criterion deteriorates depends on the drift. Regarding RQ2, \fado{} lowered demo
 and was significantly fairer in demographic parity than each of the three published baselines in all $27$ comparisons, over the whole stream and after the
 onset, at a whole-stream F1 cost of at most $0.019$ relative to \ara{}. Against \ara{} given, in hindsight, the weight that \fado{} reaches
 online, it was significantly better in $12$ and worse in $7$ of $27$ comparisons, and better on every metric after the feature permutation, where a constant
-weight is too small once the drift begins. On \folk{}, removing the adaptive constraint worsened fairness and F1 together. \rev{On \adult{}, the drift
-components improved every metric after the feature permutation, where the reset and the controller proved complementary, and with four intersectional groups
+weight is too small once the drift begins. On \folk{}, removing the adaptive constraint worsened fairness and F1 together. \rev{On \adult{}, the adaptive constraint
+alone accounted for nearly all of the fairness gain, and the drift components improved every metric after the feature permutation, where the reset and
+the controller proved complementary, and with four intersectional groups
 \fado{} lowered demographic parity by $45\%$ relative to its base learner.}
 
 \fado{} has limitations that point to future work. Its detectors registered $48\%$ of the injected onsets within one window

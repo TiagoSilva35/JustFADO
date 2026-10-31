@@ -765,21 +765,29 @@ AFTER_ONSET = [('f1_post', True), ('post_drift_dp', False), ('post_drift_eo', Fa
 
 
 def ablation_table(data):
-    """Table V: the components on top of the adaptive constraint, Adult, after the onset."""
+    """Table VI: the components on top of the adaptive constraint, Adult, whole stream and after the onset."""
     blocks = [b for b in BLOCKS if b[0] != 'folktables']
     arms = [m for m, _ in ABLATION_TABLE_ROWS if m != 'fado']
-    tests = paired_tests(data, 'fado', arms, metrics=_metrics([c for c, _ in AFTER_ONSET]), blocks=blocks)
-    cells, _, empty = metric_cells(data, tests, [m for m, _ in ABLATION_TABLE_ROWS], blocks, AFTER_ONSET, sd=False)
+    periods = [('Whole stream', [('f1', True), ('dp', False), ('eo', False)]), ('After the onset', AFTER_ONSET)]
+    every = [c for _, cols in periods for c in cols]
+    tests = paired_tests(data, 'fado', arms, metrics=_metrics([c for c, _ in every]), blocks=blocks)
+    cells, _, empty = metric_cells(data, tests, [m for m, _ in ABLATION_TABLE_ROWS], blocks, every, sd=False)
+    width = 1 + 3 * len(blocks)
     head = ' & '.join([''] + [r'\multicolumn{3}{c}{' + t + '}' for _, t in blocks]) + r' \\'
     rules = ' '.join(fr'\cmidrule({"lr" if i < len(blocks) - 1 else "l"}){{{2 + 3 * i}-{4 + 3 * i}}}'
                      for i in range(len(blocks)))
     names = ' & '.join(['Components'] + [r'F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$'] * len(blocks)) + r' \\'
-    body = [(FADO_SHADE if m == 'fado' else '') + ' & '.join([label] + [cells[(sc, m, c)] for sc, _ in blocks
-                                                                        for c, _ in AFTER_ONSET]) + r' \\'
-            for m, label in ABLATION_TABLE_ROWS]
+    body = []
+    for k, (period, cols) in enumerate(periods):
+        if k:
+            body.append(r'\midrule')
+        body.append(r'\multicolumn{' + str(width) + r'}{@{}l}{' + period + r'} \\')
+        body += [(FADO_SHADE if m == 'fado' else '') + ' & '.join([label] + [cells[(sc, m, c)] for sc, _ in blocks
+                                                                             for c, _ in cols]) + r' \\'
+                 for m, label in ABLATION_TABLE_ROWS]
     tex = '\n'.join([
         r'\begin{table*}[t]', r'\centering',
-        r'\caption{\rev{Components on Top of the Adaptive Constraint, \adult{} After the Drift Onset, Mean Over 30 Seeds}}',
+        r'\caption{\rev{Components on Top of the Adaptive Constraint on \adult{}, Mean Over 30 Seeds}}',
         r'\label{tab:ablation}', r'\setlength{\tabcolsep}{3.5pt}', r'\footnotesize',
         r'\begin{tabular}{@{}l ' + ' '.join(['ccc'] * len(blocks)) + r'@{}}', r'\toprule', head, rules, names,
         r'\midrule'] + body + [

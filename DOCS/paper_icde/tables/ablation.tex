@@ -1,6 +1,6 @@
 \begin{table*}[t]
 \centering
-\caption{\rev{Components on Top of the Adaptive Constraint, \adult{} After the Drift Onset, Mean Over 30 Seeds}}
+\caption{\rev{Components on Top of the Adaptive Constraint on \adult{}, Mean Over 30 Seeds}}
 \label{tab:ablation}
 \setlength{\tabcolsep}{3.5pt}
 \footnotesize
@@ -10,6 +10,13 @@
 \cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10} \cmidrule(l){11-13}
 Components & F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ \\
 \midrule
+\multicolumn{13}{@{}l}{Whole stream} \\
+Dual ascent only & $0.590^{\bullet}$ & $0.064^{\bullet}$ & $0.064^{\bullet}$ & $0.638^{\bullet}$ & $\mathbf{0.047}\phantom{^{\bullet}}$ & $0.051^{\bullet}$ & $0.678^{\circ}$ & $\mathbf{0.058}^{\circ}$ & $0.050\phantom{^{\bullet}}$ & $\mathbf{0.634}\phantom{^{\bullet}}$ & $\mathbf{0.057}\phantom{^{\bullet}}$ & $0.049\phantom{^{\bullet}}$ \\
+Dual + reset & $0.581^{\bullet}$ & $\mathbf{0.056}^{\circ}$ & $\mathbf{0.050}\phantom{^{\bullet}}$ & $0.639^{\bullet}$ & $0.048\phantom{^{\bullet}}$ & $0.051\phantom{^{\bullet}}$ & $\mathbf{0.680}^{\circ}$ & $0.059\phantom{^{\bullet}}$ & $0.050\phantom{^{\bullet}}$ & $0.633\phantom{^{\bullet}}$ & $\mathbf{0.057}\phantom{^{\bullet}}$ & $0.049\phantom{^{\bullet}}$ \\
+Dual + controller & $\mathbf{0.612}\phantom{^{\bullet}}$ & $0.066^{\bullet}$ & $0.060^{\bullet}$ & $\mathbf{0.645}\phantom{^{\bullet}}$ & $0.051^{\bullet}$ & $0.052^{\bullet}$ & $0.674^{\bullet}$ & $\mathbf{0.058}\phantom{^{\bullet}}$ & $0.050\phantom{^{\bullet}}$ & $0.633\phantom{^{\bullet}}$ & $\mathbf{0.057}\phantom{^{\bullet}}$ & $0.049\phantom{^{\bullet}}$ \\
+\rowcolor{black!6}\fado{} (all) & $\mathbf{0.612}\phantom{^{\bullet}}$ & $0.060\phantom{^{\bullet}}$ & $0.053\phantom{^{\bullet}}$ & $\mathbf{0.645}\phantom{^{\bullet}}$ & $0.048\phantom{^{\bullet}}$ & $\mathbf{0.048}\phantom{^{\bullet}}$ & $0.676\phantom{^{\bullet}}$ & $0.059\phantom{^{\bullet}}$ & $\mathbf{0.049}\phantom{^{\bullet}}$ & $0.633\phantom{^{\bullet}}$ & $\mathbf{0.057}\phantom{^{\bullet}}$ & $\mathbf{0.048}\phantom{^{\bullet}}$ \\
+\midrule
+\multicolumn{13}{@{}l}{After the onset} \\
 Dual ascent only & $0.482^{\bullet}$ & $0.072^{\bullet}$ & $0.093^{\bullet}$ & $0.522\phantom{^{\bullet}}$ & $0.028\phantom{^{\bullet}}$ & $0.060^{\bullet}$ & $0.649^{\circ}$ & $\mathbf{0.060}^{\circ}$ & $0.056\phantom{^{\bullet}}$ & $\mathbf{0.581}\phantom{^{\bullet}}$ & $0.049\phantom{^{\bullet}}$ & $0.053\phantom{^{\bullet}}$ \\
 Dual + reset & $0.448^{\bullet}$ & $\mathbf{0.049}^{\circ}$ & $\mathbf{0.055}\phantom{^{\bullet}}$ & $0.523\phantom{^{\bullet}}$ & $0.030\phantom{^{\bullet}}$ & $0.058\phantom{^{\bullet}}$ & $\mathbf{0.653}^{\circ}$ & $0.065\phantom{^{\bullet}}$ & $0.058\phantom{^{\bullet}}$ & $0.580\phantom{^{\bullet}}$ & $\mathbf{0.048}\phantom{^{\bullet}}$ & $0.053\phantom{^{\bullet}}$ \\
 Dual + controller & $\mathbf{0.552}\phantom{^{\bullet}}$ & $0.077^{\bullet}$ & $0.082^{\bullet}$ & $\mathbf{0.526}\phantom{^{\bullet}}$ & $0.035^{\bullet}$ & $0.062^{\bullet}$ & $0.616\phantom{^{\bullet}}$ & $0.061\phantom{^{\bullet}}$ & $0.057\phantom{^{\bullet}}$ & $0.576\phantom{^{\bullet}}$ & $0.050\phantom{^{\bullet}}$ & $0.053\phantom{^{\bullet}}$ \\

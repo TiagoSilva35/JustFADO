@@ -271,8 +271,9 @@ claim('V-C', 'x_permutations: FADO beats the constraint alone after the onset on
       f"F1 {int((f_.f1_post > d_.f1_post).sum())}/30, DP {int((f_.post_drift_dp < d_.post_drift_dp).sum())}/30, "
       f"EO {int((f_.post_drift_eo < d_.post_drift_eo).sum())}/30",
       'seeds on which FADO is better than fado_dual after the onset (paired by seed)', 'sweep ablation_adult + main')
-claim('V-C', 'the other numbers of the ablation paragraph (y_swaps EO 0.052 vs 0.060; y_prior F1 0.649 vs 0.621, DP 0.060 vs 0.063; '
+claim('V-C', 'the other numbers of the ablation paragraph (y_swaps whole-stream F1 0.645 vs 0.638, EO after 0.052 vs 0.060; y_prior F1 0.649 vs 0.621, DP 0.060 vs 0.063; '
       'x_exceed F1 within less than 0.006; Folktables F1 0.759 vs 0.758)',
+      f"y_swaps F1 (dual + controller, FADO) {am.loc[('sim_y_swaps', 'fado_no_reset'), 'f1']:.3f}, {am.loc[('sim_y_swaps', 'fado'), 'f1']:.3f} vs dual only {am.loc[('sim_y_swaps', 'fado_dual'), 'f1']:.3f}; "
       f"y_swaps EO after {am.loc[('sim_y_swaps', 'fado'), 'post_drift_eo']:.3f} vs {am.loc[('sim_y_swaps', 'fado_dual'), 'post_drift_eo']:.3f}; "
       f"y_prior F1 after {am.loc[('sim_y_prior_skip', 'fado_dual'), 'f1_post']:.3f} vs {am.loc[('sim_y_prior_skip', 'fado'), 'f1_post']:.3f}, "
       f"DP after {am.loc[('sim_y_prior_skip', 'fado_dual'), 'post_drift_dp']:.3f} vs {am.loc[('sim_y_prior_skip', 'fado'), 'post_drift_dp']:.3f}; "
@@ -288,6 +289,12 @@ ds['lambda_dual_lr'] = ds.lambda_dual_lr.fillna(ds.run_id.map(  # runs W&B does 
 base = mt.sweep_metrics('main_adult', ['fado']).assign(lambda_dual_lr=0.01)
 dd = pd.concat([base[base.scenario.isin(ds.scenario.unique())], ds]).drop_duplicates(['scenario', 'lambda_dual_lr', 'seed'])
 dm = dd.groupby(['scenario', 'lambda_dual_lr']).agg(pre=('phase_pre_drift_dp', 'mean'), f1=('f1', 'mean'), n=('seed', 'nunique'))
+claim('V-C', 'y_prior_skip: F1 after the onset 0.616 with the controller (dual + controller) and 0.649 without (dual only); '
+      'the shift drops rows of one class at random, leaving P(x | y) unchanged',
+      f"F1 after onset: dual + controller {am.loc[('sim_y_prior_skip', 'fado_no_reset'), 'f1_post']:.3f}, "
+      f"dual only {am.loc[('sim_y_prior_skip', 'fado_dual'), 'f1_post']:.3f}",
+      'means over 30 seeds; the drop rule is src/drift/inject_drift.py (DriftSimulator.transform: a row of the selected class '
+      'is skipped by _skip_instance, a random draw that ignores x)', 'sweep ablation_adult; source code')
 claim('V-B', 'with η = 0.1 DP before the onset falls from 0.060 to 0.050, at an F1 cost of 0.009 (x_perm) and 0.007 (y_prior), 30 seeds each',
       '; '.join(f'{NAMES[sc]} η={eta:g}: DP before onset {r.pre:.4f}, F1 {r.f1:.4f} (n={r.n})' for (sc, eta), r in dm.iterrows()),
       'means over the seeds; F1 cost = F1(η=0.01) − F1(η=0.1)', 'sweep dualstep_adult + main (η = 0.01)')
