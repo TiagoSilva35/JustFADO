@@ -80,6 +80,16 @@ flags.DEFINE_float(
     'FADO (lambda_base) while it streams with a different --lambda_const.',
 )
 flags.DEFINE_string(
+    'pretrain_cache_dir',
+    '',
+    'Directory where pre-trained forests are kept across runs. Pre-training is '
+    'deterministic per seed and identical for every arm and drift scenario of a '
+    'dataset, so a sweep that sets this pre-trains each seed once per machine instead '
+    'of once per run. The key covers the training data, every pre-training setting, '
+    'and the source of the forest code, so a code change starts a new entry. Empty '
+    '(default): a temporary per-process cache, as before.',
+)
+flags.DEFINE_string(
     'pipeline_dataset',
     '',
     'Optional dataset override for pipeline runs. Empty keeps --dataset.',
@@ -875,6 +885,26 @@ def _pretrain_cache_key(x_train, y_train, a_train, seed):
     )
 
 
+def _forest_code_digest():
+    """Digest of the code that pre-training runs, so a persistent entry dies with it."""
+    digest = hashlib.sha1()
+    root = os.path.dirname(os.path.abspath(aranyani.__file__))
+    for name in sorted(os.listdir(root)):
+        if name.endswith('.py'):
+            with open(os.path.join(root, name), 'rb') as f:
+                digest.update(name.encode() + f.read())
+    return digest.hexdigest()
+
+
+def _persistent_pretrain_path(key):
+    """Checkpoint path (without .pkl) in --pretrain_cache_dir, or None when it is unset."""
+    root = str(FLAGS.pretrain_cache_dir).strip()
+    if not root:
+        return None
+    name = hashlib.sha1(repr((key, _forest_code_digest())).encode()).hexdigest()
+    return os.path.join(root, f'pretrain_{name}')
+
+
 def _pretrain_aranyani(x_train, y_train, a_train, data_dim, seed):
     """Pre-train the forest once and hand every arm an identical copy.
 
@@ -890,6 +920,13 @@ def _pretrain_aranyani(x_train, y_train, a_train, data_dim, seed):
         checkpoint, timing = _PRETRAIN_CACHE[key]
         print(f"[PIPELINE] Reusing the pre-trained forest at {checkpoint}.pkl")
         return forest.FairDecisionForest.load(checkpoint), dict(timing)
+    persistent = _persistent_pretrain_path(key)
+    if persistent and os.path.isfile(f'{persistent}.pkl'):
+        with open(f'{persistent}.timing.json') as f:
+            timing = json.load(f)
+        _PRETRAIN_CACHE[key] = (persistent, dict(timing))
+        print(f"[PIPELINE] Reusing the pre-trained forest at {persistent}.pkl (--pretrain_cache_dir)")
+        return forest.FairDecisionForest.load(persistent), dict(timing)
 
     model = forest.FairDecisionForest(
         num_trees=int(FLAGS.num_trees),
@@ -922,6 +959,16 @@ def _pretrain_aranyani(x_train, y_train, a_train, data_dim, seed):
     checkpoint = os.path.join(_pretrain_dir(), f'pretrain_{abs(hash(key)):x}')
     model.save(checkpoint)
     _PRETRAIN_CACHE[key] = (checkpoint, dict(timing))
+    if persistent:
+        # Write to a temporary name and rename: several agents on one machine may
+        # pre-train the same seed at once, and a reader must never see half a file.
+        os.makedirs(os.path.dirname(persistent), exist_ok=True)
+        tmp = f'{persistent}.{os.getpid()}'
+        shutil.copyfile(f'{checkpoint}.pkl', f'{tmp}.pkl')
+        with open(f'{tmp}.timing.json', 'w') as f:
+            json.dump(timing, f)
+        os.replace(f'{tmp}.timing.json', f'{persistent}.timing.json')
+        os.replace(f'{tmp}.pkl', f'{persistent}.pkl')
     return model, dict(timing)
 
 
@@ -1362,6 +1409,9 @@ _ARM_TABLE_METRICS = [
       for metric in ('accuracy', 'dp', 'eo', 'lambda')],
     'accuracy_detections', 'accuracy_true_positives', 'accuracy_false_alarms',
     'fairness_detections', 'fairness_true_positives', 'fairness_false_alarms',
+    # Intersectional runs (--intersectional): DP / EO of each protected attribute on its
+    # own, over the whole prediction stream. Empty in single-attribute runs.
+    'dp_sex', 'dp_race', 'eo_sex', 'eo_race',
 ]
 _ARM_TABLE_COLUMNS = ['seed', 'model', 'scenario'] + _ARM_TABLE_METRICS
 
@@ -1599,6 +1649,9 @@ def main(_):
         'drift_temperature_recovery_step': float(FLAGS.drift_temperature_recovery_step),
         'seeds': seeds,
         'controller_components': str(FLAGS.controller_components),
+        # Needed to regenerate a run's stream offline (the per-sample groups are not saved).
+        'folktables_subsample_fraction': float(FLAGS.folktables_subsample_fraction),
+        'intersectional': bool(FLAGS.intersectional),
         # What the arms actually ran with, after dataset defaults.
         'static_params': _build_aranyani_static_params(),
     }

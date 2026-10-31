@@ -1,0 +1,46 @@
+# Why is FADO's demographic parity (~0.06 on Adult) above its target epsilon = 0.05?
+#
+# Projected dual ascent bounds the average violation of the constraint by the final price over
+# (dual step x stream length): sum_t (v_t - eps) <= mu_T / eta (telescoping the update), so on a
+# finite stream the target is met on average only up to mu_T / (eta T). The bound predicts that
+# a larger dual step eta shrinks the excess. This sweep tests that prediction; eta = 0.01 (the
+# paper's value) is not re-run, it is FADO in the main sweeps.
+#
+# The stream before the onset is the same in all four scenarios, so two suffice: the two after
+# whose onset FADO raises its weight the most (x_permutations, y_prior_skip).
+# 120 runs (2 steps x 2 scenarios x 30 seeds), FADO only (~16 min on tesla).
+program: src/main.py
+project: fado-ablations
+method: grid
+name: dual-step-adult
+metric:
+  name: fado/stream_final_dp
+  goal: minimize
+parameters:
+  pipeline_model:
+    value: 'fado'
+  pipeline_dataset:
+    value: adult
+  lambda_dual_lr:
+    values: [0.03, 0.1]
+  drift_scenario:
+    values:
+      - sim_x_permutations
+      - sim_y_prior_skip
+  seeds:
+    values: ['66', '77', '88', '99', '101', '111', '122', '133', '144', '155', '166', '177', '188', '199', '202', '213', '224', '235', '246', '257', '268', '279', '291', '303', '314', '325', '336', '347', '358', '369']
+  pretrain_cache_dir:
+    value: files/pretrain_cache   # pre-train each seed once per machine (TESTS/check_pretrain_cache.py)
+  deterministic:
+    value: true
+  wandb_log:
+    value: true
+  wandb_project:
+    value: fado-ablations
+command:
+  - ${env}
+  - PYTHONHASHSEED=0
+  - ${interpreter}
+  - -m
+  - src.main
+  - ${args}

@@ -1,0 +1,45 @@
+# Component ablation on Adult: what does drift awareness add to the adaptive constraint?
+#
+# Arms (presets in src/models/forest/controller.py), compared with full FADO by seed:
+#   fado_dual         dual ascent only: no detector, no reset, no reaction controller
+#   fado_lambda_only  dual + detectors + reset of the fairness statistics (+ fairness monitor)
+#   fado_no_reset     dual + detectors + reaction controller (learning rate, temperature), no reset
+# Not re-run: full FADO and Aranyani come from the main sweeps (uwhcwsdg, bi6frxi3, l8c4i60o),
+# same seeds and streams; FADO and Aranyani are bit-identical across machines.
+#
+# 120 runs (4 scenarios x 30 seeds), 3 arms each (~16 min per arm on tesla).
+program: src/main.py
+project: fado-ablations
+method: grid
+name: ablation-adult
+metric:
+  name: fado_dual/stream_final_dp
+  goal: minimize
+parameters:
+  pipeline_model:
+    value: 'fado_dual,fado_lambda_only,fado_no_reset'
+  pipeline_dataset:
+    value: adult
+  drift_scenario:
+    values:
+      - sim_x_permutations
+      - sim_y_swaps
+      - sim_y_prior_skip
+      - sim_x_exceed_skip
+  seeds:
+    values: ['66', '77', '88', '99', '101', '111', '122', '133', '144', '155', '166', '177', '188', '199', '202', '213', '224', '235', '246', '257', '268', '279', '291', '303', '314', '325', '336', '347', '358', '369']
+  pretrain_cache_dir:
+    value: files/pretrain_cache   # pre-train each seed once per machine (TESTS/check_pretrain_cache.py)
+  deterministic:
+    value: true
+  wandb_log:
+    value: true
+  wandb_project:
+    value: fado-ablations
+command:
+  - ${env}
+  - PYTHONHASHSEED=0
+  - ${interpreter}
+  - -m
+  - src.main
+  - ${args}

@@ -71,6 +71,10 @@ _FULL = ControllerConfig()
 
 PRESETS = {
     'fado_full': _FULL,
+    # Component ablation on Adult and Folktables (sweep_ablation_*.yaml). Together with
+    # fado_lambda_only (dual + detectors + reset), fado_no_reset (dual + detectors +
+    # reaction controller; the monitor runs but cannot act) and fado (everything).
+    'fado_dual': dataclasses.replace(ControllerConfig.none(), react_lambda=True),
     'fado_no_lambda': dataclasses.replace(
         _FULL, react_lambda=False, detect_fairness_drift=False,
         reset_fairness_stats=False),

@@ -162,7 +162,8 @@ folder, or `scp -r`). Run ids are unique, so nothing is overwritten.
 | Per-seed metrics of one or more sweeps | `python -m src.fetch_wandb_arm_metrics --sweep <id>[,<id>...]` | `files/experiments/wandb_arm_metrics/<ids>/raw.csv`, `summary.csv` |
 | Curves over time, mean over seeds | `python -m src.fetch_wandb_trajectories --sweep <id> --plot` | `files/experiments/wandb_trajectories/<id>/` |
 | Whole-stream F1 from local predictions (machine with the folders) | `python DOCS/paper_icde/scripts/stream_f1.py adult sim_x_permutations:uwhcwsdg sim_y_swaps:bi6frxi3` | appends to `files/experiments/extra_metrics/per_seed.csv` |
-| Onset-aligned figure (not currently in the paper) | `cd DOCS/paper_icde/figures && python ../scripts/fig_adult_onset_grid.py adult_onset_grid.pdf` | `adult_onset_grid.pdf/.png` |
+| DP and λ_t over the stream (figure; needs the run folders of every paper sweep) | `cd DOCS/paper_icde/figures && python ../scripts/fig_dp_lambda.py dp_lambda.pdf` (`--allow-partial` for a preview) | `dp_lambda.pdf/.png` |
+| DP against ε: the dual-ascent bound, run by run (local run folders) | `PYTHONHASHSEED=0 python DOCS/paper_icde/scripts/dual_bound.py` | `DOCS/paper_icde/supplementary/dual_bound.md` |
 
 **Tables from several machines.** F1 needs the per-sample predictions, which only the
 machine that ran a sweep has. So each machine runs `crawl`, which adds its F1 rows to the
