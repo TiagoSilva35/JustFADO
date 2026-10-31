@@ -1,0 +1,21 @@
+\begin{table}[t]
+\centering
+\caption{Overall Comparison of \fado{} Against Each Method}
+\label{tab:overall}
+\setlength{\tabcolsep}{4pt}
+\footnotesize
+\begin{tabular}{@{}l ccc@{}}
+\toprule
+& Significant & No significant & Significant \\
+\fado{} vs. & wins & difference & losses \\
+\midrule
+\ara{} & 17 & 5 & 5 \\
+\ara{}, leaked $\lambda$ & 12 & 8 & 7 \\
+\arf{} & 26 & 1 & 0 \\
+\rfr{} & 24 & 0 & 3 \\
+\midrule
+Total (108) & 79 & 14 & 15 \\
+\bottomrule
+\end{tabular}
+\tnote{Counts over the 27 cells of each method in Table~\ref{tab:results} (paired Wilcoxon test, Holm-corrected, $\alpha=0.05$).}
+\end{table}

@@ -323,28 +323,27 @@ OVERALL_ROWS = [('aranyani', r'vs.\ \ara{}'), ('tuned', r'vs.\ ' + dict(ROWS)['t
 OUTCOMES = [('win', 'Significant wins'), ('n.s.', 'No significant difference'), ('loss', 'Significant losses')]
 
 
-def overall_block(tests):
-    """Top of Table III: FADO's significant wins / no significant difference / losses against
-    each method, summed over every cell of the table (blocks x periods x metrics)."""
+def overall_table(tests):
+    """Overall table: FADO's significant wins / no significant difference / losses against each
+    method, summed over every cell of Table III (blocks x periods x metrics)."""
     t = tests[tests.table]
     per_method = t.groupby('model').size()
     assert per_method.nunique() == 1, per_method  # same cells for every method, so the counts compare
 
-    widths = (2, 3, 2)  # columns spanned by wins / no significant difference / losses
-
-    def row(cells):
-        return ' & '.join(r'\multicolumn{' + str(w) + '}{c}{' + str(c) + '}' for w, c in zip(widths, cells))
-    lines = [r'\multicolumn{8}{@{}l}{\textbf{Overall:} \fado{} against each method over its '
-             + str(per_method.iloc[0]) + r' cells below} \\',
-             '& ' + row([h for _, h in OUTCOMES]) + r' \\',
-             r'\cmidrule(lr){2-3} \cmidrule(lr){4-6} \cmidrule(l){7-8}']
-    for m, label in OVERALL_ROWS:
-        r = t[t.model == m].result
-        lines.append(label + ' & ' + row([int((r == k).sum()) for k, _ in OUTCOMES]) + r' \\')
-    lines += [r'\addlinespace[2pt]',
-              f'Total ({len(t)} comparisons) & ' + row([int((t.result == k).sum()) for k, _ in OUTCOMES]) + r' \\']
-
-    return lines
+    def row(label, r):
+        return label + ' & ' + ' & '.join(str(int((r == k).sum())) for k, _ in OUTCOMES) + r' \\'
+    lines = [r'\begin{table}[t]', r'\centering',
+             r'\caption{Overall Comparison of \fado{} Against Each Method}',
+             r'\label{tab:overall}', r'\setlength{\tabcolsep}{4pt}', r'\footnotesize',
+             r'\begin{tabular}{@{}l ccc@{}}', r'\toprule',
+             r'& Significant & No significant & Significant \\',
+             r'\fado{} vs. & wins & difference & losses \\', r'\midrule']
+    lines += [row(label.replace(r'vs.\ ', ''), t[t.model == m].result) for m, label in OVERALL_ROWS]
+    lines += [r'\midrule', row(f'Total ({len(t)})', t.result), r'\bottomrule', r'\end{tabular}',
+              r'\tnote{Counts over the ' + str(per_method.iloc[0]) + r' cells of each method in Table~\ref{tab:results}'
+              r' (paired Wilcoxon test, Holm-corrected, $\alpha=0.05$).}',
+              r'\end{table}']
+    return '\n'.join(lines) + '\n'
 
 
 def text_numbers(tests):
@@ -390,11 +389,11 @@ def results_table(data, tests):
         """The fairness weight: FADO's mean lambda_t over the stream, the Aranyani constants, none for ARF/RFR."""
         if m == 'fado':
             x = data[(data.scenario == sc) & (data.model == 'fado')][col]
-            return f'${x.mean():.2f}$' if x.notna().sum() == N_SEEDS else ''  # mean only: it describes the run, it is not compared
+            return f'$\\mathbf{{{x.mean():.2f}}}$' if x.notna().sum() == N_SEEDS else ''  # mean only: it describes the run, it is not compared
         if m == 'aranyani':
-            return f'${ARANYANI_LAMBDA:g}$'
+            return f'$\\mathbf{{{ARANYANI_LAMBDA:g}}}$'
         if m == 'tuned':
-            return f"${leaked['folktables' if sc == 'folktables' else 'adult']:g}$"
+            return f"$\\mathbf{{{leaked['folktables' if sc == 'folktables' else 'adult']:g}}}$"
         return '--'
     no_onset = r'\multirow{' + str(len(ROWS)) + r'}{*}{\emph{not applicable: no injected onset}}'
     body = []
@@ -409,21 +408,19 @@ def results_table(data, tests):
             else:
                 after = [cells[(sc, m, c)] for c, _ in COLS[3:]]
             body.append((FADO_SHADE if m == 'fado' else '') + ' & '.join([label] + whole + after) + r' \\')
-    overall = overall_block(tests)
 
     tex = '\n'.join([
         # [!t]: the table is taller than \dbltopfraction allows and would otherwise float to the end
         r'\begin{table*}[!t]', r'\centering',
         r'\caption{F1, Demographic Parity, and Equalized Odds Over 30 Seeds}',
         r'\label{tab:results}', r'\setlength{\tabcolsep}{5pt}', r'\footnotesize',
-        r'\begin{tabular}{@{}l cccc ccc@{}}', r'\toprule'] + overall + [
-        r'\midrule[\heavyrulewidth]',
+        r'\begin{tabular}{@{}l cccc ccc@{}}', r'\toprule',
         r'& \multicolumn{4}{c}{Whole stream} & \multicolumn{3}{c}{After the onset} \\',
         r'\cmidrule(lr){2-5} \cmidrule(l){6-8}',
         r'Method & F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & $\lambda$ & F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ \\',
         r'\midrule'] + body + [
         r'\bottomrule', r'\end{tabular}',
-        r'\tnote{Mean $\pm$ standard deviation over 30 seeds. Bold: best mean in the block. $^{\bullet}$/$^{\circ}$: \fado{} significantly better/worse'
+        r'\tnote{Mean $\pm$ standard deviation over 30 seeds. Bold: best mean of each metric in the block. $^{\bullet}$/$^{\circ}$: \fado{} significantly better/worse'
         r' than that method (paired Wilcoxon test, Holm-corrected, $\alpha=0.05$). $\lambda$: fairness weight, the mean of $\lambda_t$ over the'
         r' stream for \fado{} and a constant for the \ara{} variants.' + (' Empty cell: fewer than 30 seeds.' if empty else '') + '}',
         r'\end{table*}'])
@@ -609,6 +606,7 @@ def build(refresh):
     tests = fado_tests(data)
     results, filled = results_table(data, tests)
     open(os.path.join(PAPER, 'tables', 'results.tex'), 'w').write(results)
+    open(os.path.join(PAPER, 'tables', 'overall.tex'), 'w').write(overall_table(tests))
     open(os.path.join(PAPER, 'tables', 'detection.tex'), 'w').write(detection_table(det, main_adult))
     open(os.path.join(PAPER, 'supplementary', 'significance.md'), 'w').write(significance_report(tests))
     md, split = detection_split(det, main_adult)

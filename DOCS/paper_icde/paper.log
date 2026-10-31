@@ -1,164 +1,140 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Homebrew) (preloaded format=pdflatex 2026.3.4)  24 OCT 2026 18:11
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (MiKTeX 26.5) (preloaded format=pdflatex 2026.10.7)  29 OCT 2026 18:55
 entering extended mode
  restricted \write18 enabled.
+ file:line:error style messages enabled.
  %&-line parsing enabled.
-**paper.tex
-(./paper.tex
-LaTeX2e <2025-11-01>
-L3 programming layer <2026-01-19>
-(./IEEEtran.cls
+**d:/FADO/JustFADO/DOCS/paper_icde/paper.tex
+(d:/FADO/JustFADO/DOCS/paper_icde/paper.tex
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-08-10>
+(IEEEtran.cls
 Document Class: IEEEtran 2015/08/26 V1.8b by Michael Shell
 -- See the "IEEEtran_HOWTO" manual for usage information.
 -- http://www.michaelshell.org/tex/ieeetran/
-\@IEEEtrantmpdimenA=\dimen148
-\@IEEEtrantmpdimenB=\dimen149
-\@IEEEtrantmpdimenC=\dimen150
-\@IEEEtrantmpcountA=\count275
-\@IEEEtrantmpcountB=\count276
-\@IEEEtrantmpcountC=\count277
+\@IEEEtrantmpdimenA=\dimen150
+\@IEEEtrantmpdimenB=\dimen151
+\@IEEEtrantmpdimenC=\dimen152
+\@IEEEtrantmpcountA=\count276
+\@IEEEtrantmpcountB=\count277
+\@IEEEtrantmpcountC=\count278
 \@IEEEtrantmptoksA=\toks17
-LaTeX Font Info:    Trying to load font information for OT1+ptm on input line 5
-03.
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/psnfss/ot1ptm
-.fd
+LaTeX Font Info:    Trying to load font information for OT1+ptm on input line 503.
+(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ot1ptm.fd
 File: ot1ptm.fd 2001/06/04 font definitions for OT1/ptm.
 )
 -- Using 8.5in x 11in (letter) paper.
 -- Using PDF output.
-\@IEEEnormalsizeunitybaselineskip=\dimen151
+\@IEEEnormalsizeunitybaselineskip=\dimen153
 -- This is a 10 point document.
-LaTeX Encoding Info:    Redeclaring text command \textunderscore (encoding ?) o
-n input line 937.
-\CLASSINFOnormalsizebaselineskip=\dimen152
-\CLASSINFOnormalsizeunitybaselineskip=\dimen153
-\IEEEnormaljot=\dimen154
+LaTeX Encoding Info:    Redeclaring text command \textunderscore (encoding ?) on input line 937.
+\CLASSINFOnormalsizebaselineskip=\dimen154
+\CLASSINFOnormalsizeunitybaselineskip=\dimen155
+\IEEEnormaljot=\dimen156
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <5> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <5> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
-
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <7> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <7> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
-
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <8> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <8> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
-
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <9> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <9> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
-
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <10> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <10> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
-
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <11> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <11> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
-
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <12> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <12> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
-
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <17> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <17> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
-
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <20> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <20> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
-
 LaTeX Font Info:    Font shape `OT1/ptm/bx/n' in size <24> not available
 (Font)              Font shape `OT1/ptm/b/n' tried instead on input line 1090.
 LaTeX Font Info:    Font shape `OT1/ptm/bx/it' in size <24> not available
 (Font)              Font shape `OT1/ptm/b/it' tried instead on input line 1090.
-
-\IEEEquantizedlength=\dimen155
-\IEEEquantizedlengthdiff=\dimen156
-\IEEEquantizedtextheightdiff=\dimen157
-\IEEEilabelindentA=\dimen158
-\IEEEilabelindentB=\dimen159
-\IEEEilabelindent=\dimen160
-\IEEEelabelindent=\dimen161
-\IEEEdlabelindent=\dimen162
-\IEEElabelindent=\dimen163
-\IEEEiednormlabelsep=\dimen164
-\IEEEiedmathlabelsep=\dimen165
+\IEEEquantizedlength=\dimen157
+\IEEEquantizedlengthdiff=\dimen158
+\IEEEquantizedtextheightdiff=\dimen159
+\IEEEilabelindentA=\dimen160
+\IEEEilabelindentB=\dimen161
+\IEEEilabelindent=\dimen162
+\IEEEelabelindent=\dimen163
+\IEEEdlabelindent=\dimen164
+\IEEElabelindent=\dimen165
+\IEEEiednormlabelsep=\dimen166
+\IEEEiedmathlabelsep=\dimen167
 \IEEEiedtopsep=\skip49
-\c@section=\count278
-\c@subsection=\count279
-\c@subsubsection=\count280
-\c@paragraph=\count281
-\c@IEEEsubequation=\count282
+\c@section=\count279
+\c@subsection=\count280
+\c@subsubsection=\count281
+\c@paragraph=\count282
+\c@IEEEsubequation=\count283
 \abovecaptionskip=\skip50
 \belowcaptionskip=\skip51
-\c@figure=\count283
-\c@table=\count284
-\@IEEEeqnnumcols=\count285
-\@IEEEeqncolcnt=\count286
-\@IEEEsubeqnnumrollback=\count287
-\@IEEEquantizeheightA=\dimen166
-\@IEEEquantizeheightB=\dimen167
-\@IEEEquantizeheightC=\dimen168
-\@IEEEquantizeprevdepth=\dimen169
-\@IEEEquantizemultiple=\count288
+\c@figure=\count284
+\c@table=\count285
+\@IEEEeqnnumcols=\count286
+\@IEEEeqncolcnt=\count287
+\@IEEEsubeqnnumrollback=\count288
+\@IEEEquantizeheightA=\dimen168
+\@IEEEquantizeheightB=\dimen169
+\@IEEEquantizeheightC=\dimen170
+\@IEEEquantizeprevdepth=\dimen171
+\@IEEEquantizemultiple=\count289
 \@IEEEquantizeboxA=\box53
-\@IEEEtmpitemindent=\dimen170
-\IEEEPARstartletwidth=\dimen171
-\c@IEEEbiography=\count289
+\@IEEEtmpitemindent=\dimen172
+\IEEEPARstartletwidth=\dimen173
+\c@IEEEbiography=\count290
 \@IEEEtranrubishbin=\box54
 )
 ** ATTENTION: Overriding command lockouts (line 2).
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/cite/cite.sty
+(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/cite\cite.sty
 LaTeX Info: Redefining \cite on input line 302.
 LaTeX Info: Redefining \nocite on input line 332.
 Package: cite 2015/02/27  v 5.5
-)
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amsma
-th.sty
-Package: amsmath 2025/07/09 v2.17z AMS math features
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsmath.sty
+Package: amsmath 2026/05/19 v2.18d AMS math features
 \@mathmargin=\skip52
 
 For additional information on amsmath, use the `?' option.
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amste
-xt.sty
+(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amstext.sty
 Package: amstext 2024/11/17 v2.01 AMS text
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amsge
-n.sty
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsgen.sty
 File: amsgen.sty 1999/11/30 v2.0 generic functions
 \@emptytoks=\toks18
-\ex@=\dimen172
-))
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amsbs
-y.sty
+\ex@=\dimen174
+)) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsbsy.sty
 Package: amsbsy 1999/11/29 v1.2d Bold Symbols
-\pmbraise@=\dimen173
-)
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsmath/amsop
-n.sty
+\pmbraise@=\dimen175
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsmath\amsopn.sty
 Package: amsopn 2022/04/08 v2.04 operator names
 )
-\inf@bad=\count290
+\inf@bad=\count291
 LaTeX Info: Redefining \frac on input line 233.
-\uproot@=\count291
-\leftroot@=\count292
+\uproot@=\count292
+\leftroot@=\count293
 LaTeX Info: Redefining \overline on input line 398.
 LaTeX Info: Redefining \colon on input line 409.
-\classnum@=\count293
-\DOTSCASE@=\count294
+\classnum@=\count294
+\DOTSCASE@=\count295
 LaTeX Info: Redefining \ldots on input line 495.
 LaTeX Info: Redefining \dots on input line 498.
 LaTeX Info: Redefining \cdots on input line 619.
@@ -168,92 +144,70 @@ LaTeX Info: Redefining \big on input line 721.
 LaTeX Info: Redefining \Big on input line 722.
 LaTeX Info: Redefining \bigg on input line 723.
 LaTeX Info: Redefining \Bigg on input line 724.
-\big@size=\dimen174
+\big@size=\dimen176
 LaTeX Font Info:    Redeclaring font encoding OML on input line 742.
 LaTeX Font Info:    Redeclaring font encoding OMS on input line 743.
-\macc@depth=\count295
+\macc@depth=\count296
 LaTeX Info: Redefining \bmod on input line 904.
 LaTeX Info: Redefining \pmod on input line 909.
 LaTeX Info: Redefining \smash on input line 939.
 LaTeX Info: Redefining \relbar on input line 969.
 LaTeX Info: Redefining \Relbar on input line 970.
-\c@MaxMatrixCols=\count296
+\c@MaxMatrixCols=\count297
 \dotsspace@=\muskip17
-\c@parentequation=\count297
-\dspbrk@lvl=\count298
+\c@parentequation=\count298
+\dspbrk@lvl=\count299
 \tag@help=\toks19
-\row@=\count299
-\column@=\count300
-\maxfields@=\count301
+\row@=\count300
+\column@=\count301
+\maxfields@=\count302
 \andhelp@=\toks20
-\eqnshift@=\dimen175
-\alignsep@=\dimen176
-\tagshift@=\dimen177
-\tagwidth@=\dimen178
-\totwidth@=\dimen179
-\lineht@=\dimen180
+\eqnshift@=\dimen177
+\alignsep@=\dimen178
+\tagshift@=\dimen179
+\tagwidth@=\dimen180
+\totwidth@=\dimen181
+\lineht@=\dimen182
 \@envbody=\toks21
 \multlinegap=\skip53
 \multlinetaggap=\skip54
 \mathdisplay@stack=\toks22
-LaTeX Info: Redefining \[ on input line 2950.
-LaTeX Info: Redefining \] on input line 2951.
-)
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsfonts/amss
-ymb.sty
+LaTeX Info: Redefining \[ on input line 2965.
+LaTeX Info: Redefining \] on input line 2966.
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amssymb.sty
 Package: amssymb 2013/01/14 v3.01 AMS font symbols
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsfonts/amsf
-onts.sty
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\amsfonts.sty
 Package: amsfonts 2013/01/14 v3.01 Basic AMSFonts support
 \symAMSa=\mathgroup4
 \symAMSb=\mathgroup5
 LaTeX Font Info:    Redeclaring math symbol \hbar on input line 98.
 LaTeX Font Info:    Overwriting math alphabet `\mathfrak' in version `bold'
 (Font)                  U/euf/m/n --> U/euf/b/n on input line 106.
-))
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/grap
-hicx.sty
-Package: graphicx 2024/12/31 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/keyv
-al.sty
-Package: keyval 2022/05/29 v1.15 key=value parser (DPC)
+)) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphicx.sty
+Package: graphicx 2026-05-17 v1.2e Enhanced LaTeX Graphics (DPC,SPQR)
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\keyval.sty
+Package: keyval 2026-05-17 v1.15 key=value parser (DPC)
 \KV@toks@=\toks23
-)
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/grap
-hics.sty
-Package: graphics 2024/08/06 v1.4g Standard LaTeX Graphics (DPC,SPQR)
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/trig
-.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\graphics.sty
+Package: graphics 2026-05-17 v1.4h Standard LaTeX Graphics (DPC,SPQR)
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\trig.sty
 Package: trig 2023/12/02 v1.11 sin cos tan (DPC)
-)
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics-cfg/
-graphics.cfg
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\graphics.cfg
 File: graphics.cfg 2016/06/04 v1.11 sample graphics configuration
 )
 Package graphics Info: Driver file: pdftex.def on input line 106.
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics-def/
-pdftex.def
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics-def\pdftex.def
 File: pdftex.def 2025/09/29 v1.2d Graphics/color driver for pdftex
 ))
-\Gin@req@height=\dimen181
-\Gin@req@width=\dimen182
-)
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/xcolor/xcolor
-.sty
+\Gin@req@height=\dimen183
+\Gin@req@width=\dimen184
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/xcolor\xcolor.sty
 Package: xcolor 2024/09/29 v3.02 LaTeX color extensions (UK)
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics-cfg/
-color.cfg
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics-cfg\color.cfg
 File: color.cfg 2016/01/02 v1.6 sample color configuration
 )
 Package xcolor Info: Driver file: pdftex.def on input line 274.
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/graphics/math
-color.ltx)
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/graphics\mathcolor.ltx)
 Package xcolor Info: Model `cmy' substituted by `cmy0' on input line 1349.
 Package xcolor Info: Model `hsb' substituted by `rgb' on input line 1353.
 Package xcolor Info: Model `RGB' extended on input line 1365.
@@ -263,92 +217,76 @@ Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1369.
 Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1370.
 Package xcolor Info: Model `Gray' substituted by `gray' on input line 1371.
 Package xcolor Info: Model `wave' substituted by `hsb' on input line 1372.
-)
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/colortbl/colo
-rtbl.sty
-Package: colortbl 2024/10/29 v1.0k Color table columns (DPC)
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/tools/array.s
-ty
-Package: array 2025/09/25 v2.6n Tabular extension package (FMi)
-\col@sep=\dimen183
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/colortbl\colortbl.sty
+Package: colortbl 2026/05/01 v1.0l Color table columns (DPC)
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/tools\array.sty
+Package: array 2026/02/24 v2.7b Tabular extension package (FMi)
+\col@sep=\dimen185
 \ar@mcellbox=\box57
-\extrarowheight=\dimen184
+\extrarowheight=\dimen186
 \NC@list=\toks24
 \extratabsurround=\skip55
 \backup@length=\skip56
 \ar@cellbox=\box58
 )
-\everycr=\toks25
+new hooks used!!
 \minrowclearance=\skip57
-\rownum=\count302
-)
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/booktabs/book
-tabs.sty
+\rownum=\count303
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/booktabs\booktabs.sty
 Package: booktabs 2020/01/12 v1.61803398 Publication quality tables
-\heavyrulewidth=\dimen185
-\lightrulewidth=\dimen186
-\cmidrulewidth=\dimen187
-\belowrulesep=\dimen188
-\belowbottomsep=\dimen189
-\aboverulesep=\dimen190
-\abovetopsep=\dimen191
-\cmidrulesep=\dimen192
-\cmidrulekern=\dimen193
-\defaultaddspace=\dimen194
-\@cmidla=\count303
-\@cmidlb=\count304
-\@aboverulesep=\dimen195
-\@belowrulesep=\dimen196
-\@thisruleclass=\count305
-\@lastruleclass=\count306
-\@thisrulewidth=\dimen197
-)
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/multirow/mult
-irow.sty
+\heavyrulewidth=\dimen187
+\lightrulewidth=\dimen188
+\cmidrulewidth=\dimen189
+\belowrulesep=\dimen190
+\belowbottomsep=\dimen191
+\aboverulesep=\dimen192
+\abovetopsep=\dimen193
+\cmidrulesep=\dimen194
+\cmidrulekern=\dimen195
+\defaultaddspace=\dimen196
+\@cmidla=\count304
+\@cmidlb=\count305
+\@aboverulesep=\dimen197
+\@belowrulesep=\dimen198
+\@thisruleclass=\count306
+\@lastruleclass=\count307
+\@thisrulewidth=\dimen199
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/multirow\multirow.sty
 Package: multirow 2024/11/12 v2.9 Span multiple rows of a table
 \multirow@colwidth=\skip58
-\multirow@cntb=\count307
+\multirow@cntb=\count308
 \multirow@dima=\skip59
-\bigstrutjot=\dimen198
-)
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/algorithmicx/
-algpseudocode.sty
+\bigstrutjot=\dimen256
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/algorithmicx\algpseudocode.sty
 Package: algpseudocode 
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/base/ifthen.s
-ty
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/base\ifthen.sty
 Package: ifthen 2024/03/16 v1.1e Standard LaTeX ifthen package (DPC)
-)
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/algorithmicx/
-algorithmicx.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/algorithmicx\algorithmicx.sty
 Package: algorithmicx 2005/04/27 v1.2 Algorithmicx
 
 Document Style algorithmicx 1.2 - a greatly improved `algorithmic' style
-\c@ALG@line=\count308
-\c@ALG@rem=\count309
-\c@ALG@nested=\count310
+\c@ALG@line=\count309
+\c@ALG@rem=\count310
+\c@ALG@nested=\count311
 \ALG@tlm=\skip60
 \ALG@thistlm=\skip61
-\c@ALG@Lnr=\count311
-\c@ALG@blocknr=\count312
-\c@ALG@storecount=\count313
-\c@ALG@tmpcounter=\count314
+\c@ALG@Lnr=\count312
+\c@ALG@blocknr=\count313
+\c@ALG@storecount=\count314
+\c@ALG@tmpcounter=\count315
 \ALG@tmplength=\skip62
 )
 Document Style - pseudocode environments for use with the `algorithmicx' style
-) (/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/url/url.sty
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/url\url.sty
 \Urlmuskip=\muskip18
 Package: url 2013/09/16  ver 3.4  Verb mode for urls, etc.
 )
-\c@proposition=\count315
-\c@remark=\count316
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/l3backend/l3b
-ackend-pdftex.def
-File: l3backend-pdftex.def 2025-10-09 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count317
-) (./paper.aux)
+\c@proposition=\count316
+\c@remark=\count317
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/l3kernel\l3backend-pdftex.def
+File: l3backend-pdftex.def 2026-08-10 L3 backend support: PDF output (pdfTeX)
+\l__color_backend_stack_int=\count318
+) (paper.aux)
 \openout1 = `paper.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 33.
@@ -367,89 +305,64 @@ LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 33.
 LaTeX Font Info:    ... okay on input line 33.
 
 -- Lines per column: 56 (exact).
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/context/base/mkii/s
-upp-pdf.mkii
+(C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count318
-\scratchdimen=\dimen199
+\scratchcounter=\count319
+\scratchdimen=\dimen257
 \scratchbox=\box59
-\nofMPsegments=\count319
-\nofMParguments=\count320
-\everyMPshowfont=\toks26
-\MPscratchCnt=\count321
-\MPscratchDim=\dimen256
-\MPnumerator=\count322
-\makeMPintoPDFobject=\count323
-\everyMPtoPDFconversion=\toks27
-)
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/epstopdf-pkg/
-epstopdf-base.sty
+\nofMPsegments=\count320
+\nofMParguments=\count321
+\everyMPshowfont=\toks25
+\MPscratchCnt=\count322
+\MPscratchDim=\dimen258
+\MPnumerator=\count323
+\makeMPintoPDFobject=\count324
+\everyMPtoPDFconversion=\toks26
+) (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/epstopdf-pkg\epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
-Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 4
-85.
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/latexconfig/e
-pstopdf-sys.cfg
-File: epstopdf-sys.cfg 2010/07/13 v1.3 Configuration of (r)epstopdf for TeX Liv
-e
+Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 485.
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.cfg
+File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 ))
-LaTeX Font Info:    Trying to load font information for U+msa on input line 112
-.
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsfonts/umsa
-.fd
+LaTeX Font Info:    Trying to load font information for U+msa on input line 109.
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 112
-.
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/amsfonts/umsb
-.fd
+LaTeX Font Info:    Trying to load font information for U+msb on input line 109.
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [1{/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/map/pdftex/upd
-map/pdftex.map}{/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/en
-c/dvips/base/8r.enc}
+ [1{C:/Users/tjcsi/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}
 
 
 ] [2]
-Underfull \hbox (badness 1466) in paragraph at lines 227--232
-[]\OT1/ptm/m/n/10 We fo-cus on \OT1/ptm/m/it/10 group fair-ness\OT1/ptm/m/n/10 
-, which as-sesses whether
+Underfull \hbox (badness 1466) in paragraph at lines 230--235
+[]\OT1/ptm/m/n/10 We fo-cus on \OT1/ptm/m/it/10 group fair-ness\OT1/ptm/m/n/10 , which as-sesses whether
  []
 
 [3]
-<figures/fado_architecture.pdf, id=26, 514.14986pt x 253.41978pt>
+<figures/fado_architecture.pdf, id=25, 514.14986pt x 253.41978pt>
 File: figures/fado_architecture.pdf Graphic file (type pdf)
 <use figures/fado_architecture.pdf>
-Package pdftex.def Info: figures/fado_architecture.pdf  used on input line 281.
-
+Package pdftex.def Info: figures/fado_architecture.pdf  used on input line 283.
 (pdftex.def)             Requested size: 514.1486pt x 253.41916pt.
  [4] [5 <./figures/fado_architecture.pdf>]
-LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 4
-69.
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/psnfss/ts1ptm
-.fd
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 471.
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
-) [6]
-LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 5
-19.
-
-(/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/tex/latex/psnfss/ot1pcr
-.fd
-File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
-) [7] (./tables/results.tex) (./tables/detection.tex)
-Underfull \vbox (badness 6268) has occurred while \output is active []
-
- [8]
+)
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [9]
-[10] (./paper.bbl
+ [6]
+LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 522.
+ (C:\Users\tjcsi\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ot1pcr.fd
+File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
+) [7] (tables/results.tex) (tables/overall.tex) (tables/detection.tex) [8] [9]
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [10] (paper.bbl
 Underfull \hbox (badness 2285) in paragraph at lines 124--128
 []\OT1/ptm/m/n/8 Z. Xiong, N. Dal-masso, A. Mish-ler, V. K. Potluru, T. Balch,
  []
@@ -466,64 +379,24 @@ Before submitting the final camera ready copy, remember to:
  uses only Type 1 fonts and that every step in the generation
  process uses the appropriate paper size.
 
-[11] (./paper.aux)
+[11] (paper.aux)
  ***********
-LaTeX2e <2025-11-01>
-L3 programming layer <2026-01-19>
+LaTeX2e <2026-06-01>
+L3 programming layer <2026-08-10>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 5159 strings out of 467525
- 82581 string characters out of 5408440
- 544868 words of memory out of 5000000
- 33988 multiletter control sequences out of 15000+600000
+ 5186 strings out of 467441
+ 82633 string characters out of 5407591
+ 557664 words of memory out of 5000000
+ 34407 multiletter control sequences out of 15000+600000
  673522 words of font info for 127 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 57i,15n,65p,648b,330s stack positions out of 10000i,1000n,20000p,200000b,200000s
-</opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/ne
-wtx/NewTXMI5.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/
-type1/public/newtx/NewTXMI7.pfb></opt/homebrew/Cellar/texlive/20260301/share/te
-xmf-dist/fonts/type1/public/amsfonts/cm/cmbx10.pfb></opt/homebrew/Cellar/texliv
-e/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx8.pfb></opt/home
-brew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cm
-ex10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/pu
-blic/amsfonts/cmextra/cmex8.pfb></opt/homebrew/Cellar/texlive/20260301/share/te
-xmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb></opt/homebrew/Cellar/texliv
-e/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></opt/home
-brew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cm
-mi6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/pub
-lic/amsfonts/cm/cmmi7.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-di
-st/fonts/type1/public/amsfonts/cm/cmmi8.pfb></opt/homebrew/Cellar/texlive/20260
-301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></opt/homebrew/Ce
-llar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmr5.pfb>
-</opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsf
-onts/cm/cmr6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/
-type1/public/amsfonts/cm/cmr7.pfb></opt/homebrew/Cellar/texlive/20260301/share/
-texmf-dist/fonts/type1/public/amsfonts/cm/cmr8.pfb></opt/homebrew/Cellar/texliv
-e/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></opt/hom
-ebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/cm/c
-msy5.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/pu
-blic/amsfonts/cm/cmsy6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-d
-ist/fonts/type1/public/amsfonts/cm/cmsy7.pfb></opt/homebrew/Cellar/texlive/2026
-0301/share/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb></opt/homebrew/C
-ellar/texlive/20260301/share/texmf-dist/fonts/type1/public/amsfonts/symbols/msb
-m10.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/pub
-lic/newtx/txexs.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fon
-ts/type1/public/newtx/txmiaX.pfb></opt/homebrew/Cellar/texlive/20260301/share/t
-exmf-dist/fonts/type1/public/newtx/txsym.pfb></opt/homebrew/Cellar/texlive/2026
-0301/share/texmf-dist/fonts/type1/public/newtx/txsys.pfb></opt/homebrew/Cellar/
-texlive/20260301/share/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></opt/home
-brew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/utmb8a.pfb>
-</opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/urw/times/u
-tmbi8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/
-urw/times/utmr8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fo
-nts/type1/urw/times/utmri8a.pfb></opt/homebrew/Cellar/texlive/20260301/share/te
-xmf-dist/fonts/type1/public/newtx/ztmb.pfb></opt/homebrew/Cellar/texlive/202603
-01/share/texmf-dist/fonts/type1/public/newtx/ztmr.pfb>
-Output written on paper.pdf (11 pages, 466159 bytes).
+ 57i,14n,65p,671b,330s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/newtx/NewTXMI5.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/newtx/NewTXMI7.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx10.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmbx8.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmex10.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cmextra/cmex8.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi5.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi6.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi7.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr5.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr6.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr7.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy5.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy6.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msbm10.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/newtx/txexs.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/newtx/txmiaX.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/newtx/txsym.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/newtx/txsys.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/urw/courier/ucrr8a.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmbi8a.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/newtx/ztmb.pfb><C:/Users/tjcsi/AppData/Local/Programs/MiKTeX/fonts/type1/public/newtx/ztmr.pfb>
+Output written on paper.pdf (11 pages, 499465 bytes).
 PDF statistics:
- 225 PDF objects out of 1000 (max. 8388607)
- 143 compressed objects within 2 object streams
+ 222 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  6 words of extra memory for PDF output out of 10000 (max. 10000000)
 

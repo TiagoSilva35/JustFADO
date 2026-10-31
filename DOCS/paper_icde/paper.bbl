@@ -86,14 +86,6 @@ O.~B. Deho, M.~Bewong, S.~Kwashie, J.~Li, J.~Liu, L.~Liu, and S.~Joksimovic,
   \url{https://arxiv.org/abs/2409.12428}
 \BIBentrySTDinterwordspacing
 
-\bibitem{chowdhury2024enhancing}
-\BIBentryALTinterwordspacing
-S.~B.~R. Chowdhury \emph{et~al.}, ``Enhancing group fairness in online settings
-  using oblique decision forests,'' in \emph{The Twelfth International
-  Conference on Learning Representations}, 2024. [Online]. Available:
-  \url{https://openreview.net/forum?id=E1NxN5QMOE}
-\BIBentrySTDinterwordspacing
-
 \bibitem{10.1145/3770855.3819070}
 \BIBentryALTinterwordspacing
 V.~Cerqueira, H.~M. Gomes, M.~Heyden, B.~Pfahringer, and A.~Bifet, ``A
@@ -109,6 +101,14 @@ V.~Cerqueira, H.~M. Gomes, M.~Heyden, B.~Pfahringer, and A.~Bifet, ``A
 Z.~Jiang \emph{et~al.}, ``Chasing fairness under distribution shift: A model
   weight perturbation approach,'' 2023. [Online]. Available:
   \url{https://arxiv.org/abs/2303.03300}
+\BIBentrySTDinterwordspacing
+
+\bibitem{chowdhury2024enhancing}
+\BIBentryALTinterwordspacing
+S.~B.~R. Chowdhury \emph{et~al.}, ``Enhancing group fairness in online settings
+  using oblique decision forests,'' in \emph{The Twelfth International
+  Conference on Learning Representations}, 2024. [Online]. Available:
+  \url{https://openreview.net/forum?id=E1NxN5QMOE}
 \BIBentrySTDinterwordspacing
 
 \bibitem{Salazar_2026}

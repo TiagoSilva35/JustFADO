@@ -2,7 +2,7 @@
 %  FADO architecture -- vector figure (TikZ, standalone PDF)
 %  Laid out at the IEEE two-column text width (~18 cm) and included at
 %  natural size, so all text is >= 8 pt Times (IEEE template rule).
-%  Grey = inherited from Aranyani; blue = adaptive fairness constraint;
+%  Grey = the fair soft oblique forest (model of Aranyani); blue = adaptive fairness constraint;
 %  orange = drift detection and response.
 %  Build:  pdflatex fado_architecture.tex
 % =====================================================================
@@ -109,7 +109,7 @@
 \draw[dflow] (react.east) -- node[lbl, above, text=drfLine]{$\eta_t,\tau_t$} (17.75,0.55) |- ([yshift=-2.5mm]update.east);
 
 % ------------------------------------------------------------------ band labels (drawn last, over the arrows)
-\node[bandlabel, text=muted, fill=inhBand, inner sep=1.5pt]   at (0.15,7.25) {Base learner \textnormal{(inherited from Aranyani)}};
+\node[bandlabel, text=muted, fill=inhBand, inner sep=1.5pt]   at (0.15,7.25) {Online learner \textnormal{(fair soft oblique forest)}};
 \node[bandlabel, text=conLine, fill=conBand, inner sep=1.5pt] at (0.15,4.6)  {Adaptive fairness constraint, $\mathrm{DP}\le\varepsilon$ \textnormal{(FADO)}};
 \node[bandlabel, text=drfLine, fill=drfBand, inner sep=1.5pt] at (0.15,1.85) {Drift detection and response \textnormal{(FADO)}};
 

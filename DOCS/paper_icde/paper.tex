@@ -35,29 +35,29 @@
 % Template rules: no abbreviations, subtitles, math, or symbols in the title.
 \title{Adaptive Fairness Constraints for Online Learning\\Under Concept Drift}
 \author{\IEEEauthorblockN{Tiago Silva}
-\IEEEauthorblockA{\textit{Faculty of Science and Technology} \\
+\IEEEauthorblockA{\textit{CISUC, Dept. of Informatics Engineering} \\
 \textit{University of Coimbra}\\
 Coimbra, Portugal \\
 tds@student.uc.pt}
 \and
 \IEEEauthorblockN{Bruno Veloso}
-\IEEEauthorblockA{\textit{INESC-TEC} \\
+\IEEEauthorblockA{\textit{INESC TEC, Faculty of Economics} \\
+\textit{University of Porto}\\
 Porto, Portugal \\
-Bruno.m.veloso@inesctec.pt}
+bruno.m.veloso@inesctec.pt}
 \and
 \IEEEauthorblockN{Jo\~{a}o Gama}
-\IEEEauthorblockA{\textit{INESC-TEC} \\
+\IEEEauthorblockA{\textit{INESC TEC, Faculty of Economics} \\
+\textit{University of Porto}\\
 Porto, Portugal \\
 joao.gama@inesctec.pt}
 \linebreakand
 \IEEEauthorblockN{Pedro Henriques Abreu}
-\IEEEauthorblockA{
-  \textit{Faculty of Science and Technology} \\
-  \textit{University of Coimbra}\\
-  Coimbra, Portugal \\
-  pha@dei.uc.pt
-}}
-
+\IEEEauthorblockA{\textit{CISUC, Dept. of Informatics Engineering} \\
+\textit{University of Coimbra}\\
+Coimbra, Portugal \\
+pha@dei.uc.pt}
+}
 
 \maketitle
 
@@ -65,22 +65,19 @@ joao.gama@inesctec.pt}
 % citations in the abstract. Every number below is derived in
 % supplementary/paper_numbers.md or printed in Table III.
 \begin{abstract}
-Online learning systems in nonstationary environments must stay both predictive and fair as the data distribution evolves.
-Existing fairness-aware learners optimize a fixed regularizer ignoring concept drift, while drift-adaptive streaming
-methods enforce no fairness. We propose Fairness-Aware Drift-Aware Online Learning (FADO), which extends a fair
-oblique decision forest with an adaptive fairness constraint and a drift reaction controller. Instead of weighting the
-fairness penalty by a constant chosen in advance, FADO bounds demographic parity and treats the penalty weight as the
-Lagrange multiplier of that bound, tracked online by stochastic dual ascent on a per-sample Horvitz--Thompson estimate of
-each group's disparity that we prove to be unbiased. A dual-threshold ADWIN detector and a fairness monitor reset the
-penalty's running statistics on confirmed drift, and the reaction controller raises the learning rate and sharpens the
-forest's routing, annealing both back during recovery. Over 30 seeds, on a natural cross-year shift in census income data
-and on four types of concept drift injected into the Adult stream, FADO lowers demographic parity by 25 to 33 percent
-relative to its base learner in every setting, significantly below all three published baselines over the whole stream
-and after the drift, at a whole-stream cost of at most 0.02 in F1. Against its base learner given tuning, in
-hindsight, the constant weight for the one that FADO, on average, reaches online, it is significantly better in 12 and worse in 7 of 27
-comparisons, and better on every metric after a feature-permutation drift.
+Online learning systems in nonstationary environments must remain both predictive and fair as the data distribution evolves.
+Existing fairness-aware learners optimize a fixed regularizer, ignoring concept drift, while drift-adaptive streaming methods enforce no
+fairness. In this context, we propose Fairness-Aware Drift-Aware Online Learning (FADO), an online learner that enforces fairness through an adaptive
+constraint and responds to drift through a reaction controller. Instead of weighting the fairness penalty by a constant chosen in advance,
+FADO bounds demographic parity and treats the penalty weight as the Lagrange multiplier of that bound, updated online from a per-sample
+estimate of each group's disparity that we prove to be unbiased. A drift detector and a fairness monitor reset the penalty's statistics
+when the stream changes, and the controller temporarily raises the learning rate after a detected drift. Over 30 seeds, on a natural
+cross-year shift in census income data and on four types of concept drift injected into a second income stream, FADO lowers demographic
+parity by 25 to 33 percent relative to the same forest with a fixed weight, and is significantly fairer than all three published
+baselines over the whole stream and after the drift. After an abrupt feature drift, it even
+outperforms, on every metric, a fixed-weight forest that was tuned on the test data, which a real
+deployment cannot do.
 \end{abstract}
-
 \begin{IEEEkeywords}
 fairness-aware online learning, concept drift, constrained learning, drift detection, group fairness, oblique decision forests
 \end{IEEEkeywords}
@@ -94,7 +91,7 @@ performance an insufficient objective; models must also satisfy fairness require
 individuals~\cite{10.1145/3457607}. In this regard, among the fairness literature, \emph{group fairness}~\cite{10.1145/2090236.2090255} has emerged as one of the most
 widely studied paradigms, aiming to ensure that predictive behavior is balanced across populations defined by sensitive attributes such as gender, race, or age.
 Common formulations include demographic parity (DP), equal opportunity, and equalized odds (EO), each imposing statistical constraints on model outcomes across
-groups (sometimes mutually incompatible)~\cite{10.1145/2090236.2090255,NIPS2016_6a9659fe}. Most existing fairness-aware models, unfortunately, are developed under the
+groups (sometimes mutually incompatible)~\cite{10.1145/2090236.2090255,NIPS2016_6a9659fe}. Most existing fairness-aware models are, unfortunately, developed under the
 assumption of a stationary data distribution. In practice, real-world environments are inherently dynamic, and properties of data evolve over
 time due to policy changes, behavioral shifts, seasonal effects, economic fluctuations, or other social transformations. This phenomenon, commonly referred to as
 concept drift, occurs when the relationship between input variables and target outcomes changes over time, causing previously learned decision boundaries to
@@ -106,7 +103,7 @@ predictive accuracy under nonstationary conditions. However, the majority of exi
 utility~\cite{10.1007/s10994-017-5642-8,KLAIBER20231261}, while fairness considerations remain comparatively underexplored. As a result, fairness guarantees
 established during training may deteriorate over time even when predictive accuracy remains relatively stable~\cite{deho2024faircomparativeevaluationfairness}. This limitation is particularly
 critical in high-stakes applications, where persistent fairness violations may remain undetected for extended periods, compromising trustworthiness, reinforcing
-societal inequalities, and causing tangible harm to affected groups. These limitations highlight an important gap in the literature and motivate the following
+societal inequalities, and causing objective harm to affected groups. These observations highlight an important gap in the literature and motivate the following
 research questions (RQs):
 \begin{itemize}
 \item \textbf{RQ1:} To what extent does concept drift affect group fairness metrics in online learning settings?
@@ -114,11 +111,10 @@ research questions (RQs):
 \end{itemize}
 
 Based on these research questions, this work investigates fairness-aware online learning under concept drift. We introduce \textbf{F}airness-\textbf{A}ware \textbf{D}rift-Aware \textbf{O}nline
-Learning (\fado{}), a framework that leverages an existing soft-routed fair oblique decision forest, Aranyani~\cite{chowdhury2024enhancing}, extending it with three mechanisms: an
-\emph{adaptive fairness constraint}, which replaces the fixed fairness weight of the base learner with the Lagrange multiplier of a bound on the fairness metric and
-tracks it online; a dual-threshold drift detector, complemented by a fairness monitor, whose confirmed drifts reset the fairness penalty's running statistics; and a
-reaction controller that modulates the optimizer learning rate and a routing temperature, which \fado{} adds to the forest, in response to detected change. We emphasize that \ara{} is not
-contributed by this paper: it serves as the in-processing base learner around which \fado{} builds its constraint, drift-detection, and response machinery. Our
+Learning (\fado{}), a framework built on three mechanisms: an \emph{adaptive fairness constraint}, which states fairness as a bound on the fairness metric and
+learns the weight of the fairness penalty online as the Lagrange multiplier of that bound, instead of fixing it in advance; a dual-threshold drift detector,
+complemented by a fairness monitor, whose confirmed drifts reset the fairness penalty's running statistics; and a reaction controller that modulates the optimizer
+learning rate and a routing temperature in response to detected change. \fado{} applies these mechanisms to a soft-routed fair oblique decision forest. Our
 central hypothesis is that fairness degradation under concept drift can be mitigated by enforcing fairness as a constraint whose price adapts to the data, coupled
 with explicit drift detection and response, allowing the model to maintain both predictive utility and equitable treatment across groups in
 nonstationary environments.
@@ -128,13 +124,13 @@ California) contributes a natural cross-year shift between 2015 (training) and 2
 whose stream we inject four types of concept drift~\cite{10.1145/3770855.3819070}, one per scenario. \fado{} is compared against three streaming baselines
 spanning the accuracy/fairness/adaptivity design space: the Adaptive Random Forest (\arf{})~\cite{10.1007/s10994-017-5642-8}, an accuracy-oriented ensemble with
 drift detection but no fairness mechanism; robust fairness regularization (\rfr{})~\cite{jiang2023chasingfairnessdistributionshift}, a sharpness-aware
-fairness-reweighted method without adaptive drift handling; and a controller-free \ara{} baseline, identical to the base learner inside \fado{} but with a fixed
-fairness weight and no drift handling, which isolates \fado{}'s contribution. To separate the benefit of adapting the weight from that of a larger one, we
+fairness-reweighted method without adaptive drift handling; and \ara{}~\cite{chowdhury2024enhancing}, which shares \fado{}'s forest model but uses a fixed
+fairness weight and no drift handling, and therefore isolates \fado{}'s contribution. To separate the benefit of adapting the weight from that of a larger one, we
 also give this baseline, in hindsight, the constant weight that \fado{} reaches online. The main contributions of this work are:
 \begin{itemize}
-\item \fado{}, a fairness-aware online learning framework that wraps a fair oblique decision forest with an adaptive fairness constraint, a dual-threshold ADWIN
-drift detector with a fairness monitor, and a reaction controller acting on the learning rate and on a routing temperature that \fado{} introduces;
-\item Where \ara{} relaxes its node-level fairness constraints into a penalty with a fixed weight, a formulation that keeps a bound on the demographic parity
+\item \fado{}, a fairness-aware online learning framework that combines an adaptive fairness constraint, a dual-threshold ADWIN drift detector with a
+fairness monitor, and a reaction controller acting on the learning rate and on a routing temperature that \fado{} introduces;
+\item A formulation that keeps a bound on the demographic parity
 of the predictions and treats the penalty weight as its dual price, tracked online, together with a per-sample Horvitz--Thompson estimate of each group's disparity that we prove unbiased and that drives both the price and the fairness monitor;
 \item An empirical analysis over 30 seeds, on a natural cross-year shift on \folk{} and on four injected drift types on \adult{}, of how concept drift affects group
 fairness over the stream, comparing \fado{} against the \arf{}, \rfr{}, and controller-free \ara{} baselines, and against \ara{} given \fado{}'s weight in
@@ -142,11 +138,16 @@ hindsight, with paired, multiplicity-corrected tests, together with an analysis 
 and the scripts that generate every table and number are released.
 \end{itemize}
 
+The remainder of this paper is organized as follows. Section~\ref{sec:related} reviews related work and identifies the limitations that motivate \fado{}.
+Section~\ref{sec:problem} formalizes the online setting, the fairness metrics, and the constrained problem. Section~\ref{sec:method} presents \fado{} and the
+experimental design. Section~\ref{sec:results} reports and discusses the results in light of the two research questions, and Section~\ref{sec:conclusion}
+concludes and outlines future work.
+
 % =====================================================================
 \section{Related Work}
 \label{sec:related}
-Following the most adopted taxonomy~\cite{Salazar_2026}, in this section, the works will be divided into three categories: (i) pre-processing methods,
-(ii) in-processing methods, and (iii) post-processing methods.
+Following a widely used taxonomy in the fair machine learning literature~\cite{Salazar_2026}, we group related work into three categories: (i) pre-processing,
+(ii) in-processing, and (iii) post-processing methods, and then summarize the limitations that motivate this work.
 
 \subsection{Pre-Processing Methods}
 Pre-processing methods aim to mitigate bias in the data before the training stage of a model. Xiong et
@@ -165,8 +166,8 @@ In-processing methods incorporate fairness constraints directly into the learnin
 Chowdhury et al.~\cite{chowdhury2024enhancing} propose \ara{}, an online fair-learning ensemble of soft-routed oblique decision trees in which the
 demographic-parity penalty is enforced at the level of individual routing nodes, inducing a parameter-isolation property that keeps the per-step fairness gradient
 cheap and lets the ensemble track running per-group statistics rather than storing past samples. \ara{} starts from node-level fairness constraints but relaxes
-them into a regularizer whose weight is a fixed hyperparameter, and it has no mechanism for drift. We adopt it as our base learner; these two limitations
-motivate our extension.
+them into a regularizer whose weight is a fixed hyperparameter, and it has no mechanism for drift. \fado{} uses the same forest model and addresses
+both limitations.
 
 Gomes et al.~\cite{10.1007/s10994-017-5642-8} propose \arf{}, a streaming ensemble of Hoeffding trees with per-tree warning and drift detectors that swap in
 background trees on confirmed drift. \arf{} is the standard streaming-adaptation baseline but is purely accuracy-oriented; we treat it as a representative
@@ -205,7 +206,7 @@ as~\cite{jiang2023chasingfairnessdistributionshift} treat distribution shift as 
 does not yield an actionable online detector or controller, and constrained fair learners~\cite{zafar2017fairnessconstraintsmechanismsfair,cotter2018optimizationnondifferentiableconstraintsapplications,agarwal2018reductionsapproachfairclassification}
 solve their problem offline.
 \end{itemize}
-\fado{} addresses L1--L4 directly by retaining the node-level fairness regularizer of \ara{} as the in-processing base learner and adding on top of it (i)~an
+\fado{} addresses L1--L4 directly with (i)~an
 adaptive fairness constraint, whose dual price replaces the fixed fairness weight; (ii)~an ADWIN-based dual-threshold detector on the online error stream and a
 fairness monitor on a per-sample disparity signal, whose confirmed drifts reset the regularizer's running statistics; and (iii)~a reaction controller that
 modulates the optimizer learning rate and a routing temperature added to the forest on warning and confirmation events.
@@ -213,6 +214,8 @@ modulates the optimizer learning rate and a routing temperature added to the for
 % =====================================================================
 \section{Problem Statement}
 \label{sec:problem}
+This section formalizes the online learning setting, the group fairness metrics, and the 
+constrained optimization problem that \fado{} solves.
 
 \subsection{Online Learning Setting}
 \label{sec:problem:online}
@@ -225,7 +228,7 @@ fairness formulation introduced below supports arbitrary $K$; in our study each 
 \subsection{Group Fairness Metrics}
 \label{sec:problem:metrics}
 We focus on \emph{group fairness}, which assesses whether model behavior is statistically similar across protected groups. \ara{}~\cite{chowdhury2024enhancing}
-defines demographic parity on the forest's outputs for two groups and extends its formulation to more groups and to equalized odds in its appendix; we measure
+defines demographic parity on the forest's outputs for two groups leaving the implementation to more groups and to equalized odds for future work; we measure
 fairness on the \emph{predictions}, in a form that holds for any number of groups. Let $\mathcal{A}_t \subseteq \mathcal{A}$ denote the set of sensitive groups observed
 within the current evaluation window, and let $\hat{p}_a = \mathbb{E}[\hat{y} \mid a]$ be the positive-prediction rate for group $a \in \mathcal{A}_t$. We define the
 unweighted mean group rate as:
@@ -248,9 +251,8 @@ $\bar p_y$ its mean across the observed groups:
 \begin{equation}
 \mathrm{EO} = \max_{y \in \{0,1\}}\ \max_{a \in \mathcal{A}_t}\left|\hat{p}_{a|y} - \bar{p}_y\right|.
 \end{equation}
-Restricting it to $y{=}1$ gives equal opportunity. EO separates bias from differences in base rates. We report it but do not optimize it: \ara{} derives the
-label-conditional node regularizer~\cite[App.~C.1]{chowdhury2024enhancing}, and constraining EO in \fado{} would also need a label-conditional version of the
-per-sample signal~\eqref{eq:ht}.
+Restricting it to $y{=}1$ gives equal opportunity. EO separates bias from differences in base rates. We report it but do not optimize it: constraining EO in 
+\fado{} would also need a label-conditional version of the per-sample signal~\eqref{eq:ht} leaving the implementation to future work. 
 
 \subsection{From a Fixed Penalty to a Fairness Constraint}
 \label{sec:problem:constraint}
@@ -269,26 +271,26 @@ and needlessly costly when the stream is already fair, so it must be estimated o
 % =====================================================================
 \section{Methodology and Experimental Design}
 \label{sec:method}
-\fado{} builds on the \ara{} fair oblique forest~\cite{chowdhury2024enhancing}, which we use as the base learner and summarize only as far as
-\fado{} relies on it (Section~\ref{sec:method:model}). On top of it, \fado{} adds three mechanisms (Fig.~\ref{fig:drift-pipeline}): (i)~an adaptive fairness
-constraint, whose dual price replaces the base learner's fixed fairness weight (Section~\ref{sec:method:lambda}); (ii)~drift detection with forgetting, in which a
+\fado{} consists of three mechanisms (Fig.~\ref{fig:drift-pipeline}): (i)~an adaptive fairness
+constraint, whose dual price replaces a fixed fairness weight (Section~\ref{sec:method:lambda}); (ii)~drift detection with forgetting, in which a
 dual-threshold ADWIN detector on the error stream and a fairness monitor on a per-sample disparity signal reset the fairness statistics on confirmed drift; and
 (iii)~a reaction controller on the learning rate and on a routing temperature that \fado{} adds to the forest (both in Section~\ref{sec:method:drift}).
+They act on a fair soft oblique forest~\cite{chowdhury2024enhancing}, which we summarize only as far as \fado{} uses it (Section~\ref{sec:method:model}).
 Sections~\ref{sec:method:data}--\ref{sec:method:reproducibility} then describe datasets, drift scenarios, baselines, hyperparameter selection, the evaluation
 protocol, and reproducibility.
 \begin{figure*}[t]
 \centering
 \includegraphics{figures/fado_architecture}
-\caption{Overview of \fado{}. Gray: the \ara{} base learner~\cite{chowdhury2024enhancing}, which predicts and then trains on each sample. Blue: the
+\caption{Overview of \fado{}. Gray: the fair soft oblique forest~\cite{chowdhury2024enhancing}, which predicts and then trains on each sample. Blue: the
 adaptive fairness constraint, which turns each prediction into a disparity signal and sets the fairness price $\lambda_t$. Orange: drift detection and
 response, which resets the fairness statistics $S$ on drift and adjusts the learning rate $\eta_t$ and routing temperature $\tau_t$. Colored symbols in gray
 boxes are set by \fado{}.}
 \label{fig:drift-pipeline}
 \end{figure*}
 
-\subsection{Base Learner}
+\subsection{Forest Model}
 \label{sec:method:model}
-We use \ara{}~\cite{chowdhury2024enhancing} as the base learner and refer to~\cite{chowdhury2024enhancing} for its details. It is an ensemble of $M$ soft
+\fado{}'s predictive model is a fair soft oblique decision forest~\cite{chowdhury2024enhancing}, to which we refer for its details. It is an ensemble of $M$ soft
 oblique trees of depth $h$ whose internal node $j$ routes an input to its left child with probability $n_j(x)=\sigma(w_j^{\top}x+b_j)$ and to its right
 child otherwise. Fairness is imposed on these routing decisions: \ara{} constrains the deviation $F_{j,a}$ of each node's average routing decision for group $a$
 from its average over all inputs (for two groups, the difference between the groups' averages), the per-node analogue of $D_a$ in~\eqref{eq:dp}, and then
@@ -303,7 +305,7 @@ fairness gradient online from running per-group averages of the routing decision
 Our implementation, used identically by \fado{} and the \ara{} baseline, takes the cross-group mean unweighted and gives the linear branch of $\phi_\delta$ a
 unit slope.
 
-\fado{} changes this learner in three places. First, the fixed weight $\lambda$ becomes the price $\lambda_t$ of Section~\ref{sec:method:lambda}. Second,
+\fado{} turns this static, fixed-weight model into one (more flexible) that adapts to the stream, through three changes. First, the fixed weight $\lambda$ becomes the price $\lambda_t$ of Section~\ref{sec:method:lambda}. Second,
 the statistics $S$ are reset when a drift is confirmed. Third, \fado{} adds a routing temperature, $n_j(x)=\sigma\big((w_j^{\top}x+b_j)/\tau\big)$, which
 recovers \ara{} at $\tau=1$ and which the reaction controller lowers after a confirmed drift to make routing nearly hard
 (Section~\ref{sec:method:drift}).
@@ -320,8 +322,8 @@ one-sided constraints:
 \label{eq:onesided}
 \end{equation}
 The rewrite has no absolute value and no maximum, and it states \emph{which side} of the mean a group falls on. Its purpose is statistical: each constraint is
-linear in $D_a$, so an unbiased estimate of $D_a$ is an unbiased estimate of every constraint's value. An absolute value would not preserve this ---
-$\mathbb{E}|v|\neq|\mathbb{E}v|$ --- and a controller fed with the magnitude of a noisy disparity estimate would read noise as unfairness and raise the price
+linear in $D_a$, so an unbiased estimate of $D_a$ is an unbiased estimate of every constraint's value. An absolute value would not preserve this 
+($\mathbb{E}|v|\neq|\mathbb{E}v|$) and a controller fed with the magnitude of a noisy disparity estimate would read noise as unfairness and raise the price
 indefinitely on a perfectly fair model.
 
 \paragraph*{Lagrangian and Dual Ascent}
@@ -335,19 +337,19 @@ violation $\pm D_a-\varepsilon$, so projected ascent reads:
 \mu_{a,\pm}\leftarrow\Pi_{[0,\lambda_{\max}]}\big(\mu_{a,\pm}+\eta_\lambda(\pm D_a-\varepsilon)\big),
 \label{eq:dual}
 \end{equation}
-interleaved with the usual gradient step in $\theta$ (primal--dual descent--ascent~\cite{mahdavi2012trading}). In control terms, $\mu$ \emph{integrates} the
+This projection alternates with the usual gradient step in $\theta$ (primal--dual descent--ascent~\cite{mahdavi2012trading}). In control terms, $\mu$ \emph{integrates} the
 violation: it keeps rising while a group's deviation exceeds $\varepsilon$ and stops only when it does not, so it has no steady-state error. 
 While a group's deviation stays below $\varepsilon$, its multiplier drains toward zero, so the penalty weight decreases gradually while the stream remains fair.
 The projection keeps the prices nonnegative, as duality
-requires, and bounded to protect accuracy. \fado{} sums the prices into a single weight for \ara{}'s node-level penalty:
+requires, and bounded (although it is not strictly necessary) to protect accuracy. \fado{} sums the prices into a single weight for the node-level penalty of~\eqref{eq:reg}:
 \begin{equation}
 \lambda_t=\min\Big(\lambda_{\mathrm{base}}+\sum_{a,\pm}\mu_{a,\pm},\ \lambda_{\max}\Big),
 \label{eq:lambda}
 \end{equation}
 where $\lambda_{\mathrm{base}}$ is the fixed weight used by the \ara{} baseline. \fado{} therefore never applies less fairness pressure than \ara{}, and adds
 pressure only while the constraint is violated. The floor is not needed by the method: with $\lambda_{\mathrm{base}}=0$, the weight is set entirely by the
-prices, that is, by the constraint. We use $\lambda_{\mathrm{base}}>0$ only to make the comparison with \ara{} fair, since both models then start from the same
-weight and \fado{}'s gain cannot come from a larger initial penalty. Penalizing the nodes is a sound way to reduce output disparity: \ara{} shows that when every node treats the
+prices, that is, by the constraint. We use $\lambda_{\mathrm{base}}>0$ only to make the comparison with \ara{} fair: both models start from the same weight, so
+any difference in utility or fairness cannot come from a different initial penalty. Penalizing the nodes is a solid way to reduce output disparity: \ara{} shows that when every node treats the
 groups alike, the demographic parity of the forest's output is bounded~\cite[Lemma~1]{chowdhury2024enhancing}.
 
 \paragraph*{A Per-Sample Estimate of the Violation}
@@ -444,7 +446,7 @@ test-then-train loop.
   \State optimizer step on $\nabla\big(\mathcal{L}_{\mathrm{CE}}(f(x_t),y_t) + \lambda_t\,\mathcal{L}_{\mathrm{fair}}(S)\big)$ at rate $\eta$
 \EndFor
 \end{algorithmic}
-\caption{The \fado{} prequential test-then-train loop.}
+\caption{\fado{}'s prequential test-then-train loop. Available at [undisclosed for blind review].}
 \label{fig:alg}
 \end{figure}
 
@@ -480,9 +482,10 @@ multidimensional cross-year shift driven by genuine demographic and economic cha
 injecting additional synthetic perturbations on top of it would mask
 controlled and natural signals obscuring the source of any observed degradation.
 
-On \adult{} the test stream carries no known drift, so we inject it. We use four drift 
-types~\cite{10.1145/3770855.3819070}, each giving a separate scenario: every
-model ran on all four, with one drift per stream at an onset drawn uniformly between $50\%$ 
+On \adult{} the test stream carries no known drift, so we inject it. 
+Following the benchmarking framework of Cerqueira et al.~\cite{10.1145/3770855.3819070}, which injects 
+controlled distributional changes into real-world datasets to evaluate drift detectors, we use its four drift types, 
+each giving a separate scenario: every model ran on all four, with one drift per stream at an onset drawn uniformly between $50\%$ 
 and $70\%$ of the stream. The four types are \emph{x\_permutations}, where the feature vector 
 is permuted by a fixed random permutation, changing the mapping from inputs to labels;
 \emph{y\_swaps}, where samples of one randomly chosen class are relabeled with probability $0.5$, 
@@ -523,7 +526,7 @@ training trajectory are identical across methods that share a seed.
 \subsection{Hyperparameter Selection}
 \label{sec:method:hpo}
 Table~\ref{tab:hparams} lists the fairness and controller hyperparameters with 
-their \adult{} defaults and the \folk{} overrides. For the base learner we keep the
+their \adult{} defaults and the \folk{} overrides. For the forest we keep the
 settings of~\cite{chowdhury2024enhancing}: $M=3$ trees of depth $h=4$, trained with 
 Adam at $\eta_0=2{\times}10^{-3}$. The remaining values were set before the reported 
 runs and were never tuned on the reporting seeds. 
@@ -621,7 +624,7 @@ alongside in the repository (Section~\ref{sec:method:reproducibility}).
 \subsection{Reproducibility}
 \label{sec:method:reproducibility}
 The full implementation, configuration files, seed manifests, and per-seed result files 
-are released at \url{https://github.com/TiagoSilva35/JustFADO}. The repository lists the sweep configuration
+are released at [undisclosed for blind review]. The repository lists the sweep configuration
 behind every reported run; one script regenerates Tables~\ref{tab:results} and~\ref{tab:detection} and the full significance report (paired
 Wilcoxon and Welch tests, raw and Holm-corrected $p$-values) from the per-seed results, and a second script recomputes, with its
 derivation, every number quoted in the text.
@@ -633,6 +636,8 @@ derivation, every number quoted in the text.
 % Generated by scripts/make_tables.py -- edit the script, not this table.
 \input{tables/results}
 % Generated by scripts/make_tables.py -- edit the script, not this table.
+\input{tables/overall}
+% Generated by scripts/make_tables.py -- edit the script, not this table.
 \input{tables/detection}
 % The split of Table~\ref{tab:detection} by detected / undetected runs (FADO minus
 % Aranyani after the onset) is in supplementary/detection_split.md, to be published
@@ -641,20 +646,22 @@ derivation, every number quoted in the text.
 Table~\ref{tab:results} reports F1, demographic parity (DP), and equalized odds (EO) as mean $\pm$ standard deviation over the $30$ seeds, which all methods
 share, both over the whole stream and over the part of each \adult{} stream that follows the injected onset; \folk{} has no onset because its shift lies between the
 training year and the test stream. We measure utility with the F1 score of the positive class (income above \$50k) because that class is a minority:
-$40\%$ of the \folk{} stream and $24\%$ of the \adult{} test split. Bold marks the best mean of each column within a block. The column $\lambda$ gives
+$40\%$ of the \folk{} stream and $24\%$ of the \adult{} test split. Bold marks the best mean of each metric within a block. The column $\lambda$ gives
 the fairness weight over the whole stream: for \fado{}, the mean of $\lambda_t$; for the two \ara{} variants, their constant weight.
 
 Every value of the other methods in Table~\ref{tab:results} carries the outcome of its paired test against \fado{} (Section~\ref{sec:method:protocol}): $^{\bullet}$
 if \fado{} is significantly better, $^{\circ}$ if it is significantly worse, and no mark if no significant difference is detected, which does not establish that the two
-are equivalent. The top of the table sums these outcomes over the $27$ cells of each method: $3$ metrics in $5$ blocks over the whole stream and in $4$ after the
-onset. Over the $108$ comparisons, \fado{} obtains $79$ significant wins and $15$ significant losses; $11$ of the losses are on F1, and the $4$ on DP or EO are all
-against \ara{} with leaked $\lambda$. With the Holm correction applied across all $108$ comparisons at once, $81$ of the $94$ significant differences remain
-significant.
+are equivalent. Table~\ref{tab:overall} sums these outcomes over the $27$ cells of each method: $3$ metrics in $5$ blocks over the whole stream and in $4$ after the
+onset. Over the $108$ comparisons, \fado{} is significantly better in $73\%$ and significantly worse in $14\%$; $73\%$ of these losses are on F1, and the
+remaining $27\%$, on DP or EO, are all against \ara{} with leaked $\lambda$. With the Holm correction applied across all $108$ comparisons at once, $86\%$ of the
+significant differences remain significant.
 
 Table~\ref{tab:detection} reports how often, and how fast, \fado{}'s detectors register each injected drift. An onset counts as detected when a detector raises an
 alarm within $1{,}000$ samples after it, the length of one rolling window: a window-based detector cannot register a change before its window has refilled, so a later
 alarm is no longer attributed to the injected drift. The delay is the mean number of samples from the onset to that alarm over the detected runs only, so it must be
 read together with the detection rate; alarms not matched to an onset count as false alarms.
+
+We now use these results to answer the two research questions.
 
 \subsection{To What Extent Does Concept Drift Affect Group Fairness?}
 \label{sec:results:rq1}
@@ -676,9 +683,13 @@ measure the effect of drift itself.
 \subsection{Can Adaptive Mechanisms Preserve Fairness While Maintaining Utility?}
 \label{sec:results:rq2}
 \textbf{Fairness against the published baselines.} In every block of Table~\ref{tab:results}, \fado{} attains a significantly lower demographic parity than
-each of \ara{}, \arf{}, and \rfr{} ($p<0.001$); relative to \ara{}, the reduction ranges from $25\%$ (\emph{x\_exceed\_skip}) to $33\%$ (\emph{y\_swaps}). Equalized odds,
-which \fado{} does not optimize directly, is also lower than that of the three in four of the five blocks; the exception is \emph{x\_exceed\_skip}, where \ara{} attains $0.047$ against \fado{}'s $0.048$.
-The advantage holds after the onset, where \fado{} has the lowest demographic parity of all methods in the four \adult{} scenarios, significantly lower than each of the three ($p<0.001$), and the lowest equalized odds in three.
+each of \ara{}, \arf{}, and \rfr{} ($p<0.001$); relative to \ara{}, the reduction ranges from $25\%$ (\emph{x\_exceed\_skip}) to $33\%$ (\emph{y\_swaps}). \fado{}'s
+constraint targets demographic parity only; equalized odds is not part of its objective. Even so, \fado{}'s equalized odds is lower than that of \ara{},
+\arf{}, and \rfr{} in four of the five blocks. In the fifth, \emph{x\_exceed\_skip}, it is still lower than that of \arf{} and \rfr{}, and level with
+that of \ara{} ($0.048$ against $0.047$, a difference that is not significant).
+The advantage also holds after the onset. In all four \adult{} scenarios, \fado{} has the lowest demographic parity of the five methods, significantly
+lower than that of \ara{}, \arf{}, and \rfr{} ($p<0.001$). It also has the lowest equalized odds after the onset in three of the four scenarios; in
+\emph{x\_exceed\_skip}, \ara{} is slightly lower ($0.047$ against $0.051$), but not significantly.
 \fado{} also limits the increases identified in Section~\ref{sec:results:rq1}: after the onset of \emph{x\_permutations}, its equalized odds rises from $0.047$ to
 $0.064$, against $0.115$ for \ara{}, and under \emph{y\_prior\_skip} its increase is not significant.
 
@@ -723,9 +734,9 @@ detection, a fairness monitor, and a reaction controller.
 Regarding RQ1, concept drift does not degrade fairness uniformly. On \adult{}, the drifts that change the relation between inputs and labels widened the
 error-rate gap of the fixed-weight learner, whose equalized odds rose from $0.047$ to $0.115$ after the feature permutation, whereas relabeling one class or
 removing part of the input space narrowed its demographic parity. A fairness level calibrated before a drift is therefore not guaranteed after it, and which
-criterion deteriorates depends on the drift. Regarding RQ2, \fado{} lowered demographic parity by $25$ to $33\%$ relative to its base learner in every block
+criterion deteriorates depends on the drift. Regarding RQ2, \fado{} lowered demographic parity by $25$ to $33\%$ relative to the fixed-weight \ara{} in every block
 and was significantly fairer in demographic parity than each of the three published baselines in all $27$ comparisons, over the whole stream and after the
-onset, at a whole-stream F1 cost of at most $0.019$ relative to its base learner. Against the base learner given, in hindsight, the weight that \fado{} reaches
+onset, at a whole-stream F1 cost of at most $0.019$ relative to \ara{}. Against \ara{} given, in hindsight, the weight that \fado{} reaches
 online, it was significantly better in $12$ and worse in $7$ of $27$ comparisons, and better on every metric after the feature permutation, where a constant
 weight is too small once the drift begins. On \folk{}, removing the adaptive constraint worsened fairness and F1 together.
 
@@ -735,7 +746,11 @@ protected attribute, two income datasets, and abrupt injected drifts; more group
 ablation on \adult{}, and a runtime analysis are left for future work.
 
 \section*{Acknowledgment}
-The authors used generative AI, to help edit parts of the text, help generate figures and brainstorm on tables' format. All content was reviewed and any errors or inaccuracies are the authors' own.
+This work is funded by national funds through FCT -- Foundation for Science and Technology, I.P., within the scope of the research unit UID/00326 -
+Centre for Informatics and Systems of the University of Coimbra, \url{https://doi.org/10.54499/UID/00326/2025}.
+
+The authors used a generative AI system, Claude (Anthropic), to edit the wording of parts of the text, to help draw Fig.~\ref{fig:drift-pipeline}, and to
+explore layouts for the tables. All content was reviewed by the authors, who take full responsibility for it.
 
 
 \bibliographystyle{IEEEtran}
