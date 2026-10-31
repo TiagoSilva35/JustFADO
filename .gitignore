@@ -19,3 +19,7 @@ files/experiments/wandb_trajectories/
 # persistent pre-training cache (--pretrain_cache_dir), per machine
 files/pretrain_cache/
 files/experiments/stream_groups/
+DOCS/paper_icde/*.fdb_latexmk
+DOCS/paper_icde/*.log
+DOCS/paper_icde/*.pdf
+DOCS/paper_icde/*.synctex.gz
