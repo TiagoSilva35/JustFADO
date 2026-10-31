@@ -1,0 +1,20 @@
+\begin{table*}[t]
+\centering
+\caption{\rev{Components on Top of the Adaptive Constraint, \adult{} After the Drift Onset, Mean Over 30 Seeds}}
+\label{tab:ablation}
+\setlength{\tabcolsep}{3.5pt}
+\footnotesize
+\begin{tabular}{@{}l ccc ccc ccc ccc@{}}
+\toprule
+ & \multicolumn{3}{c}{x\_permutations} & \multicolumn{3}{c}{y\_swaps} & \multicolumn{3}{c}{y\_prior\_skip} & \multicolumn{3}{c}{x\_exceed\_skip} \\
+\cmidrule(lr){2-4} \cmidrule(lr){5-7} \cmidrule(lr){8-10} \cmidrule(l){11-13}
+Components & F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ & F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$ \\
+\midrule
+Dual ascent only & $0.482^{\bullet}$ & $0.072^{\bullet}$ & $0.093^{\bullet}$ & $0.522\phantom{^{\bullet}}$ & $0.028\phantom{^{\bullet}}$ & $0.060^{\bullet}$ & $0.649^{\circ}$ & $\mathbf{0.060}^{\circ}$ & $0.056\phantom{^{\bullet}}$ & $\mathbf{0.581}\phantom{^{\bullet}}$ & $0.049\phantom{^{\bullet}}$ & $0.053\phantom{^{\bullet}}$ \\
+Dual + reset & $0.448^{\bullet}$ & $\mathbf{0.049}^{\circ}$ & $\mathbf{0.055}\phantom{^{\bullet}}$ & $0.523\phantom{^{\bullet}}$ & $0.030\phantom{^{\bullet}}$ & $0.058\phantom{^{\bullet}}$ & $\mathbf{0.653}^{\circ}$ & $0.065\phantom{^{\bullet}}$ & $0.058\phantom{^{\bullet}}$ & $0.580\phantom{^{\bullet}}$ & $\mathbf{0.048}\phantom{^{\bullet}}$ & $0.053\phantom{^{\bullet}}$ \\
+Dual + controller & $\mathbf{0.552}\phantom{^{\bullet}}$ & $0.077^{\bullet}$ & $0.082^{\bullet}$ & $\mathbf{0.526}\phantom{^{\bullet}}$ & $0.035^{\bullet}$ & $0.062^{\bullet}$ & $0.616\phantom{^{\bullet}}$ & $0.061\phantom{^{\bullet}}$ & $0.057\phantom{^{\bullet}}$ & $0.576\phantom{^{\bullet}}$ & $0.050\phantom{^{\bullet}}$ & $0.053\phantom{^{\bullet}}$ \\
+\rowcolor{black!6}\fado{} (all) & $0.550\phantom{^{\bullet}}$ & $0.062\phantom{^{\bullet}}$ & $0.064\phantom{^{\bullet}}$ & $\mathbf{0.526}\phantom{^{\bullet}}$ & $\mathbf{0.027}\phantom{^{\bullet}}$ & $\mathbf{0.052}\phantom{^{\bullet}}$ & $0.621\phantom{^{\bullet}}$ & $0.063\phantom{^{\bullet}}$ & $\mathbf{0.054}\phantom{^{\bullet}}$ & $0.576\phantom{^{\bullet}}$ & $0.049\phantom{^{\bullet}}$ & $\mathbf{0.051}\phantom{^{\bullet}}$ \\
+\bottomrule
+\end{tabular}
+\tnote{\rev{Every arm keeps the adaptive constraint. Reset: the drift detectors and the fairness monitor reset the fairness statistics; controller: the learning-rate and temperature reaction to a confirmed drift. Bold: best mean in the block. $^{\bullet}$/$^{\circ}$: \fado{} significantly better/worse than that arm (paired Wilcoxon test, Holm-corrected across the three arms, $\alpha=0.05$).}}
+\end{table*}

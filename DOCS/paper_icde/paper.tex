@@ -27,6 +27,8 @@
 \newcommand{\folk}{\textsc{Folktables}}
 \newcommand{\sig}[1]{^{\scriptscriptstyle #1}}
 \newcommand{\tnote}[1]{\vspace{2pt}\parbox{\linewidth}{\footnotesize #1}}
+% Additions after review, in blue. Before submission: \renewcommand{\rev}[1]{#1}
+\newcommand{\rev}[1]{{\color{blue}#1}}
 % new row of authors in the IEEEtran author block
 \makeatletter\newcommand{\linebreakand}{\end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill\begin{@IEEEauthorhalign}}\makeatother
 
@@ -134,7 +136,8 @@ fairness monitor, and a reaction controller acting on the learning rate and on a
 of the predictions and treats the penalty weight as its dual price, tracked online, together with a per-sample Horvitz--Thompson estimate of each group's disparity that we prove unbiased and that drives both the price and the fairness monitor;
 \item An empirical analysis over 30 seeds, on a natural cross-year shift on \folk{} and on four injected drift types on \adult{}, of how concept drift affects group
 fairness over the stream, comparing \fado{} against the \arf{}, \rfr{}, and controller-free \ara{} baselines, and against \ara{} given \fado{}'s weight in
-hindsight, with paired, multiplicity-corrected tests, together with an analysis of how often and how fast \fado{} detects each drift; code, per-seed results,
+hindsight, with paired, multiplicity-corrected tests, together with an analysis of how often and how fast \fado{} detects each drift\rev{, an ablation of its drift components
+on \adult{}, and an evaluation with four intersectional groups on \folk{}}; code, per-seed results,
 and the scripts that generate every table and number are released.
 \end{itemize}
 
@@ -223,7 +226,8 @@ We consider an online binary classification problem over a data stream $\{(x_t, 
 observed at time $t$, $y_t \in \{0,1\}$ is the binary target label, and $a_t \in \mathcal{A}$ is a sensitive attribute taking values in a finite set with
 $|\mathcal{A}|=K \ge 2$. Following the formulation of previous work~\cite{chowdhury2024enhancing,zhang2019fahtadaptivefairnessawaredecision}, at each time step the learner receives $x_t$,
 produces a prediction $\hat{y}_t = \arg\max f_t(x_t)$, then observes $(y_t, a_t)$ and updates its parameters under a prequential, test-then-train protocol. The
-fairness formulation introduced below supports arbitrary $K$; in our study each dataset has one binary protected attribute (sex), so $K=2$.
+fairness formulation introduced below supports arbitrary $K$; in our main study each dataset has one binary protected attribute (sex), so $K=2$\rev{;
+Section~\ref{sec:results:rq2} also evaluates $K=4$ intersectional groups on \folk{}}.
 
 \subsection{Group Fairness Metrics}
 \label{sec:problem:metrics}
@@ -380,7 +384,10 @@ autocorrelated. In practice $\pi_a$ is replaced by the running share $\hat\pi_a$
 Under a sustained violation $\Delta_{\mathrm{DP}}=\mathrm{DP}-\varepsilon>0$, the active multipliers grow by about $\eta_\lambda\Delta_{\mathrm{DP}}$ per sample;
 once $\mathrm{DP}<\varepsilon$ they drain by at most $\eta_\lambda\varepsilon$ per sample, so draining is slow by design. With two groups, $D_0=-D_1$, so the
 constraints in~\eqref{eq:onesided} coincide in pairs; our implementation keeps all four multipliers, which leaves the duality intact but makes the effective dual
-step $2\eta_\lambda$.
+step $2\eta_\lambda$. \rev{Telescoping~\eqref{eq:dual} also bounds the violation over a finite stream: for each constraint,
+$\frac{1}{T}\sum_{t\le T}(\pm v_t[a]-\varepsilon)\le\mu_{a,\pm,T}/(\eta_\lambda T)$ while no multiplier reaches $\lambda_{\max}$, with equality while none is
+projected at zero. On a finite stream the constraint therefore holds on average only up to the final price over $\eta_\lambda T$; a larger step approaches
+$\varepsilon$ sooner, at the cost of a noisier $\lambda_t$.}
 \end{remark}
 
 \subsection{Drift Detection and Reaction Controller}
@@ -456,7 +463,8 @@ Table~\ref{tab:datasets} summarizes the two datasets. \folk{} (ACS Income, CA)~\
 (training) and 2017--2018 (prequential test); \adult{}~\cite{adult_2} provides a controlled testbed on which we inject concept-drift perturbations of a
 known form on the test stream. Both datasets are processed through a shared tabular pipeline: numerical features are standardized using training-set means and
 standard deviations, and categorical variables are one-hot encoded. The encoder is fitted on the training split alone and reused unchanged for the test stream, so
-the streaming protocol remains free of test-time information leakage.
+the streaming protocol remains free of test-time information leakage. \rev{For an intersectional evaluation, \folk{} also provides four groups on the same
+streams: sex crossed with race (white or not).}
 
 \begin{table}[t]
 \centering
@@ -693,6 +701,12 @@ lower than that of \ara{}, \arf{}, and \rfr{} ($p<0.001$). It also has the lowes
 \fado{} also limits the increases identified in Section~\ref{sec:results:rq1}: after the onset of \emph{x\_permutations}, its equalized odds rises from $0.047$ to
 $0.064$, against $0.115$ for \ara{}, and under \emph{y\_prior\_skip} its increase is not significant.
 
+\rev{\textbf{Demographic parity and the target.} In three of the four \adult{} drifts, \fado{}'s demographic parity ($0.057$--$0.060$ over the whole stream)
+stays above $\varepsilon=0.05$, as the finite-horizon bound of Remark~\ref{rem:dyn} predicts. Before the onset its average disparity is $0.057$, the bound gives
+$0.057$ with a final weight of $1.51$ after about $10^4$ samples, and the rolling window adds $0.002$ to the reported value. A larger dual step reaches the target
+sooner: with $\eta_\lambda=0.1$, demographic parity before the onset falls from $0.060$ to $0.050$, at an F1 cost of $0.009$ under \emph{x\_permutations} and
+$0.007$ under \emph{y\_prior\_skip} ($30$ seeds each). On the longer \folk{} stream, the average disparity, $0.039$, is already below the target.}
+
 \textbf{Utility.} The fairness gain comes at a small utility cost relative to \ara{}. \fado{}'s F1 is $0.758$ against $0.762$ on \folk{} and is lower on three of
 the four \adult{} drifts, by at most $0.019$ (\emph{y\_prior\_skip}); on \emph{x\_permutations} \fado{} exceeds \ara{} ($0.612$ against $0.609$), and \rfr{} attains the highest F1. \fado{}
 remains well above \arf{} in every block. The cost is largest after the onset of \emph{y\_prior\_skip} ($0.621$ against $0.667$), the drift after which
@@ -716,13 +730,32 @@ detection: in the $62$ runs where neither detector fired, \fado{}'s demographic 
 detected runs ($-0.013$ against $-0.035$), while its equalized-odds advantage largely requires a detection. The per-scenario split is provided with the
 code (Section~\ref{sec:method:reproducibility}).
 
-\subsection{Ablation of the Adaptive Constraint}
+\rev{\textbf{Intersectional groups.} To test the formulation beyond two groups, we ran \fado{}, \ara{}, and \arf{} on \folk{} with the four intersectional groups,
+on the same $30$ seeds; \rfr{} is omitted because its penalty is defined for two groups. Relative to \ara{}, \fado{} lowers the demographic parity over the four
+groups from $0.117$ to $0.064$ ($45\%$; \arf{}: $0.141$), the equalized odds from $0.085$ to $0.073$, and the demographic parity of each attribute on its own,
+over all predictions, by $62\%$ (sex) and $51\%$ (race), at an F1 cost of $0.012$; each difference is significant (paired Wilcoxon, Holm-corrected, $p<0.05$).
+With more constraints and smaller groups, the weight averages $1.85$, and demographic parity remains above $\varepsilon$, as on \adult{}.}
+
+% Generated by scripts/make_tables.py -- edit the script, not this table.
+\input{tables/ablation}
+
+\subsection{\rev{Ablation of the Components}}
 \label{sec:results:ablation}
 To isolate the adaptive fairness constraint, we ran on \folk{}, on the same $30$ seeds as Table~\ref{tab:results}, a variant of \fado{} that keeps the drift detector and the reaction controller but uses the fixed weight
 $\lambda=\lambda_{\mathrm{base}}$, without the fairness monitor and the reset. Removing these components worsens every metric on at least $28$ of the $30$ seeds
 ($p<10^{-8}$): demographic parity rises from $0.042$ to $0.050$, equalized odds from $0.025$ to $0.035$, and F1 falls from $0.758$ to $0.748$. The adaptive
 constraint therefore improves fairness and utility together on this dataset. The gain is concentrated in the first half of the test stream (2017); on the 2018 half the
-two variants reach a similar demographic parity. A per-component ablation on \adult{} is left for future work.
+two variants reach a similar demographic parity.
+
+\rev{To isolate the drift components, Table~\ref{tab:ablation} adds them one at a time to the adaptive constraint on \adult{}, on the same $30$ seeds. Over the
+whole stream, the constraint alone already attains a demographic parity within $0.004$ of \fado{}'s in every block; the drift components matter where a drift
+is detected. Under \emph{x\_permutations}, full \fado{} beats the constraint alone on every metric after the onset, on $25$ to $26$ of the $30$ seeds, and the
+two components are complementary: the reset recovers fairness at a loss of F1, the controller recovers F1 but not demographic parity, and only together do they keep F1
+and improve fairness. Under \emph{y\_swaps}, the two together lower equalized odds after the onset ($0.052$ against $0.060$). Under \emph{y\_prior\_skip}, in
+contrast, the reaction costs utility: the constraint alone attains a higher F1 after the onset ($0.649$ against $0.621$) and a slightly lower demographic parity
+($0.060$ against $0.063$). Under \emph{x\_exceed\_skip}, which is rarely detected, the components change F1 by less than $0.006$, and on \folk{} the constraint
+alone matches \fado{}'s fairness with a marginally higher F1 ($0.759$ against $0.758$). Drift awareness thus pays off under abrupt concept drift that the
+detectors register, at a utility cost under a class-prior shift.}
 
 % =====================================================================
 \section{Conclusion and Future Work}
@@ -738,12 +771,15 @@ criterion deteriorates depends on the drift. Regarding RQ2, \fado{} lowered demo
 and was significantly fairer in demographic parity than each of the three published baselines in all $27$ comparisons, over the whole stream and after the
 onset, at a whole-stream F1 cost of at most $0.019$ relative to \ara{}. Against \ara{} given, in hindsight, the weight that \fado{} reaches
 online, it was significantly better in $12$ and worse in $7$ of $27$ comparisons, and better on every metric after the feature permutation, where a constant
-weight is too small once the drift begins. On \folk{}, removing the adaptive constraint worsened fairness and F1 together.
+weight is too small once the drift begins. On \folk{}, removing the adaptive constraint worsened fairness and F1 together. \rev{On \adult{}, the drift
+components improved every metric after the feature permutation, where the reset and the controller proved complementary, and with four intersectional groups
+\fado{} lowered demographic parity by $45\%$ relative to its base learner.}
 
 \fado{} has limitations that point to future work. Its detectors registered $48\%$ of the injected onsets within one window
-and only $7\%$ of the covariate shifts, which calls for detectors on fairness-relevant statistics of the input distribution. Finally, our study uses one binary
-protected attribute, two income datasets, and abrupt injected drifts; more groups and intersectional attributes, gradual and recurring drift, a per-component
-ablation on \adult{}, and a runtime analysis are left for future work.
+and only $7\%$ of the covariate shifts, which calls for detectors on fairness-relevant statistics of the input distribution. \rev{Its reaction to a detected
+drift costs utility under a class-prior shift, which calls for a reaction conditioned on the type of drift, and on a finite stream its constraint holds only up to
+the final price over the dual step and the stream length.} Finally, our study uses two income datasets and abrupt injected drifts; \rev{protected attributes
+beyond the four-group study}, gradual and recurring drift, and a runtime analysis are left for future work.
 
 \section*{Acknowledgment}
 This work is funded by national funds through FCT -- Foundation for Science and Technology, I.P., within the scope of the research unit UID/00326 -

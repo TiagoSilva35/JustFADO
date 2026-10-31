@@ -255,6 +255,59 @@ claim('IV-F', 'the leaked constant is at least FADO\'s mean λ_t on each dataset
       + f" (all ≤ 1.5: {bool((lam_mean[ADULT] <= 1.5).all())})",
       'mean over 30 seeds of stream_final_lambda (mean of λ_t over the stream)', 'W&B arm metrics')
 
+# ----------------------------------------------------------------------------- review experiments
+abl = pd.concat([mt.sweep_metrics('main_adult', ['fado', 'aranyani']), mt.sweep_metrics('main_folktables', ['fado']),
+                 mt.sweep_metrics('ablation_adult', mt.ABLATION_NEW), mt.sweep_metrics('ablation_folktables', ['fado_dual'])],
+                ignore_index=True).drop_duplicates(['scenario', 'model', 'seed'])
+am = abl.groupby(['scenario', 'model']).mean(numeric_only=True)
+gap = {sc: am.loc[(sc, 'fado_dual'), 'dp'] - am.loc[(sc, 'fado'), 'dp'] for sc, _ in mt.BLOCKS}
+claim('V-C', 'over the whole stream the constraint alone attains a DP within 0.004 of FADO\'s in every block',
+      '; '.join(f'{NAMES[sc]} {v:+.4f}' for sc, v in gap.items()) + f'; largest |difference| {max(abs(v) for v in gap.values()):.4f}',
+      'mean DP(dual only) − mean DP(FADO), whole stream, 30 seeds', 'sweeps ablation_adult, ablation_folktables + main')
+xp = abl[abl.scenario == 'sim_x_permutations']
+f_ = xp[xp.model == 'fado'].set_index('seed').sort_index()
+d_ = xp[xp.model == 'fado_dual'].set_index('seed').reindex(f_.index)
+claim('V-C', 'x_permutations: FADO beats the constraint alone after the onset on 25 to 26 of the 30 seeds',
+      f"F1 {int((f_.f1_post > d_.f1_post).sum())}/30, DP {int((f_.post_drift_dp < d_.post_drift_dp).sum())}/30, "
+      f"EO {int((f_.post_drift_eo < d_.post_drift_eo).sum())}/30",
+      'seeds on which FADO is better than fado_dual after the onset (paired by seed)', 'sweep ablation_adult + main')
+claim('V-C', 'the other numbers of the ablation paragraph (y_swaps EO 0.052 vs 0.060; y_prior F1 0.649 vs 0.621, DP 0.060 vs 0.063; '
+      'x_exceed F1 within less than 0.006; Folktables F1 0.759 vs 0.758)',
+      f"y_swaps EO after {am.loc[('sim_y_swaps', 'fado'), 'post_drift_eo']:.3f} vs {am.loc[('sim_y_swaps', 'fado_dual'), 'post_drift_eo']:.3f}; "
+      f"y_prior F1 after {am.loc[('sim_y_prior_skip', 'fado_dual'), 'f1_post']:.3f} vs {am.loc[('sim_y_prior_skip', 'fado'), 'f1_post']:.3f}, "
+      f"DP after {am.loc[('sim_y_prior_skip', 'fado_dual'), 'post_drift_dp']:.3f} vs {am.loc[('sim_y_prior_skip', 'fado'), 'post_drift_dp']:.3f}; "
+      f"x_exceed largest |F1 difference| between arms "
+      f"{max(abs(am.loc[('sim_x_exceed_skip', m), c] - am.loc[('sim_x_exceed_skip', 'fado'), c]) for m in mt.ABLATION_NEW for c in ('f1', 'f1_post')):.4f}; "
+      f"Folktables F1 {am.loc[('folktables', 'fado_dual'), 'f1']:.3f} vs {am.loc[('folktables', 'fado'), 'f1']:.3f}",
+      'means over 30 seeds; significance in Table V / supplementary/ablation.md', 'sweeps ablation_* + main')
+
+ds = mt.sweep_metrics('dualstep_adult', ['fado'])
+ds = ds.merge(mt.run_meta(mt.SWEEPS['dualstep_adult'])[['run_id', 'lambda_dual_lr']], on='run_id', how='left')
+ds['lambda_dual_lr'] = ds.lambda_dual_lr.fillna(ds.run_id.map(  # runs W&B does not list come from local folders
+    {r['config']['wandb_run_id']: r['lambda_controller']['eta'] for r in run_store.local_runs(set(mt.SWEEPS['dualstep_adult']))}))
+base = mt.sweep_metrics('main_adult', ['fado']).assign(lambda_dual_lr=0.01)
+dd = pd.concat([base[base.scenario.isin(ds.scenario.unique())], ds]).drop_duplicates(['scenario', 'lambda_dual_lr', 'seed'])
+dm = dd.groupby(['scenario', 'lambda_dual_lr']).agg(pre=('phase_pre_drift_dp', 'mean'), f1=('f1', 'mean'), n=('seed', 'nunique'))
+claim('V-B', 'with η = 0.1 DP before the onset falls from 0.060 to 0.050, at an F1 cost of 0.009 (x_perm) and 0.007 (y_prior), 30 seeds each',
+      '; '.join(f'{NAMES[sc]} η={eta:g}: DP before onset {r.pre:.4f}, F1 {r.f1:.4f} (n={r.n})' for (sc, eta), r in dm.iterrows()),
+      'means over the seeds; F1 cost = F1(η=0.01) − F1(η=0.1)', 'sweep dualstep_adult + main (η = 0.01)')
+claim('V-B', 'before the onset: average disparity 0.057, bound 0.057, final weight 1.51, about 10^4 samples, window adds 0.002; '
+      'Folktables average disparity 0.039', 'see supplementary/dual_bound.md (main_adult before onset: avg violation + ε 0.0568, '
+      'bound 0.0570, λ 1.51, T 10075, rolling 0.0597 vs stream 0.0579; Folktables 0.0393)',
+      'controller replayed from the stored predictions (scripts/dual_bound.py)', 'local run folders l8c4i60o, jo5dqqhy')
+claim('V-B', 'FADO\'s whole-stream DP is 0.057–0.060 in three of the four Adult drifts',
+      ', '.join(f"{NAMES[sc]} {mean.loc[(sc, 'fado'), 'dp']:.3f}" for sc in ADULT), 'mean over 30 seeds', 'Table III data')
+
+it = mt.sweep_metrics('intersectional_folktables').drop_duplicates(['model', 'seed'])
+im = it.groupby('model').mean(numeric_only=True)
+red4 = lambda c: 100 * (1 - im.loc['fado', c] / im.loc['aranyani', c])
+claim('V-B', 'four groups: DP 0.117 → 0.064 (45%; ARF 0.141), EO 0.085 → 0.073, DP sex −62%, race −51%, F1 cost 0.012, weight 1.85',
+      f"DP {im.loc['aranyani', 'dp']:.3f} → {im.loc['fado', 'dp']:.3f} ({red4('dp'):.1f}%; ARF {im.loc['arf', 'dp']:.3f}); "
+      f"EO {im.loc['aranyani', 'eo']:.3f} → {im.loc['fado', 'eo']:.3f}; DP sex {red4('dp_sex'):.1f}%, race {red4('dp_race'):.1f}%; "
+      f"F1 cost {im.loc['aranyani', 'f1'] - im.loc['fado', 'f1']:.4f}; λ {im.loc['fado', 'stream_final_lambda']:.2f}; "
+      f"seeds {it.groupby('model').seed.nunique().to_dict()}",
+      'means over 30 seeds; significance in supplementary/intersectional.md', 'sweep intersectional_folktables')
+
 # ----------------------------------------------------------------------------- arithmetic
 claim('IV-G', 'ε = 0.05 allows a positive-prediction-rate gap of at most 0.10 between two groups',
       f'{2 * 0.05:.2f}', 'for two groups DP = |p0 − p1| / 2 (Section III-B), so the gap is 2ε', 'definition')

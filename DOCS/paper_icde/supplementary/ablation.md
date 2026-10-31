@@ -16,9 +16,9 @@ Mean ± sd over 30 seeds. • full FADO significantly better than that arm, ◦ 
 |---|---|---|---|---|
 | none (Aranyani) | 0.762 ± 0.005 ◦ | 0.057 ± 0.004 • | 0.036 ± 0.003 • | – |
 | controller only | 0.748 ± 0.005 • | 0.050 ± 0.005 • | 0.035 ± 0.004 • | 0.100 ± 0.000 |
-| dual only | pending | pending | pending | pending |
-| dual + reset | pending | pending | pending | pending |
-| dual + controller | pending | pending | pending | pending |
+| dual only | 0.759 ± 0.005 ◦ | 0.041 ± 0.003 | 0.025 ± 0.003 | 0.449 ± 0.060 |
+| dual + reset | 0.759 ± 0.005 ◦ | 0.042 ± 0.003 | 0.025 ± 0.003 | 0.448 ± 0.056 |
+| dual + controller | 0.744 ± 0.006 • | 0.039 ± 0.004 ◦ | 0.029 ± 0.003 • | 0.432 ± 0.069 |
 | all (FADO) | 0.758 ± 0.005 | 0.042 ± 0.003 | 0.025 ± 0.003 | 0.449 ± 0.056 |
 
 ## x_permutations
@@ -26,9 +26,9 @@ Mean ± sd over 30 seeds. • full FADO significantly better than that arm, ◦ 
 | Arm | F1 | DP | EO | λ | F1 after onset | DP after onset | EO after onset |
 |---|---|---|---|---|---|---|---|
 | none (Aranyani) | 0.609 ± 0.019 | 0.083 ± 0.007 • | 0.073 ± 0.010 • | – | 0.513 ± 0.056 • | 0.085 ± 0.014 • | 0.115 ± 0.025 • |
-| dual only | pending | pending | pending | pending | pending | pending | pending |
-| dual + reset | pending | pending | pending | pending | pending | pending | pending |
-| dual + controller | pending | pending | pending | pending | pending | pending | pending |
+| dual only | 0.590 ± 0.021 • | 0.064 ± 0.007 • | 0.064 ± 0.010 • | 1.557 ± 0.649 | 0.482 ± 0.067 • | 0.072 ± 0.017 • | 0.093 ± 0.027 • |
+| dual + reset | 0.581 ± 0.026 • | 0.056 ± 0.005 ◦ | 0.050 ± 0.008 | 1.114 ± 0.453 | 0.448 ± 0.094 • | 0.049 ± 0.014 ◦ | 0.055 ± 0.018 |
+| dual + controller | 0.612 ± 0.012 | 0.066 ± 0.004 • | 0.060 ± 0.009 • | 1.806 ± 0.482 | 0.552 ± 0.032 | 0.077 ± 0.009 • | 0.082 ± 0.024 • |
 | all (FADO) | 0.612 ± 0.010 | 0.060 ± 0.004 | 0.053 ± 0.009 | 1.474 ± 0.467 | 0.550 ± 0.029 | 0.062 ± 0.010 | 0.064 ± 0.022 |
 
 ## y_swaps
@@ -36,9 +36,9 @@ Mean ± sd over 30 seeds. • full FADO significantly better than that arm, ◦ 
 | Arm | F1 | DP | EO | λ | F1 after onset | DP after onset | EO after onset |
 |---|---|---|---|---|---|---|---|
 | none (Aranyani) | 0.647 ± 0.047 | 0.071 ± 0.010 • | 0.056 ± 0.010 • | – | 0.524 ± 0.206 | 0.054 ± 0.028 • | 0.069 ± 0.024 • |
-| dual only | pending | pending | pending | pending | pending | pending | pending |
-| dual + reset | pending | pending | pending | pending | pending | pending | pending |
-| dual + controller | pending | pending | pending | pending | pending | pending | pending |
+| dual only | 0.638 ± 0.052 • | 0.047 ± 0.006 | 0.051 ± 0.007 • | 0.933 ± 0.428 | 0.522 ± 0.206 | 0.028 ± 0.013 | 0.060 ± 0.015 • |
+| dual + reset | 0.639 ± 0.052 • | 0.048 ± 0.006 | 0.051 ± 0.006 | 0.982 ± 0.413 | 0.523 ± 0.205 | 0.030 ± 0.013 | 0.058 ± 0.012 |
+| dual + controller | 0.645 ± 0.058 | 0.051 ± 0.007 • | 0.052 ± 0.007 • | 1.036 ± 0.452 | 0.526 ± 0.221 | 0.035 ± 0.019 • | 0.062 ± 0.014 • |
 | all (FADO) | 0.645 ± 0.058 | 0.048 ± 0.004 | 0.048 ± 0.006 | 0.941 ± 0.343 | 0.526 ± 0.222 | 0.027 ± 0.011 | 0.052 ± 0.013 |
 
 ## y_prior_skip
@@ -46,9 +46,9 @@ Mean ± sd over 30 seeds. • full FADO significantly better than that arm, ◦ 
 | Arm | F1 | DP | EO | λ | F1 after onset | DP after onset | EO after onset |
 |---|---|---|---|---|---|---|---|
 | none (Aranyani) | 0.695 ± 0.049 ◦ | 0.083 ± 0.017 • | 0.054 ± 0.006 • | – | 0.667 ± 0.201 ◦ | 0.097 ± 0.066 • | 0.076 ± 0.018 • |
-| dual only | pending | pending | pending | pending | pending | pending | pending |
-| dual + reset | pending | pending | pending | pending | pending | pending | pending |
-| dual + controller | pending | pending | pending | pending | pending | pending | pending |
+| dual only | 0.678 ± 0.048 ◦ | 0.058 ± 0.011 ◦ | 0.050 ± 0.010 | 1.396 ± 0.582 | 0.649 ± 0.196 ◦ | 0.060 ± 0.041 ◦ | 0.056 ± 0.031 |
+| dual + reset | 0.680 ± 0.050 ◦ | 0.059 ± 0.012 | 0.050 ± 0.010 | 1.413 ± 0.598 | 0.653 ± 0.197 ◦ | 0.065 ± 0.044 | 0.058 ± 0.031 |
+| dual + controller | 0.674 ± 0.050 • | 0.058 ± 0.011 | 0.050 ± 0.009 | 1.402 ± 0.586 | 0.616 ± 0.224 | 0.061 ± 0.041 | 0.057 ± 0.026 |
 | all (FADO) | 0.676 ± 0.051 | 0.059 ± 0.011 | 0.049 ± 0.008 | 1.411 ± 0.597 | 0.621 ± 0.229 | 0.063 ± 0.042 | 0.054 ± 0.023 |
 
 ## x_exceed_skip
@@ -56,7 +56,7 @@ Mean ± sd over 30 seeds. • full FADO significantly better than that arm, ◦ 
 | Arm | F1 | DP | EO | λ | F1 after onset | DP after onset | EO after onset |
 |---|---|---|---|---|---|---|---|
 | none (Aranyani) | 0.647 ± 0.016 ◦ | 0.076 ± 0.007 • | 0.047 ± 0.006 | – | 0.594 ± 0.077 ◦ | 0.061 ± 0.017 • | 0.047 ± 0.015 |
-| dual only | pending | pending | pending | pending | pending | pending | pending |
-| dual + reset | pending | pending | pending | pending | pending | pending | pending |
-| dual + controller | pending | pending | pending | pending | pending | pending | pending |
+| dual only | 0.634 ± 0.016 | 0.057 ± 0.005 | 0.049 ± 0.007 | 1.078 ± 0.428 | 0.581 ± 0.078 | 0.049 ± 0.014 | 0.053 ± 0.020 |
+| dual + reset | 0.633 ± 0.016 | 0.057 ± 0.005 | 0.049 ± 0.008 | 1.077 ± 0.427 | 0.580 ± 0.080 | 0.048 ± 0.014 | 0.053 ± 0.021 |
+| dual + controller | 0.633 ± 0.016 | 0.057 ± 0.005 | 0.049 ± 0.007 | 1.084 ± 0.432 | 0.576 ± 0.080 | 0.050 ± 0.013 | 0.053 ± 0.019 |
 | all (FADO) | 0.633 ± 0.016 | 0.057 ± 0.005 | 0.048 ± 0.007 | 1.078 ± 0.425 | 0.576 ± 0.080 | 0.049 ± 0.013 | 0.051 ± 0.018 |

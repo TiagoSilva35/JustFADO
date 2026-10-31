@@ -8,4 +8,18 @@ supplementary/dual_bound.md checks the bound on every run with local per-sample 
 Mean ± sd over 30 seeds. • η = 0.01 significantly better than that η, ◦ significantly worse
 (paired two-sided Wilcoxon, Holm across the step sizes of the column, α = 0.05).
 
-**Pending:** sweep `dualstep_adult` is not registered.
+## x_permutations
+
+| Arm | DP before onset | DP | EO | F1 | DP after onset | EO after onset | F1 after onset | λ | λ after onset |
+|---|---|---|---|---|---|---|---|---|---|
+| η = 0.01 (paper) | 0.060 ± 0.003 | 0.060 ± 0.004 | 0.053 ± 0.009 | 0.612 ± 0.010 | 0.062 ± 0.010 | 0.064 ± 0.022 | 0.550 ± 0.029 | 1.474 ± 0.467 | 2.301 ± 0.923 |
+| η = 0.03 | 0.056 ± 0.003 ◦ | 0.055 ± 0.003 ◦ | 0.052 ± 0.009 | 0.605 ± 0.009 • | 0.055 ± 0.008 ◦ | 0.057 ± 0.021 | 0.534 ± 0.036 • | 2.312 ± 0.982 | 3.744 ± 2.251 |
+| η = 0.1 | 0.050 ± 0.005 ◦ | 0.052 ± 0.005 ◦ | 0.055 ± 0.009 | 0.603 ± 0.009 • | 0.054 ± 0.011 ◦ | 0.054 ± 0.016 ◦ | 0.537 ± 0.038 • | 4.283 ± 1.559 | 6.400 ± 2.798 |
+
+## y_prior_skip
+
+| Arm | DP before onset | DP | EO | F1 | DP after onset | EO after onset | F1 after onset | λ | λ after onset |
+|---|---|---|---|---|---|---|---|---|---|
+| η = 0.01 (paper) | 0.060 ± 0.003 | 0.059 ± 0.011 | 0.049 ± 0.008 | 0.676 ± 0.051 | 0.063 ± 0.042 | 0.054 ± 0.023 | 0.621 ± 0.229 | 1.411 ± 0.597 | 3.011 ± 2.358 |
+| η = 0.03 | 29/30 seeds | 29/30 seeds | 29/30 seeds | 29/30 seeds | 29/30 seeds | 29/30 seeds | 29/30 seeds | 29/30 seeds | 29/30 seeds |
+| η = 0.1 | 0.050 ± 0.005 ◦ | 0.051 ± 0.010 ◦ | 0.056 ± 0.009 • | 0.669 ± 0.053 • | 0.058 ± 0.038 ◦ | 0.052 ± 0.018 | 0.618 ± 0.225 | 3.589 ± 1.347 | 5.983 ± 4.350 |

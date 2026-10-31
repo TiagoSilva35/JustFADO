@@ -74,10 +74,10 @@ SWEEPS = {
     'tuned_adult': ['rm2glvmh', 'wqab0alm', 'pzbwmd4e'],      # Aranyani, lambda 1.5, pre-train 0.1
     # Experiments added after review (src/configs/sweeps/sweep_<name>.yaml). Put each sweep id
     # here once launch.sh has registered it; until then its report says it is pending.
-    'ablation_adult': [],             # fado_dual, fado_lambda_only, fado_no_reset; 4 drifts
-    'ablation_folktables': [],        # the same three arms
-    'dualstep_adult': [],             # FADO with lambda_dual_lr 0.03 and 0.1
-    'intersectional_folktables': [],  # FADO, Aranyani, ARF on sex x race (4 groups)
+    'ablation_adult': ['mj6o92rf'],             # fado_dual, fado_lambda_only, fado_no_reset; 4 drifts
+    'ablation_folktables': ['2sl1yfo8'],        # the same three arms
+    'dualstep_adult': ['51cc9zem'],             # FADO with lambda_dual_lr 0.03 and 0.1
+    'intersectional_folktables': ['ehu5y1as'],  # FADO, Aranyani, ARF on sex x race (4 groups)
 }
 BLOCKS = [  # (scenario key, block title in the table); the four drifts are injected into Adult
     ('folktables', r'\folk{}'),
@@ -196,6 +196,8 @@ def crawl():
     key = ['sweep', 'run_id', 'model', 'seed']
     store = pd.read_csv(F1_STORE) if os.path.isfile(F1_STORE) else pd.DataFrame(columns=STORE_COLS)
     merged = found.merge(store[key + ['f1', 'f1_post']], on=key, how='left', suffixes=('', '_old'))
+    # both sides numeric: an empty store, or no local runs, leaves an object column
+    merged['f1'] = pd.to_numeric(merged.f1, errors='coerce')
     merged['f1_old'] = pd.to_numeric(merged.f1_old, errors='coerce')
     new = merged.f1_old.isna().sum()
     changed = ((merged.f1_old.notna()) & ~np.isclose(merged.f1, merged.f1_old, equal_nan=True)).sum()
@@ -393,7 +395,7 @@ def metric_cells(data, tests, models, blocks, cols, sd=True):
                     cells[(sc, m, col)], empty = '', True
                     continue
                 v = f"{means[m]:.3f}{{\\pm}}{by[m][col].std(ddof=1):.3f}" if sd else f'{means[m]:.3f}'
-                if m == best:
+                if best is not None and round(means[m], 3) == round(means[best], 3):  # ties as printed
                     v = f'\\mathbf{{{v}}}'
                 r = result.get((sc, col, m))
                 v += WIN if r == 'win' else LOSS if r == 'loss' else SLOT
@@ -634,14 +636,51 @@ def sweep_metrics(key, models=None, refresh=False):
     sweeps = SWEEPS.get(key) or []
     if not sweeps:
         return None
-    raw = arm_metrics(sweeps, refresh)
+    raw = arm_metrics(sweeps, refresh).drop_duplicates(['run_id', 'model', 'seed'])
     if models is not None:
         raw = raw[raw.model.isin(models)]
     store = pd.read_csv(F1_STORE) if os.path.isfile(F1_STORE) else pd.DataFrame(columns=STORE_COLS)
     f1 = store[store.run_id.isin(set(raw.run_id))][['run_id', 'model', 'seed', 'f1', 'f1_post']]
     data = raw.merge(f1, on=['run_id', 'model', 'seed'], how='left')
+    local = local_metrics(sweeps, models)
+    extra = local[~local.run_id.isin(set(raw.run_id))] if len(local) else local
+    if len(extra):
+        print(f'[{key}] {extra.run_id.nunique()} run(s) not listed as finished in W&B, read from the local run '
+              f'folders: {", ".join(sorted(extra.run_id.unique()))}')
+        data = pd.concat([data, extra], ignore_index=True)
     data.loc[data.scenario == 'folktables', [c for c in POST if c in data]] = np.nan
     return data
+
+
+def local_metrics(sweeps, models=None):
+    """The per-arm metrics of `sweeps` computed from this machine's run folders, with the definitions
+    of the W&B arm table (rolling DP / EO averaged over the stream, over the part after the onset and
+    before it; F1 from the predictions; mean lambda_t). They agree with W&B to ~1e-16 where both exist."""
+    rows = []
+    for path in glob.glob(os.path.join(REPO, 'files', 'experiments', 'wandb', '*', 'dataset_*',
+                                       'seed_pipeline_results.json')):
+        d = json.load(open(path))
+        cfg = d.get('config', {})
+        if cfg.get('wandb_sweep_id') not in sweeps:
+            continue
+        for run in d['seed_runs']:
+            if models is not None and run['model'] not in models:
+                continue
+            res = run['results'][0]
+            ts = res['timestep_results']
+            y, p = np.asarray(ts['y_true_all'], dtype=int), np.asarray(ts['y_preds_all'], dtype=int)
+            dp, eo = np.asarray(ts['dp'], dtype=float), np.asarray(ts['eo'], dtype=float)
+            lam = np.asarray(ts['lambda'], dtype=float) if ts.get('lambda') else None
+            on = (ts.get('drift_info') or {}).get('onset')
+            row = dict(run_id=cfg.get('wandb_run_id') or path.split(os.sep)[-3], model=run['model'],
+                       seed=int(run['seed']), scenario=res['scenario'], dp=dp.mean(), eo=eo.mean(), f1=_f1(y, p),
+                       stream_final_lambda=lam.mean() if lam is not None else np.nan)
+            if on is not None:
+                row.update(post_drift_dp=dp[on:].mean(), post_drift_eo=eo[on:].mean(), f1_post=_f1(y[on:], p[on:]),
+                           phase_pre_drift_dp=dp[:on].mean(),
+                           post_drift_lambda=lam[on:].mean() if lam is not None else np.nan)
+            rows.append(row)
+    return pd.DataFrame(rows)
 
 
 def arm_report_md(title, intro, data, tests, rows, blocks, cols, expected):
@@ -677,6 +716,21 @@ def arm_report_md(title, intro, data, tests, rows, blocks, cols, expected):
     return '\n'.join(out)
 
 
+def _one_run_per_seed(data, label):
+    """Keep one run per (scenario, arm, seed). A sweep can hold the same cell twice (a run started
+    again by a second agent); the runs are deterministic, so the copies should agree, and the
+    report says so or warns."""
+    key = ['scenario', 'model', 'seed']
+    dup = data[data.duplicated(key, keep=False)]
+    if len(dup):
+        cols = [c for c in ('f1', 'dp', 'eo', 'post_drift_dp') if c in dup]
+        same = dup.groupby(key)[cols].nunique(dropna=False).le(1).all().all()
+        print(f'[{label}] {dup.groupby(key).ngroups} (scenario, arm, seed) cells have more than one run '
+              f'({", ".join(sorted(dup.run_id.astype(str).unique()))}); keeping one each. '
+              + ('The copies agree.' if same else 'WARNING: the copies differ; check these runs.'))
+    return data.drop_duplicates(key, keep='first')
+
+
 def _metrics(cols):
     return [(c, COL_NAMES[c], c not in LOWER) for c in cols]
 
@@ -687,7 +741,7 @@ def ablation_report(refresh):
              sweep_metrics('main_folktables', ['fado', 'aranyani', 'fado_no_lambda'], refresh),
              sweep_metrics('ablation_adult', ABLATION_NEW, refresh),
              sweep_metrics('ablation_folktables', ABLATION_NEW, refresh)]
-    data = pd.concat([p for p in parts if p is not None], ignore_index=True)
+    data = _one_run_per_seed(pd.concat([p for p in parts if p is not None], ignore_index=True), 'ablation')
     cols = ['f1', 'dp', 'eo', 'stream_final_lambda', 'f1_post', 'post_drift_dp', 'post_drift_eo']
     tests = paired_tests(data, 'fado', [m for m, _ in ABLATION_ROWS if m != 'fado'],
                          metrics=_metrics([c for c in cols if c != 'stream_final_lambda']))
@@ -703,6 +757,39 @@ def ablation_report(refresh):
              '(paired two-sided Wilcoxon, Holm across the arms of the column, α = 0.05).']
     md = arm_report_md('Component ablation', intro, data, tests, ABLATION_ROWS, BLOCKS, cols, expected)
     return md, data, tests
+
+
+ABLATION_TABLE_ROWS = [('fado_dual', 'Dual ascent only'), ('fado_lambda_only', 'Dual + reset'),
+                       ('fado_no_reset', 'Dual + controller'), ('fado', r'\fado{} (all)')]
+AFTER_ONSET = [('f1_post', True), ('post_drift_dp', False), ('post_drift_eo', False)]
+
+
+def ablation_table(data):
+    """Table V: the components on top of the adaptive constraint, Adult, after the onset."""
+    blocks = [b for b in BLOCKS if b[0] != 'folktables']
+    arms = [m for m, _ in ABLATION_TABLE_ROWS if m != 'fado']
+    tests = paired_tests(data, 'fado', arms, metrics=_metrics([c for c, _ in AFTER_ONSET]), blocks=blocks)
+    cells, _, empty = metric_cells(data, tests, [m for m, _ in ABLATION_TABLE_ROWS], blocks, AFTER_ONSET, sd=False)
+    head = ' & '.join([''] + [r'\multicolumn{3}{c}{' + t + '}' for _, t in blocks]) + r' \\'
+    rules = ' '.join(fr'\cmidrule({"lr" if i < len(blocks) - 1 else "l"}){{{2 + 3 * i}-{4 + 3 * i}}}'
+                     for i in range(len(blocks)))
+    names = ' & '.join(['Components'] + [r'F1\,$\uparrow$ & DP\,$\downarrow$ & EO\,$\downarrow$'] * len(blocks)) + r' \\'
+    body = [(FADO_SHADE if m == 'fado' else '') + ' & '.join([label] + [cells[(sc, m, c)] for sc, _ in blocks
+                                                                        for c, _ in AFTER_ONSET]) + r' \\'
+            for m, label in ABLATION_TABLE_ROWS]
+    tex = '\n'.join([
+        r'\begin{table*}[t]', r'\centering',
+        r'\caption{\rev{Components on Top of the Adaptive Constraint, \adult{} After the Drift Onset, Mean Over 30 Seeds}}',
+        r'\label{tab:ablation}', r'\setlength{\tabcolsep}{3.5pt}', r'\footnotesize',
+        r'\begin{tabular}{@{}l ' + ' '.join(['ccc'] * len(blocks)) + r'@{}}', r'\toprule', head, rules, names,
+        r'\midrule'] + body + [
+        r'\bottomrule', r'\end{tabular}',
+        r'\tnote{\rev{Every arm keeps the adaptive constraint. Reset: the drift detectors and the fairness monitor reset the'
+        r' fairness statistics; controller: the learning-rate and temperature reaction to a confirmed drift. Bold: best mean in the'
+        r' block. $^{\bullet}$/$^{\circ}$: \fado{} significantly better/worse than that arm (paired Wilcoxon test, Holm-corrected'
+        r' across the three arms, $\alpha=0.05$).' + (' Empty cell: fewer than 30 seeds.' if empty else '') + '}}',
+        r'\end{table*}'])
+    return tex + '\n', tests
 
 
 def dual_step_report(refresh):
@@ -721,7 +808,7 @@ def dual_step_report(refresh):
     new['model'] = 'fado_eta' + new.lambda_dual_lr.map(lambda e: f'{e:g}')
     scenarios = sorted(new.scenario.unique(), key=ADULT.index)
     base = sweep_metrics('main_adult', ['fado'], refresh)
-    data = pd.concat([base[base.scenario.isin(scenarios)], new], ignore_index=True)
+    data = _one_run_per_seed(pd.concat([base[base.scenario.isin(scenarios)], new], ignore_index=True), 'dual step')
     arms = sorted(new.model.unique(), key=lambda m: float(m[8:]))
     rows = [('fado', 'η = 0.01 (paper)')] + [(m, f'η = {m[8:]}') for m in arms]
     cols = ['phase_pre_drift_dp', 'dp', 'eo', 'f1', 'post_drift_dp', 'post_drift_eo', 'f1_post',
@@ -743,6 +830,7 @@ def intersectional_report(refresh):
     rows = [('fado', 'FADO'), ('aranyani', 'Aranyani'), ('arf', 'ARF')]
     cols = ['f1', 'dp', 'eo', 'dp_sex', 'dp_race', 'eo_sex', 'eo_race', 'stream_final_lambda']
     data = sweep_metrics('intersectional_folktables', [m for m, _ in rows], refresh)
+    data = _one_run_per_seed(data, 'intersectional') if data is not None else None
     tests = (paired_tests(data, 'fado', ['aranyani', 'arf'], metrics=_metrics(cols[:-1]),
                           blocks=[BLOCKS[0]]) if data is not None else pd.DataFrame())
     expected = {} if data is not None else {'folktables': [m for m, _ in rows]}
@@ -751,8 +839,11 @@ def intersectional_report(refresh):
 
 def review_reports(refresh):
     out = os.path.join(PAPER, 'supplementary')
-    md, _, _ = ablation_report(refresh)
+    md, data, _ = ablation_report(refresh)
     open(os.path.join(out, 'ablation.md'), 'w').write(md)
+    if SWEEPS['ablation_adult']:
+        tex, _ = ablation_table(data)
+        open(os.path.join(PAPER, 'tables', 'ablation.tex'), 'w').write(tex)
     open(os.path.join(out, 'dual_step.md'), 'w').write(dual_step_report(refresh))
     open(os.path.join(out, 'intersectional.md'), 'w').write(intersectional_report(refresh))
     pending = [k for k in ('ablation_adult', 'ablation_folktables', 'dualstep_adult', 'intersectional_folktables')

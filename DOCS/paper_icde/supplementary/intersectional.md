@@ -12,6 +12,6 @@ Mean ± sd over 30 seeds. • FADO significantly better than that method, ◦ si
 
 | Arm | F1 | DP | EO | DP, sex | DP, race | EO, sex | EO, race | λ |
 |---|---|---|---|---|---|---|---|---|
-| FADO | pending | pending | pending | pending | pending | pending | pending | pending |
-| Aranyani | pending | pending | pending | pending | pending | pending | pending | pending |
-| ARF | pending | pending | pending | pending | pending | pending | pending | pending |
+| FADO | 0.749 ± 0.005 | 0.064 ± 0.004 | 0.073 ± 0.006 | 0.021 ± 0.003 | 0.024 ± 0.004 | 0.018 ± 0.006 | 0.006 ± 0.003 | 1.852 ± 0.279 |
+| Aranyani | 0.761 ± 0.005 ◦ | 0.117 ± 0.005 • | 0.085 ± 0.006 • | 0.055 ± 0.004 • | 0.050 ± 0.005 • | 0.024 ± 0.004 • | 0.028 ± 0.006 • | – |
+| ARF | 0.641 ± 0.013 • | 0.141 ± 0.013 • | 0.148 ± 0.019 • | 0.069 ± 0.009 • | 0.057 ± 0.008 • | 0.073 ± 0.013 • | 0.054 ± 0.013 • | – |
