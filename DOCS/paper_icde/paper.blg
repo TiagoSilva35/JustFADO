@@ -1,12 +1,15 @@
-This is BibTeX, Version 0.99e (TeX Live 2026/Homebrew)
+This is BibTeX, Version 0.99e
 Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: paper.aux
+Reallocating 'name_of_file' (item size: 1) to 9 items.
 The style file: IEEEtran.bst
-Reallocated singl_function (elt_size=4) to 100 items from 50.
-Reallocated singl_function (elt_size=4) to 100 items from 50.
-Reallocated singl_function (elt_size=4) to 100 items from 50.
-Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
-Reallocated singl_function (elt_size=4) to 100 items from 50.
+Reallocating 'name_of_file' (item size: 1) to 9 items.
+Reallocating 'name_of_file' (item size: 1) to 11 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
+Reallocating 'wiz_functions' (item size: 4) to 6000 items.
+Reallocating 'singl_function' (item size: 4) to 100 items.
 Database file #1: IEEEabrv.bib
 Database file #2: references.bib
 -- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
@@ -14,44 +17,44 @@ Database file #2: references.bib
 -- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
 
 Done.
-You've used 31 entries,
+You've used 34 entries,
             4087 wiz_defined-function locations,
-            1387 strings with 21717 characters,
-and the built_in function-call counts, 23614 in all, are:
-= -- 1900
-> -- 618
-< -- 150
-+ -- 332
-- -- 125
-* -- 1142
-:= -- 3511
-add.period$ -- 64
-call.type$ -- 31
-change.case$ -- 31
-chr.to.int$ -- 348
-cite$ -- 31
-duplicate$ -- 1704
-empty$ -- 1914
-format.name$ -- 149
-if$ -- 5501
+            1406 strings with 22131 characters,
+and the built_in function-call counts, 28214 in all, are:
+= -- 2253
+> -- 739
+< -- 217
++ -- 403
+- -- 141
+* -- 1347
+:= -- 4021
+add.period$ -- 72
+call.type$ -- 34
+change.case$ -- 36
+chr.to.int$ -- 510
+cite$ -- 34
+duplicate$ -- 2025
+empty$ -- 2287
+format.name$ -- 169
+if$ -- 6648
 int.to.chr$ -- 0
-int.to.str$ -- 31
-missing$ -- 327
-newline$ -- 156
-num.names$ -- 31
-pop$ -- 837
+int.to.str$ -- 34
+missing$ -- 371
+newline$ -- 139
+num.names$ -- 36
+pop$ -- 912
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 2
-skip$ -- 1833
+skip$ -- 2193
 stack$ -- 0
-substring$ -- 940
-swap$ -- 1359
-text.length$ -- 34
+substring$ -- 1321
+swap$ -- 1668
+text.length$ -- 47
 text.prefix$ -- 0
 top$ -- 5
-type$ -- 31
+type$ -- 34
 warning$ -- 0
-while$ -- 85
-width$ -- 33
-write$ -- 358
+while$ -- 117
+width$ -- 36
+write$ -- 362

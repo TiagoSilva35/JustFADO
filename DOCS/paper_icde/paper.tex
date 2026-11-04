@@ -29,6 +29,7 @@
 \newcommand{\tnote}[1]{\vspace{2pt}\parbox{\linewidth}{\footnotesize #1}}
 % Additions after review, in blue. Before submission: \renewcommand{\rev}[1]{#1}
 \newcommand{\rev}[1]{{\color{blue}#1}}
+\renewcommand{\rev}[1]{#1}
 % new row of authors in the IEEEtran author block
 \makeatletter\newcommand{\linebreakand}{\end{@IEEEauthorhalign}\hfill\mbox{}\par\mbox{}\hfill\begin{@IEEEauthorhalign}}\makeatother
 
@@ -37,26 +38,28 @@
 % Template rules: no abbreviations, subtitles, math, or symbols in the title.
 \title{Adaptive Fairness Constraints for Online Learning\\Under Concept Drift}
 \author{\IEEEauthorblockN{Tiago Silva}
-\IEEEauthorblockA{\textit{CISUC, Dept. of Informatics Engineering} \\
-\textit{University of Coimbra}\\
+\IEEEauthorblockA{\textit{University of Coimbra} \\
+\textit{CISUC/LASI} \\
+\textit{DEI}\\
 Coimbra, Portugal \\
 tds@student.uc.pt}
 \and
 \IEEEauthorblockN{Bruno Veloso}
-\IEEEauthorblockA{\textit{INESC TEC, Faculty of Economics} \\
-\textit{University of Porto}\\
+\IEEEauthorblockA{\textit{University of Porto}\\
+\textit{INESC TEC, Faculty of Economics} \\
 Porto, Portugal \\
 bruno.m.veloso@inesctec.pt}
 \and
 \IEEEauthorblockN{Jo\~{a}o Gama}
-\IEEEauthorblockA{\textit{INESC TEC, Faculty of Economics} \\
-\textit{University of Porto}\\
+\IEEEauthorblockA{\textit{University of Porto}\\
+\textit{INESC TEC, Faculty of Economics} \\
 Porto, Portugal \\
 joao.gama@inesctec.pt}
-\linebreakand
+\and
 \IEEEauthorblockN{Pedro Henriques Abreu}
-\IEEEauthorblockA{\textit{CISUC, Dept. of Informatics Engineering} \\
-\textit{University of Coimbra}\\
+\IEEEauthorblockA{\textit{University of Coimbra} \\
+\textit{CISUC/LASI} \\
+\textit{DEI}\\
 Coimbra, Portugal \\
 pha@dei.uc.pt}
 }
@@ -99,7 +102,7 @@ time due to policy changes, behavioral shifts, seasonal effects, economic fluctu
 concept drift, occurs when the relationship between input variables and target outcomes changes over time, causing previously learned decision boundaries to
 become outdated. Different forms of concept drift~\cite{DBLP:journals/corr/WebbHCNP15} require different adaptation strategies and can degrade performance when
 models fail to adjust. Drift also threatens fairness: shifting distributions alter the statistical relationships that support fairness guarantees, increasing bias
-against some groups. To address this challenge, the online learning and data stream mining literature has proposed numerous adaptive methods capable of detecting
+against some groups. To address this challenge, the online learning and data stream mining literature~\cite{1315451.1315460} has proposed numerous adaptive methods capable of detecting
 and responding to concept drift in real time. These approaches often rely on drift detection mechanisms combined with incremental learning strategies to maintain
 predictive accuracy under nonstationary conditions. However, the majority of existing methods focus primarily on predictive
 utility~\cite{10.1007/s10994-017-5642-8,KLAIBER20231261}, while fairness considerations remain comparatively underexplored. As a result, fairness guarantees
@@ -161,7 +164,8 @@ al.~\cite{zeng2024fairrrpreprocessinggroupfairness} propose a different approach
 the removal of discrimination from the training dataset as a randomized response problem. The main contribution of this work is the provision of a theoretical
 bridge between pre-processing techniques and downstream Bayes-optimal classifiers, and the fact that it is model agnostic: because it only alters the training
 labels, users do not need to modify their current pipelines. However, this method also does not account for concept drift or its impact, and it is limited by
-the binary setup, meaning it only works with binary sensitive attributes and binary outcomes.
+the binary setup, meaning it only works with binary sensitive attributes and binary outcomes. On data streams, Ghosh et al.~\cite{ghosh2026cobloc} keep
+group fairness within sliding windows by reordering the stream, which acts on the data rather than on a learned model's predictions.
 
 \subsection{In-Processing Methods}
 In-processing methods incorporate fairness constraints directly into the learning algorithm. Four lines are especially relevant to our work.
@@ -232,7 +236,7 @@ Section~\ref{sec:results:rq2} also evaluates $K=4$ intersectional groups on \fol
 \subsection{Group Fairness Metrics}
 \label{sec:problem:metrics}
 We focus on \emph{group fairness}, which assesses whether model behavior is statistically similar across protected groups. \ara{}~\cite{chowdhury2024enhancing}
-defines demographic parity on the forest's outputs for two groups leaving the implementation to more groups and to equalized odds for future work; we measure
+defines demographic parity on the forest's outputs for two groups and extends its formulation to more groups and to equalized odds in its appendix; we measure
 fairness on the \emph{predictions}, in a form that holds for any number of groups. Let $\mathcal{A}_t \subseteq \mathcal{A}$ denote the set of sensitive groups observed
 within the current evaluation window, and let $\hat{p}_a = \mathbb{E}[\hat{y} \mid a]$ be the positive-prediction rate for group $a \in \mathcal{A}_t$. We define the
 unweighted mean group rate as:
@@ -256,7 +260,7 @@ $\bar p_y$ its mean across the observed groups:
 \mathrm{EO} = \max_{y \in \{0,1\}}\ \max_{a \in \mathcal{A}_t}\left|\hat{p}_{a|y} - \bar{p}_y\right|.
 \end{equation}
 Restricting it to $y{=}1$ gives equal opportunity. EO separates bias from differences in base rates. We report it but do not optimize it: constraining EO in 
-\fado{} would also need a label-conditional version of the per-sample signal~\eqref{eq:ht} leaving the implementation to future work. 
+\fado{} would also need a label-conditional version of the per-sample signal~\eqref{eq:ht}, which we leave to future work. 
 
 \subsection{From a Fixed Penalty to a Fairness Constraint}
 \label{sec:problem:constraint}
@@ -309,7 +313,7 @@ fairness gradient online from running per-group averages of the routing decision
 Our implementation, used identically by \fado{} and the \ara{} baseline, takes the cross-group mean unweighted and gives the linear branch of $\phi_\delta$ a
 unit slope.
 
-\fado{} turns this static, fixed-weight model into one (more flexible) that adapts to the stream, through three changes. First, the fixed weight $\lambda$ becomes the price $\lambda_t$ of Section~\ref{sec:method:lambda}. Second,
+\fado{} turns this static, fixed-weight model into one that adapts to the stream, through three changes. First, the fixed weight $\lambda$ becomes the price $\lambda_t$ of Section~\ref{sec:method:lambda}. Second,
 the statistics $S$ are reset when a drift is confirmed. Third, \fado{} adds a routing temperature, $n_j(x)=\sigma\big((w_j^{\top}x+b_j)/\tau\big)$, which
 recovers \ara{} at $\tau=1$ and which the reaction controller lowers after a confirmed drift to make routing nearly hard
 (Section~\ref{sec:method:drift}).
@@ -338,14 +342,14 @@ Attaching a multiplier $\mu_{a,\pm}\ge0$ to each constraint gives the Lagrangian
 and~\eqref{eq:cons} is the saddle point $\min_\theta\max_{\mu\ge0}\mathcal{L}$~\cite{boyd2004convex}. The gradient of $\mathcal{L}$ in $\mu_{a,\pm}$ is the
 violation $\pm D_a-\varepsilon$, so projected ascent reads:
 \begin{equation}
-\mu_{a,\pm}\leftarrow\Pi_{[0,\lambda_{\max}]}\big(\mu_{a,\pm}+\eta_\lambda(\pm D_a-\varepsilon)\big),
+\mu_{a,\pm}\leftarrow\Pi_{[0,\lambda_{\max}]}\big(\mu_{a,\pm}+\eta_\lambda(\pm D_a-\varepsilon)\big).
 \label{eq:dual}
 \end{equation}
-This projection alternates with the usual gradient step in $\theta$ (primal--dual descent--ascent~\cite{mahdavi2012trading}). In control terms, $\mu$ \emph{integrates} the
+This ascent step alternates with the usual gradient step in $\theta$ (primal--dual descent--ascent~\cite{mahdavi2012trading}). In control terms, $\mu$ \emph{integrates} the
 violation: it keeps rising while a group's deviation exceeds $\varepsilon$ and stops only when it does not, so it has no steady-state error. 
 While a group's deviation stays below $\varepsilon$, its multiplier drains toward zero, so the penalty weight decreases gradually while the stream remains fair.
 The projection keeps the prices nonnegative, as duality
-requires, and bounded (although it is not strictly necessary) to protect accuracy. \fado{} sums the prices into a single weight for the node-level penalty of~\eqref{eq:reg}:
+requires, and bounded, which the method does not require but which protects accuracy. \fado{} sums the prices into a single weight for the node-level penalty of~\eqref{eq:reg}:
 \begin{equation}
 \lambda_t=\min\Big(\lambda_{\mathrm{base}}+\sum_{a,\pm}\mu_{a,\pm},\ \lambda_{\max}\Big),
 \label{eq:lambda}
@@ -453,7 +457,7 @@ test-then-train loop.
   \State optimizer step on $\nabla\big(\mathcal{L}_{\mathrm{CE}}(f(x_t),y_t) + \lambda_t\,\mathcal{L}_{\mathrm{fair}}(S)\big)$ at rate $\eta$
 \EndFor
 \end{algorithmic}
-\caption{\fado{}'s prequential test-then-train loop. Available at [undisclosed for blind review].}
+\caption{\fado{}'s prequential test-then-train loop. Available at \protect\url{https://github.com/TiagoSilva35/fado-icde2027}.}
 \label{fig:alg}
 \end{figure}
 
@@ -632,8 +636,8 @@ alongside in the repository (Section~\ref{sec:method:reproducibility}).
 \subsection{Reproducibility}
 \label{sec:method:reproducibility}
 The full implementation, configuration files, seed manifests, and per-seed result files 
-are released at [undisclosed for blind review]. The repository lists the sweep configuration
-behind every reported run; one script regenerates Tables~\ref{tab:results} and~\ref{tab:detection} and the full significance report (paired
+are released at \url{https://github.com/TiagoSilva35/fado-icde2027}. The repository lists the sweep configuration
+behind every reported run; one script regenerates the tables of Section~\ref{sec:results} and the full significance report (paired
 Wilcoxon and Welch tests, raw and Holm-corrected $p$-values) from the per-seed results, and a second script recomputes, with its
 derivation, every number quoted in the text.
 
@@ -681,7 +685,7 @@ to $0.097$. Demographic parity, in contrast, falls after the onset of \emph{y\_s
 to $0.069$), and after the onset of \emph{x\_exceed\_skip} ($0.082$ to $0.061$): relabeling one class or removing the samples above a feature's median also brings
 the groups' positive-prediction rates closer. For \arf{} and \rfr{} as well, demographic parity falls after the onset of
 \emph{y\_swaps} and \emph{x\_exceed\_skip}, and it remains higher than \fado{}'s before and after every onset. A fairness guarantee on
-the stream before a drift is, therefore, not preserved after it and the metric that worsens can't be known in advance. This is the setting the adaptive
+the stream before a drift is, therefore, not preserved after it and the metric that worsens cannot be known in advance. This is the setting the adaptive
 constraint targets.
 
 On \folk{} the shift lies between the training year and the whole test stream, so the stream offers no reference before the drift; every method shows a slightly
@@ -730,7 +734,7 @@ detection: in the $62$ runs where neither detector fired, \fado{}'s demographic 
 detected runs ($-0.013$ against $-0.035$), while its equalized-odds advantage largely requires a detection. The per-scenario split is provided with the
 code (Section~\ref{sec:method:reproducibility}).
 
-\rev{\textbf{Intersectional groups.} To test the formulation beyond two groups, we ran \fado{}, \ara{}, and \arf{} on \folk{} with the four intersectional groups,
+\rev{\textbf{Intersectional groups.} To test the formulation beyond two groups, we ran \fado{}, \ara{}, and \arf{} on \folk{} with the four intersectional groups~\cite{foulds2020intersectional},
 on the same $30$ seeds; \rfr{} is omitted because its penalty is defined for two groups. Relative to \ara{}, \fado{} lowers the demographic parity over the four
 groups from $0.117$ to $0.064$ ($45\%$; \arf{}: $0.141$), the equalized odds from $0.085$ to $0.073$, and the demographic parity of each attribute on its own,
 over all predictions, by $62\%$ (sex) and $51\%$ (race), at an F1 cost of $0.012$; each difference is significant (paired Wilcoxon, Holm-corrected, $p<0.05$).
@@ -755,7 +759,7 @@ and improve fairness. Under \emph{y\_swaps}, the controller raises the whole-str
 after the onset ($0.052$ against $0.060$). Under \emph{y\_prior\_skip}, in
 contrast, the reaction costs utility: the constraint alone attains a higher F1 after the onset ($0.649$ against $0.621$) and a slightly lower demographic parity
 ($0.060$ against $0.063$). A class-prior shift drops rows of one class at random, which leaves the class-conditional distribution of the features unchanged, so
-the decision boundary wouldn't need to move; the controller's reaction, which assumes it must, is the likely source of this cost (F1 after the onset $0.616$ with the
+the decision boundary would not need to move; the controller's reaction, which assumes it must, is the likely source of this cost (F1 after the onset $0.616$ with the
 controller and $0.649$ without). Under \emph{x\_exceed\_skip}, which is rarely detected, the components change F1 by less than $0.006$, and on \folk{} the constraint
 alone matches \fado{}'s fairness with a marginally higher F1 ($0.759$ against $0.758$). Drift awareness thus pays off under abrupt concept drift that the
 detectors register, at a utility cost under a class-prior shift.}
@@ -777,7 +781,7 @@ online, it was significantly better in $12$ and worse in $7$ of $27$ comparisons
 weight is too small once the drift begins. On \folk{}, removing the adaptive constraint worsened fairness and F1 together. \rev{On \adult{}, the adaptive constraint
 alone accounted for nearly all of the fairness gain, and the drift components improved every metric after the feature permutation, where the reset and
 the controller proved complementary, and with four intersectional groups
-\fado{} lowered demographic parity by $45\%$ relative to its base learner.}
+\fado{} lowered demographic parity by $45\%$ relative to \ara{}.}
 
 \fado{} has limitations that point to future work. Its detectors registered $48\%$ of the injected onsets within one window
 and only $7\%$ of the covariate shifts, which calls for detectors on fairness-relevant statistics of the input distribution. \rev{Its reaction to a detected
@@ -789,8 +793,8 @@ beyond the four-group study}, gradual and recurring drift, and a runtime analysi
 This work is funded by national funds through FCT -- Foundation for Science and Technology, I.P., within the scope of the research unit UID/00326 -
 Centre for Informatics and Systems of the University of Coimbra, \url{https://doi.org/10.54499/UID/00326/2025}.
 
-The authors used a generative AI system, Claude (Anthropic), to edit the wording of parts of the text, to help draw Fig.~\ref{fig:drift-pipeline}, and to
-explore layouts for the tables. All content was reviewed by the authors, who take full responsibility for it.
+The authors used a generative AI system, Claude (Anthropic), to edit the wording of parts of the text, to help draw Fig.~\ref{fig:drift-pipeline}, 
+explore layouts for tables and to help write the scripts that set up sweeps and experiments. All content was reviewed by the authors, who take full responsibility for it.
 
 
 \bibliographystyle{IEEEtran}

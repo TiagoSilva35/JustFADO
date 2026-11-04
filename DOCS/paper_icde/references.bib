@@ -70,7 +70,6 @@
    title={Unveiling Group-Specific Distributed Concept Drift: A Fairness Imperative in Federated Learning},
    volume={37},
    ISSN={2162-2388},
-   url={http://dx.doi.org/10.1109/TNNLS.2025.3601834},
    DOI={10.1109/tnnls.2025.3601834},
    number={1},
    journal={IEEE Transactions on Neural Networks and Learning Systems},
@@ -110,14 +109,12 @@
   pages     = {386--400},
   month     = mar,
   year      = {2021},
-  url       = {http://dx.doi.org/10.1145/3442188.3445902}
 }
 
 @inproceedings{Small_2024,
   author    = {Edward Small and Kacper Sokol and Daniel Manning and Flora D. Salim and Jeffrey Chan},
   title     = {Equalised odds is not equal individual odds: Post-processing for group and individual fairness},
   booktitle = {Proc. ACM Conf. Fairness, Accountability, Transparency (FAccT)},
-  url       = {http://dx.doi.org/10.1145/3630106.3658989},
   pages     = {1559--1578},
   month     = jun,
   year      = {2024}
@@ -126,25 +123,31 @@
 % ---------------------------------------------------------------------
 % In-processing, constrained fairness, online optimisation
 % ---------------------------------------------------------------------
-@misc{zafar2017fairnessconstraintsmechanismsfair,
-      title={Fairness Constraints: Mechanisms for Fair Classification}, 
-      author={Muhammad Bilal Zafar and Isabel Valera and Manuel Gomez Rodriguez and Krishna P. Gummadi},
-      year={2017},
-      eprint={1507.05259},
-      archivePrefix={arXiv},
-      primaryClass={stat.ML},
-      url={https://arxiv.org/abs/1507.05259}, 
-} % CHECK THIS
 
-@misc{agarwal2018reductionsapproachfairclassification,
-      title={A Reductions Approach to Fair Classification}, 
-      author={Alekh Agarwal and Alina Beygelzimer and Miroslav Dudík and John Langford and Hanna Wallach},
-      year={2018},
-      eprint={1803.02453},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/1803.02453}, 
-}% CHECK THIS
+@InProceedings{zafar2017fairnessconstraintsmechanismsfair,
+  title = 	 {{Fairness Constraints: Mechanisms for Fair Classification}},
+  author = 	 {Zafar, Muhammad Bilal and Valera, Isabel and Rogriguez, Manuel Gomez and Gummadi, Krishna P.},
+  booktitle = 	 {Proceedings of the 20th International Conference on Artificial Intelligence and Statistics},
+  pages = 	 {962--970},
+  year = 	 {2017},
+  editor = 	 {Singh, Aarti and Zhu, Jerry},
+  volume = 	 {54},
+  series = 	 {Proceedings of Machine Learning Research},
+  month = 	 {20--22 Apr},
+  publisher =    {PMLR},
+  pdf = 	 {http://proceedings.mlr.press/v54/zafar17a/zafar17a.pdf},
+  abstract = 	 {Algorithmic decision making systems are ubiquitous across a wide variety of online as well as offline services. These systems rely on complex learning methods and vast amounts of data to optimize the service functionality, satisfaction of the end user and profitability. However, there is a growing concern that these automated decisions can lead, even in the absence of intent, to a lack of fairness, i.e., their outcomes can disproportionately hurt (or, benefit) particular groups of people sharing one or more sensitive attributes (e.g., race, sex). In this paper, we introduce a flexible mechanism to design fair classifiers by leveraging a novel intuitive measure of decision boundary (un)fairness. We instantiate this mechanism with two well-known classifiers, logistic regression and support vector machines, and show on real-world data that our mechanism allows for a fine-grained control on the degree of fairness, often at a small cost in terms of accuracy.}
+}
+
+@inproceedings{agarwal2018reductionsapproachfairclassification,
+  title={A reductions approach to fair classification},
+  author={Agarwal, Alekh and Beygelzimer, Alina and Dud{\'\i}k, Miroslav and Langford, John and Wallach, Hanna},
+  booktitle={International conference on machine learning},
+  pages={60--69},
+  year={2018},
+  organization={PMLR}
+}
+
 
 @misc{cotter2018optimizationnondifferentiableconstraintsapplications,
       title={Optimization with Non-Differentiable Constraints with Applications to Fairness, Recall, Churn, and Other Goals}, 
@@ -175,7 +178,6 @@
 
 @article{bbbe4e97-7833-3faa-820c-4c61f82fe965,
  ISSN = {01621459, 1537274X},
- URL = {http://www.jstor.org/stable/2280784},
  abstract = {This paper presents a general technique for the treatment of samples drawn without replacement from finite universes when unequal selection probabilities are used. Two sampling schemes are discussed in connection with the problem of determining optimum selection probabilities according to the information available in a supplementary variable. Admittedly, these two schemes have limited application. They should prove useful, however, for the first stage of sampling with multi-stage designs, since both permit unbiased estimation of the sampling variance without resorting to additional assumptions.},
  author = {D. G. Horvitz and D. J. Thompson},
  journal = {Journal of the American Statistical Association},
@@ -294,7 +296,6 @@ address = {USA},
 volume = {90},
 number = {3},
 issn = {0885-6125},
-url = {https://doi.org/10.1007/s10994-012-5320-9},
 doi = {10.1007/s10994-012-5320-9},
 abstract = {Most streaming decision models evolve continuously over time, run in resource-aware environments, and detect and react to changes in the environment generating data. One important issue, not yet convincingly addressed, is the design of experimental work to evaluate and compare decision models that evolve over time. This paper proposes a general framework for assessing predictive stream learning algorithms. We defend the use of prequential error with forgetting mechanisms to provide reliable error estimators. We prove that, in stationary data and for consistent learning algorithms, the holdout estimator, the prequential error and the prequential error estimated over a sliding window or using fading factors, all converge to the Bayes error. The use of prequential error with forgetting mechanisms reveals to be advantageous in assessing performance and in comparing stream learning algorithms. It is also worthwhile to use the proposed methods for hypothesis testing and for change detection. In a set of experiments in drift scenarios, we evaluate the ability of a standard change detection algorithm to detect change using three prequential error estimators. These experiments point out that the use of forgetting mechanisms (sliding windows or fading factors) are required for fast and efficient change detection. In comparison to sliding windows, fading factors are faster and memoryless, both important requirements for streaming applications. Overall, this paper is a contribution to a discussion on best practice for performance assessment when learning is a continuous process, and the decision models are dynamic and evolve over time.},
 journal = {Mach. Learn.},
@@ -312,7 +313,6 @@ publisher = {SIAM},
 year = {2007},
 pages = {443-448},
 doi = {10.1137/1.9781611972771.42},
-URL = {https://epubs.siam.org/doi/abs/10.1137/1.9781611972771.42},
 eprint = {https://epubs.siam.org/doi/pdf/10.1137/1.9781611972771.42},
     abstract = { Abstract We present a new approach for dealing with distribution change and concept drift when learning from data 
     sequences that may vary with time. We use sliding windows whose size, instead of being fixed a priori, is recomputed online according 
@@ -334,7 +334,6 @@ eprint = {https://epubs.siam.org/doi/pdf/10.1137/1.9781611972771.42},
   volume = {106},
   number = {9–10},
   issn = {0885-6125},
-  url = {https://doi.org/10.1007/s10994-017-5642-8},
   doi = {10.1007/s10994-017-5642-8},
   abstract = {Random forests is currently one of the most used machine learning algorithms in the non-streaming (batch) setting. This preference is attributable to its high learning performance and low demands with respect to input preparation and hyper-parameter tuning. However, in the challenging context of evolving data streams, there is no random forests algorithm that can be considered state-of-the-art in comparison to bagging and boosting based algorithms. In this work, we present the adaptive random forest (ARF) algorithm for classification of evolving data streams. In contrast to previous attempts of replicating random forests for data stream learning, ARF includes an effective resampling method and adaptive operators that can cope with different types of concept drifts without complex optimizations for different data sets. We present experiments with a parallel implementation of ARF which has no degradation in terms of classification performance in comparison to a serial implementation, since trees and adaptive operators are independent from one another. Finally, we compare ARF with state-of-the-art algorithms in a traditional test-then-train evaluation and a novel delayed labelling evaluation, and show that ARF is accurate and uses a feasible amount of resources.},
   journal = {Mach. Learn.},
@@ -353,21 +352,21 @@ eprint = {https://epubs.siam.org/doi/pdf/10.1137/1.9781611972771.42},
   note = {27th International Conference on Knowledge Based and Intelligent Information and Engineering Sytems (KES 2023)},
   issn = {1877-0509},
   doi = {https://doi.org/10.1016/j.procs.2023.10.114},
-  url = {https://www.sciencedirect.com/science/article/pii/S1877050923012723},
   author = {Marco Klaiber and Manfred Rössle and Andreas Theissler},
   keywords = {concept drift, real drift, NSE, machine learning, big data},
   abstract = {In a dynamic world, data streams are continuously generated, which poses immense challenges for machine learning (ML) algorithms to adapt to changing statistical properties that are subject to a non-stationary context. The underlying scenario is defined as concept drift (CD), where changes in the relationship between response and prediction variables (real CD) or a change in input data (virtual CD) are accompanied by a significant degradation in the predictive performance of the models, causing ML models to reach unacceptable levels of system accuracy. In this paper, the state of the art for CD algorithms is analyzed and compared. For this purpose, a systematic literature review was performed. Then, the 10 most popular CD algorithms were extracted from the literature using a newly-developed metric. Subsequently, the algorithms were analyzed and compared with respect to their functionality and limitations. Based on these, the optimization potentials were systematically derived. This work presents a summarized overview of CD algorithms and provides the basis for algorithm optimization in this domain.}
 }
 
-@misc{montiel2020rivermachinelearningstreaming,
-      title={River: machine learning for streaming data in Python}, 
-      author={Jacob Montiel and Max Halford and Saulo Martiello Mastelini and Geoffrey Bolmier and Raphael Sourty and Robin Vaysse and Adil Zouitine and Heitor Murilo Gomes and Jesse Read and Talel Abdessalem and Albert Bifet},
-      year={2020},
-      eprint={2012.04740},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2012.04740}, 
-} % CHECK THIS
+@article{montiel2020rivermachinelearningstreaming,
+  title={River: machine learning for streaming data in python},
+  author={Montiel, Jacob and Halford, Max and Mastelini, Saulo Martiello and Bolmier, Geoffrey and Sourty, Raphael and Vaysse, Robin and Zouitine, Adil and Gomes, Heitor Murilo and Read, Jesse and Abdessalem, Talel and others},
+  journal={Journal of Machine Learning Research},
+  volume={22},
+  number={110},
+  pages={1--8},
+  year={2021}
+}
+
 
 @inproceedings{10.1145/3770855.3819070,
 author = {Cerqueira, Vitor and Gomes, Heitor Murilo and Heyden, Marco and Pfahringer, Bernhard and Bifet, Albert},
@@ -376,7 +375,6 @@ year = {2026},
 isbn = {9798400722592},
 publisher = {Association for Computing Machinery},
 address = {New York, NY, USA},
-url = {https://doi.org/10.1145/3770855.3819070},
 doi = {10.1145/3770855.3819070},
 abstract = {Data stream mining is fundamentally challenged by concept drift, where distributional changes can degrade model performance. Despite the proliferation of drift detection methods, progress in the field is hindered by inconsistent evaluation practices: studies rely on oversimplified synthetic data generators, adopt incompatible metrics, and lack transparency in hyperparameter selection, making fair comparisons difficult. We address this gap with a novel benchmarking framework comprising three contributions: (1) a drift simulation method that injects controlled distributional changes into real-world datasets via Monte Carlo trials, enabling supervised evaluation while preserving real-world data complexity; (2) an evaluation protocol for drift detection with timing-aware criteria, including the derivation of new metrics (e.g., F1 detection score, normalized detection time) that are comparable across streams; and (3) we advocate for a leave-one-dataset-out hyperparameter optimization protocol for drift detection methods that promotes configuration robustness across heterogeneous stream dynamics. We benchmark 14 widely used drift detection methods on 7 real-world datasets across 4 drift types (class prior, label swap, feature permutation, feature filtering), each under both abrupt and gradual transitions. Our experimental results provide insights into the strengths and weaknesses of current drift detection approaches while establishing baseline performance metrics for future research in this area. All code and experiments are publicly available.},
 booktitle = {Proceedings of the 32nd ACM SIGKDD Conference on Knowledge Discovery and Data Mining V.2},
@@ -398,19 +396,58 @@ series = {KDD '26}
   pages   = {1--30},
   year    = {2006}
 }
-@misc{ding2022retiringadultnewdatasets,
-      title={Retiring Adult: New Datasets for Fair Machine Learning}, 
-      author={Frances Ding and Moritz Hardt and John Miller and Ludwig Schmidt},
-      year={2022},
-      eprint={2108.04884},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2108.04884}, 
+
+@article{ding2022retiringadultnewdatasets,
+  title={Retiring adult: New datasets for fair machine learning},
+  author={Ding, Frances and Hardt, Moritz and Miller, John and Schmidt, Ludwig},
+  journal={Advances in neural information processing systems},
+  volume={34},
+  pages={6478--6490},
+  year={2021}
 }
+
+
 @misc{adult_2,
   author       = {Becker, Barry and Kohavi, Ronny},
   title        = {{Adult}},
   year         = {1996},
   howpublished = {UCI Machine Learning Repository},
   note         = {{DOI}: https://doi.org/10.24432/C5XW20}
+}
+@inproceedings{1315451.1315460,
+  author    = {Charu C. Aggarwal and Jiawei Han and Jianyong Wang and Philip S. Yu},
+  title     = {A framework for clustering evolving data streams},
+  booktitle = {Proc. 29th Int. Conf. Very Large Data Bases ({VLDB})},
+  pages     = {81--92},
+  year      = {2003}
+}
+
+
+@article{10.14778/3827998.3828091,
+author = {Ghosh, Subhodeep and Du, Zhihui and Bonifati, Angela and Kumar, Manish and Bader, David and Roy, Senjuti Basu},
+title = {CoBLOC - Continuous Block Level Fairness on Data Streams},
+year = {2026},
+issue_date = {August 2026},
+publisher = {VLDB Endowment},
+volume = {19},
+number = {12},
+issn = {2150-8097},
+url = {https://doi.org/10.14778/3827998.3828091},
+doi = {10.14778/3827998.3828091},
+abstract = {We present CoBLOC, the first interactive system for enforcing continuous group fairness over sliding windows in data streams. CoBLOC introduces block-level fairness, a fine-grained fairness model that exposes short-term disparities missed by window-level guarantees, and supports efficient real-time monitoring using compact sketch-based summaries. When violations occur, CoBLOC applies theoretically grounded stream reordering algorithms to restore fairness within the current window, while maintaining low-latency, high-throughput performance suitable for real-world streaming analytics. Through interactive demonstrations, CoBLOC also surfaces serendipitous moments where fairness adjustments become critical, provides intuitive explanations of its decisions, and recommends landmark sizes that best balance reordering cost and fairness in dynamic streaming settings.},
+journal = {Proc. VLDB Endow.},
+month = sep,
+pages = {4662–4665},
+numpages = {4}
+}
+
+@article{ghosh2026cobloc,
+  author  = {Subhodeep Ghosh and Zhihui Du and Angela Bonifati and Manish Kumar and David Bader and Senjuti {Basu Roy}},
+  title   = {{CoBLOC} -- Continuous block level fairness on data streams},
+  journal = {Proc. {VLDB} Endow.},
+  volume  = {19},
+  number  = {12},
+  pages   = {4662--4665},
+  year    = {2026},
+  doi     = {10.14778/3827998.3828091}
 }

@@ -6,6 +6,7 @@
 \citation{10.1145/2090236.2090255}
 \citation{10.1145/2090236.2090255,NIPS2016_6a9659fe}
 \citation{DBLP:journals/corr/WebbHCNP15}
+\citation{1315451.1315460}
 \citation{10.1007/s10994-017-5642-8,KLAIBER20231261}
 \citation{deho2024faircomparativeevaluationfairness}
 \@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
@@ -17,12 +18,13 @@
 \citation{Salazar_2026}
 \citation{Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024}
 \citation{zeng2024fairrrpreprocessinggroupfairness}
+\citation{ghosh2026cobloc}
 \citation{chowdhury2024enhancing}
+\citation{10.1007/s10994-017-5642-8}
 \@writefile{toc}{\contentsline {section}{\numberline {II}Related Work}{2}{}\protected@file@percent }
 \newlabel{sec:related}{{II}{2}{}{section.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Pre-Processing Methods}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}In-Processing Methods}{2}{}\protected@file@percent }
-\citation{10.1007/s10994-017-5642-8}
 \citation{jiang2023chasingfairnessdistributionshift}
 \citation{zafar2017fairnessconstraintsmechanismsfair}
 \citation{agarwal2018reductionsapproachfairclassification}
@@ -68,13 +70,13 @@
 \newlabel{eq:dual}{{8}{4}{}{equation.8}{}}
 \citation{chowdhury2024enhancing}
 \citation{bbbe4e97-7833-3faa-820c-4c61f82fe965}
+\citation{doi:10.1137/1.9781611972771.42}
 \@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of \textsc  {FADO}{}. Gray: the fair soft oblique forest~\cite  {chowdhury2024enhancing}, which predicts and then trains on each sample. Blue: the adaptive fairness constraint, which turns each prediction into a disparity signal and sets the fairness price $\lambda _t$. Orange: drift detection and response, which resets the fairness statistics $S$ on drift and adjusts the learning rate $\eta _t$ and routing temperature $\tau _t$. Colored symbols in gray boxes are set by \textsc  {FADO}{}.}}{5}{}\protected@file@percent }
 \newlabel{fig:drift-pipeline}{{1}{5}{}{figure.1}{}}
 \newlabel{eq:lambda}{{9}{5}{}{equation.9}{}}
 \newlabel{eq:ht}{{10}{5}{}{equation.10}{}}
 \newlabel{prop:ht}{{1}{5}{}{equation.10}{}}
 \newlabel{rem:dyn}{{1}{5}{}{equation.10}{}}
-\citation{doi:10.1137/1.9781611972771.42}
 \citation{ding2022retiringadultnewdatasets}
 \citation{adult_2}
 \citation{10.1145/3770855.3819070}
@@ -82,7 +84,7 @@
 \newlabel{sec:method:drift}{{\mbox  {IV-C}}{6}{}{subsection.4.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Datasets and Preprocessing}{6}{}\protected@file@percent }
 \newlabel{sec:method:data}{{\mbox  {IV-D}}{6}{}{subsection.4.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces \textsc  {FADO}{}'s prequential test-then-train loop. Available at [undisclosed for blind review].}}{6}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces \textsc  {FADO}{}'s prequential test-then-train loop. Available at \url {https://github.com/TiagoSilva35/fado-icde2027}.}}{6}{}\protected@file@percent }
 \newlabel{fig:alg}{{2}{6}{}{figure.2}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Datasets}}{6}{}\protected@file@percent }
 \newlabel{tab:datasets}{{I}{6}{}{table.1}{}}
@@ -95,13 +97,13 @@
 \citation{chowdhury2024enhancing}
 \citation{chowdhury2024enhancing}
 \citation{10.1007/s10994-012-5320-9}
+\citation{demsar2006statistical}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-F}}Baselines}{7}{}\protected@file@percent }
 \newlabel{sec:method:baselines}{{\mbox  {IV-F}}{7}{}{subsection.4.6}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-G}}Hyperparameter Selection}{7}{}\protected@file@percent }
 \newlabel{sec:method:hpo}{{\mbox  {IV-G}}{7}{}{subsection.4.7}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-H}}Evaluation Protocol}{7}{}\protected@file@percent }
 \newlabel{sec:method:protocol}{{\mbox  {IV-H}}{7}{}{subsection.4.8}{}}
-\citation{demsar2006statistical}
 \@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces \textsc  {FADO}{} Hyperparameters}}{8}{}\protected@file@percent }
 \newlabel{tab:hparams}{{II}{8}{}{table.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-I}}Reproducibility}{8}{}\protected@file@percent }
@@ -116,11 +118,12 @@
 \newlabel{tab:overall}{{IV}{9}{}{table.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Can Adaptive Mechanisms Preserve Fairness While Maintaining Utility?}{9}{}\protected@file@percent }
 \newlabel{sec:results:rq2}{{\mbox  {V-B}}{9}{}{subsection.5.2}{}}
+\citation{foulds2020intersectional}
 \@writefile{lot}{\contentsline {table}{\numberline {V}{\ignorespaces Detection of the Injected Drift by \textsc  {FADO}{} on \textsc  {Adult}{}, 30 Seeds per Scenario}}{10}{}\protected@file@percent }
 \newlabel{tab:detection}{{V}{10}{}{table.5}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}{\color  {blue}Ablation of the Components}}{10}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Ablation of the Components}{10}{}\protected@file@percent }
 \newlabel{sec:results:ablation}{{\mbox  {V-C}}{10}{}{subsection.5.3}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {VI}{\ignorespaces {\color  {blue}Components on Top of the Adaptive Constraint on \textsc  {Adult}{}, Mean Over 30 Seeds}}}{11}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {VI}{\ignorespaces Components on Top of the Adaptive Constraint on \textsc  {Adult}{}, Mean Over 30 Seeds}}{11}{}\protected@file@percent }
 \newlabel{tab:ablation}{{VI}{11}{}{table.6}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion and Future Work}{11}{}\protected@file@percent }
 \newlabel{sec:conclusion}{{VI}{11}{}{section.6}{}}
@@ -133,29 +136,32 @@
 \bibcite{10.1145/2090236.2090255}{5}
 \bibcite{NIPS2016_6a9659fe}{6}
 \bibcite{DBLP:journals/corr/WebbHCNP15}{7}
-\bibcite{10.1007/s10994-017-5642-8}{8}
-\bibcite{KLAIBER20231261}{9}
-\bibcite{deho2024faircomparativeevaluationfairness}{10}
-\bibcite{10.1145/3770855.3819070}{11}
-\bibcite{jiang2023chasingfairnessdistributionshift}{12}
-\bibcite{chowdhury2024enhancing}{13}
-\bibcite{Salazar_2026}{14}
-\bibcite{Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024}{15}
-\bibcite{zeng2024fairrrpreprocessinggroupfairness}{16}
-\bibcite{zafar2017fairnessconstraintsmechanismsfair}{17}
-\bibcite{agarwal2018reductionsapproachfairclassification}{18}
-\bibcite{cotter2018optimizationnondifferentiableconstraintsapplications}{19}
-\bibcite{mahdavi2012trading}{20}
-\bibcite{Mishler_2021}{21}
-\bibcite{Small_2024}{22}
-\bibcite{zhang2019fahtadaptivefairnessawaredecision}{23}
-\bibcite{boyd2004convex}{24}
-\bibcite{bbbe4e97-7833-3faa-820c-4c61f82fe965}{25}
-\bibcite{doi:10.1137/1.9781611972771.42}{26}
-\bibcite{ding2022retiringadultnewdatasets}{27}
-\bibcite{adult_2}{28}
-\bibcite{montiel2020rivermachinelearningstreaming}{29}
-\bibcite{10.1007/s10994-012-5320-9}{30}
-\bibcite{demsar2006statistical}{31}
+\bibcite{1315451.1315460}{8}
+\bibcite{10.1007/s10994-017-5642-8}{9}
+\bibcite{KLAIBER20231261}{10}
+\bibcite{deho2024faircomparativeevaluationfairness}{11}
+\bibcite{10.1145/3770855.3819070}{12}
+\bibcite{jiang2023chasingfairnessdistributionshift}{13}
+\bibcite{chowdhury2024enhancing}{14}
+\bibcite{Salazar_2026}{15}
+\bibcite{Xiong_Dalmasso_Mishler_Potluru_Balch_Veloso_2024}{16}
+\bibcite{zeng2024fairrrpreprocessinggroupfairness}{17}
+\bibcite{ghosh2026cobloc}{18}
+\bibcite{zafar2017fairnessconstraintsmechanismsfair}{19}
+\bibcite{agarwal2018reductionsapproachfairclassification}{20}
+\bibcite{cotter2018optimizationnondifferentiableconstraintsapplications}{21}
+\bibcite{mahdavi2012trading}{22}
+\bibcite{Mishler_2021}{23}
+\bibcite{Small_2024}{24}
+\bibcite{zhang2019fahtadaptivefairnessawaredecision}{25}
+\bibcite{boyd2004convex}{26}
+\bibcite{bbbe4e97-7833-3faa-820c-4c61f82fe965}{27}
+\bibcite{doi:10.1137/1.9781611972771.42}{28}
+\bibcite{ding2022retiringadultnewdatasets}{29}
+\bibcite{adult_2}{30}
+\bibcite{montiel2020rivermachinelearningstreaming}{31}
+\bibcite{10.1007/s10994-012-5320-9}{32}
+\bibcite{demsar2006statistical}{33}
+\bibcite{foulds2020intersectional}{34}
 \@writefile{toc}{\contentsline {section}{References}{12}{}\protected@file@percent }
 \gdef \@abspage@last{12}
